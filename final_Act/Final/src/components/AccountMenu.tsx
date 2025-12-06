@@ -106,7 +106,7 @@ export default function AccountMenu() {
         <Box sx={{ 
           display: 'flex', 
           alignItems: 'center', 
-          gap: 1,
+          gap: 0,
           cursor: 'pointer',
           '&:hover': {
             '& .logo-text': {
@@ -121,6 +121,7 @@ export default function AccountMenu() {
             sx={{
               width: 70,
               height: 55,
+              
               filter: 'drop-shadow(0px 2px 8px rgba(212, 175, 55, 0.3))',
               transition: 'transform 0.3s ease',
               '&:hover': {
@@ -132,6 +133,7 @@ export default function AccountMenu() {
             variant="h4" 
             className="logo-text"
             sx={{
+              mt: 1.5,
               fontWeight: '900',
               letterSpacing: '1px',
               background: 'linear-gradient(45deg, #D4AF37 30%, #FFD700 90%)',

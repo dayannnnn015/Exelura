@@ -1,10 +1,9 @@
 import { Container, Box } from "@mui/material";
 import ProductSearch from './components/ProductSearch';
 import AccountMenu from "./components/AccountMenu";
+import PictureSlide from "./components/pictureSlide"; // Add this import
 import { initializeStore } from "./store/userStore";
 import { useEffect } from "react";
-
-// ✅ Add the import
 import CartDrawer from "./components/cartDrawer";
 
 function App() {
@@ -21,7 +20,7 @@ function App() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        py: 4
+        py: 4,
       }}
     >
       <Container 
@@ -46,13 +45,13 @@ function App() {
           }}
         >
           <AccountMenu />
+          
+          {/* Add PictureSlide here, before ProductSearch */}
+          <PictureSlide />
+          
           <ProductSearch />
         </Box>
-        
-        {/* Cart Drawer Component (to be implemented) */}
-        {/* <CartDrawer /> */}
-
-        {/* ✅ ENABLED Cart Drawer */}
+      
         <CartDrawer />
       </Container>
     </Box>
