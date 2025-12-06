@@ -1,7 +1,7 @@
 import { Container, Box } from "@mui/material";
 import ProductSearch from './components/ProductSearch';
 import AccountMenu from "./components/AccountMenu";
-import PictureSlide from "./components/pictureSlide"; // Add this import
+import PictureSlide from "./components/PictureSlide"; 
 import { initializeStore } from "./store/userStore";
 import { useEffect } from "react";
 import CartDrawer from "./components/cartDrawer";
@@ -46,9 +46,10 @@ function App() {
         >
           <AccountMenu />
           
-          {/* Add PictureSlide here, before ProductSearch */}
+          {/* PictureSlide now includes its own skeleton loading */}
           <PictureSlide />
           
+          {/* ProductSearch now includes its own skeleton loading for the product grid */}
           <ProductSearch />
         </Box>
       

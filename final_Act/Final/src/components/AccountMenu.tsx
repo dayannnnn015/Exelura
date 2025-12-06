@@ -16,11 +16,21 @@ import LoginIcon from '@mui/icons-material/Login';
 import Badge from '@mui/material/Badge';
 import { useUserStore } from '../store/userStore';
 import { useCartStore } from '../store/cartStore';
+import TextField from '@mui/material/TextField';
+import InputAdornment from '@mui/material/InputAdornment';
+import SearchIcon from '@mui/icons-material/Search';
+import { useTheme } from '@mui/material/styles';
+import useMediaQuery from '@mui/material/useMediaQuery';
 
 export default function AccountMenu() {
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const [loginDialogOpen, setLoginDialogOpen] = React.useState(false);
   const [registerDialogOpen, setRegisterDialogOpen] = React.useState(false);
+  const [searchTerm, setSearchTerm] = React.useState('');
+  
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const isTablet = useMediaQuery(theme.breakpoints.down('lg'));
   
   // Zustand stores
   const { 
@@ -88,6 +98,21 @@ export default function AccountMenu() {
     }
   };
   
+  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value);
+    // You can add search functionality here
+    // Example: debounced API call or state update for parent component
+  };
+  
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchTerm.trim()) {
+      console.log('Searching for:', searchTerm);
+      // Implement search logic here
+      // Example: navigate to search page or update global state
+    }
+  };
+
   return (
     <React.Fragment>
       <Box sx={{ 
@@ -100,7 +125,8 @@ export default function AccountMenu() {
         backgroundColor: 'rgba(240, 238, 179, 0.3)', // #F0EEB3 with opacity
         borderRadius: 2,
         boxShadow: '0 4px 12px rgba(212, 175, 55, 0.1)',
-        border: '1px solid rgba(212, 175, 55, 0.2)'
+        border: '1px solid rgba(212, 175, 55, 0.2)',
+        gap: 2
       }}>
         {/* Logo Section */}
         <Box sx={{ 
@@ -108,6 +134,7 @@ export default function AccountMenu() {
           alignItems: 'center', 
           gap: 0,
           cursor: 'pointer',
+          flexShrink: 0,
           '&:hover': {
             '& .logo-text': {
               textShadow: '0 0 10px rgba(212, 175, 55, 0.5)'
@@ -121,7 +148,6 @@ export default function AccountMenu() {
             sx={{
               width: 70,
               height: 55,
-              
               filter: 'drop-shadow(0px 2px 8px rgba(212, 175, 55, 0.3))',
               transition: 'transform 0.3s ease',
               '&:hover': {
@@ -130,7 +156,7 @@ export default function AccountMenu() {
             }}
           />
           <Typography 
-            variant="h4" 
+            variant={isMobile ? "h6" : "h4"}
             className="logo-text"
             sx={{
               mt: 1.5,
@@ -141,19 +167,96 @@ export default function AccountMenu() {
               WebkitTextFillColor: 'transparent',
               backgroundClip: 'text',
               textShadow: '0 2px 4px rgba(0,0,0,0.1)',
-              transition: 'all 0.3s ease'
+              transition: 'all 0.3s ease',
+              display: isMobile ? 'none' : 'block'
             }}
           >
             XELURA
           </Typography>
         </Box>
         
+        {/* Search Bar - Center */}
+        <Box 
+          component="form" 
+          onSubmit={handleSearchSubmit}
+          sx={{ 
+            flex: 1,
+            maxWidth: isMobile ? '100%' : isTablet ? '400px' : '600px',
+            mx: isMobile ? 0 : 4,
+            display: 'flex',
+            justifyContent: 'center'
+          }}
+        >
+          <TextField
+            fullWidth
+            variant="outlined"
+            placeholder="Search products, brands, and categories..."
+            value={searchTerm}
+            onChange={handleSearch}
+            slotProps={{
+              input: {
+                sx: {
+                  backgroundColor: 'white',
+                  borderRadius: 2,
+                  borderColor: 'rgba(212, 175, 55, 0.3)',
+                  '&:hover': {
+                    borderColor: '#D4AF37',
+                  },
+                  '&.Mui-focused': {
+                    borderColor: '#D4AF37',
+                    boxShadow: '0 0 0 2px rgba(212, 175, 55, 0.2)',
+                  },
+                  height: 45,
+                  fontSize: isMobile ? '0.9rem' : '1rem',
+                  fontWeight: 500,
+                  color: '#333',
+                },
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon sx={{ color: '#D4AF37' }} />
+                  </InputAdornment>
+                ),
+                endAdornment: searchTerm && (
+                  <InputAdornment position="end">
+                    <IconButton
+                      size="small"
+                      onClick={() => setSearchTerm('')}
+                      sx={{ color: '#D4AF37', mr: -1 }}
+                    >
+                      ✕
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              },
+            }}
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                '& fieldset': {
+                  borderColor: 'rgba(212, 175, 55, 0.3)',
+                  borderWidth: 2,
+                },
+                '&:hover fieldset': {
+                  borderColor: '#D4AF37',
+                },
+                '&.Mui-focused fieldset': {
+                  borderColor: '#D4AF37',
+                },
+              },
+              boxShadow: '0 2px 8px rgba(212, 175, 55, 0.1)',
+              transition: 'all 0.3s ease',
+              '&:hover': {
+                boxShadow: '0 4px 16px rgba(212, 175, 55, 0.2)',
+              },
+            }}
+          />
+        </Box>
+        
         {/* Right Side Menu */}
         <Box sx={{ 
           display: 'flex', 
           alignItems: 'center', 
-          gap: 4,
-          mr: 2
+          gap: isMobile ? 1 : 2,
+          flexShrink: 0
         }}>
           {/* Cart Icon with Badge */}
           <Tooltip title={isLoggedIn ? "Your Cart" : "Please login to view cart"}>
@@ -167,8 +270,8 @@ export default function AccountMenu() {
                   transform: 'scale(1.1)'
                 },
                 transition: 'all 0.3s ease',
-                width: 48,
-                height: 48,
+                width: { xs: 40, md: 48 },
+                height: { xs: 40, md: 48 },
                 position: 'relative'
               }}
             >
@@ -179,11 +282,14 @@ export default function AccountMenu() {
                   '& .MuiBadge-badge': {
                     backgroundColor: '#D4AF37',
                     color: 'white',
-                    fontWeight: 'bold'
+                    fontWeight: 'bold',
+                    fontSize: isMobile ? '0.7rem' : '0.8rem',
+                    minWidth: isMobile ? 18 : 20,
+                    height: isMobile ? 18 : 20,
                   }
                 }}
               >
-                <ShoppingCartIcon sx={{ fontSize: 26 }} />
+                <ShoppingCartIcon sx={{ fontSize: { xs: 22, md: 26 } }} />
               </Badge>
             </IconButton>
           </Tooltip>
@@ -202,8 +308,8 @@ export default function AccountMenu() {
                   transform: 'scale(1.05)'
                 },
                 transition: 'all 0.3s ease',
-                width: 48,
-                height: 48
+                width: { xs: 40, md: 48 },
+                height: { xs: 40, md: 48 }
               }}
               aria-controls={open ? 'account-menu' : undefined}
               aria-haspopup="true"
@@ -211,26 +317,67 @@ export default function AccountMenu() {
             >
               {isLoggedIn ? (
                 <Avatar sx={{ 
-                  width: 36, 
-                  height: 36,
+                  width: { xs: 28, md: 36 }, 
+                  height: { xs: 28, md: 36 },
                   backgroundColor: '#D4AF37',
-                  fontWeight: 'bold'
+                  fontWeight: 'bold',
+                  fontSize: { xs: '0.9rem', md: '1rem' }
                 }}>
                   {currentUser?.name?.charAt(0).toUpperCase() || 'U'}
                 </Avatar>
               ) : (
                 <Avatar sx={{ 
-                  width: 36, 
-                  height: 36,
+                  width: { xs: 28, md: 36 }, 
+                  height: { xs: 28, md: 36 },
                   backgroundColor: 'rgba(212, 175, 55, 0.3)'
                 }}>
-                  <LoginIcon sx={{ color: '#D4AF37' }} />
+                  <LoginIcon sx={{ 
+                    color: '#D4AF37',
+                    fontSize: { xs: 18, md: 24 }
+                  }} />
                 </Avatar>
               )}
             </IconButton>
           </Tooltip>
         </Box>
       </Box>
+      
+      {/* Mobile Search Bar (if needed for better mobile experience) */}
+      {isMobile && (
+        <Box sx={{ mb: 3, px: 2 }}>
+          <TextField
+            fullWidth
+            variant="outlined"
+            placeholder="Search products..."
+            value={searchTerm}
+            onChange={handleSearch}
+            slotProps={{
+              input: {
+                sx: {
+                  backgroundColor: 'white',
+                  borderRadius: 2,
+                  height: 45,
+                  fontSize: '0.9rem',
+                },
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon sx={{ color: '#D4AF37' }} />
+                  </InputAdornment>
+                ),
+              },
+            }}
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                '& fieldset': {
+                  borderColor: 'rgba(212, 175, 55, 0.3)',
+                  borderWidth: 2,
+                },
+              },
+              boxShadow: '0 2px 8px rgba(212, 175, 55, 0.1)',
+            }}
+          />
+        </Box>
+      )}
       
       {/* Account Menu Dropdown */}
       <Menu

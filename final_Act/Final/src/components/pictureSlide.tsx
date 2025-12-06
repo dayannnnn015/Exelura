@@ -331,7 +331,7 @@ const PictureSlide = () => { // Renamed to use PascalCase locally for convention
             </Box>
 
             {/* Slide Content */}
-            <Box sx={{ position: 'relative', zIndex: 1 }}>
+            <Box sx={{ position: 'relative', zIndex: 1, width:'80%' }}>
               {/* Badge */}
               <Box
                 sx={{
