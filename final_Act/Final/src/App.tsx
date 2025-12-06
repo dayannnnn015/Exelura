@@ -1,8 +1,11 @@
 import { Container, Box } from "@mui/material";
-import ProductSearch from "./components/ProductSearch";
+import ProductSearch from './components/ProductSearch';
 import AccountMenu from "./components/AccountMenu";
 import { initializeStore } from "./store/userStore";
 import { useEffect } from "react";
+
+// ✅ Add the import
+import CartDrawer from "./components/cartDrawer";
 
 function App() {
   // Initialize store
@@ -48,6 +51,9 @@ function App() {
         
         {/* Cart Drawer Component (to be implemented) */}
         {/* <CartDrawer /> */}
+
+        {/* ✅ ENABLED Cart Drawer */}
+        <CartDrawer />
       </Container>
     </Box>
   );
