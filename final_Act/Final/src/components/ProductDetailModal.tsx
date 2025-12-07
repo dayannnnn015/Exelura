@@ -1,3 +1,4 @@
+import React, { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -9,16 +10,14 @@ import {
   Rating,
   Button,
   Chip,
-  Divider,
   Badge,
-  Tooltip,
-  useMediaQuery,
-  useTheme,
   Avatar,
   Stack,
   Tabs,
   Tab,
   Paper,
+  useTheme,
+  useMediaQuery,
 } from "@mui/material";
 import {
   Close,
@@ -29,19 +28,63 @@ import {
   Reviews,
   LocalShipping,
   Verified,
-  Star,
   Comment,
   Class,
   Style,
 } from "@mui/icons-material";
-import { useState } from "react";
 
+// -------------------- Types --------------------
+interface Review {
+  id: number;
+  user?: string;
+  rating: number;
+  comment: string;
+  date?: string;
+  avatar?: string;
+}
+
+interface Product {
+  id: number;
+  title: string;
+  images?: string[];
+  thumbnail?: string;
+  price: number;
+  discountPercentage?: number;
+  stock: number;
+  brand?: string;
+  sku?: string;
+  weight?: string;
+  dimensions?: string;
+  warranty?: string;
+  category?: string;
+  tags?: string[];
+  description: string;
+  rating?: number;
+  reviews?: Review[];
+}
+
+interface ProductDetailModalProps {
+  open: boolean;
+  product: Product | null;
+  onClose: () => void;
+  onAddToCart: (product: Product) => void;
+  isLoggedIn: boolean;
+}
+
+// -------------------- Currency Formatter --------------------
 const usdFormatted = new Intl.NumberFormat("en-US", {
   style: "currency",
   currency: "USD",
 });
 
-const ProductDetailModal = ({ open, product, onClose, onAddToCart, isLoggedIn }) => {
+// -------------------- Component --------------------
+const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
+  open,
+  product,
+  onClose,
+  onAddToCart,
+  isLoggedIn,
+}) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
@@ -49,29 +92,30 @@ const ProductDetailModal = ({ open, product, onClose, onAddToCart, isLoggedIn })
 
   if (!product) return null;
 
-  // Ensure we have at least one image
-  const productImages = product.images && product.images.length > 0 
-    ? product.images 
-    : [product.thumbnail || "https://via.placeholder.com/600x400?text=No+Image"];
-  
+  const productImages =
+    product.images && product.images.length > 0
+      ? product.images
+      : [product.thumbnail || "https://via.placeholder.com/600x400?text=No+Image"];
+
   const discountPrice = product.price * (1 - (product.discountPercentage || 0) / 100);
   const savings = product.price - discountPrice;
 
   const handlePreviousImage = () => {
-    setSelectedImageIndex(prev => prev === 0 ? productImages.length - 1 : prev - 1);
+    setSelectedImageIndex(prev => (prev === 0 ? productImages.length - 1 : prev - 1));
   };
 
   const handleNextImage = () => {
-    setSelectedImageIndex(prev => prev === productImages.length - 1 ? 0 : prev + 1);
+    setSelectedImageIndex(prev => (prev === productImages.length - 1 ? 0 : prev + 1));
   };
 
   const handleAddToCartClick = () => {
     onAddToCart(product);
   };
 
+  // -------------------- Render Tabs --------------------
   const renderSpecifications = () => (
     <Stack spacing={2}>
-      <Paper elevation={0} sx={{ p: 2, bgcolor: 'grey.50' }}>
+      <Paper elevation={0} sx={{ p: 2, bgcolor: "grey.50" }}>
         <Typography variant="subtitle2" color="text.secondary" gutterBottom>
           Product Information
         </Typography>
@@ -123,12 +167,11 @@ const ProductDetailModal = ({ open, product, onClose, onAddToCart, isLoggedIn })
 
   const renderReviews = () => (
     <Stack spacing={2}>
-      {/* Rating Summary */}
-      <Paper elevation={0} sx={{ p: 2, bgcolor: 'grey.50' }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <Box sx={{ textAlign: 'center' }}>
+      <Paper elevation={0} sx={{ p: 2, bgcolor: "grey.50" }}>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+          <Box sx={{ textAlign: "center" }}>
             <Typography variant="h3" fontWeight="bold" color="primary">
-              {product.rating?.toFixed(1) || '0.0'}
+              {product.rating?.toFixed(1) || "0.0"}
             </Typography>
             <Rating value={product.rating || 0} readOnly precision={0.5} />
             <Typography variant="caption" color="text.secondary">
@@ -143,18 +186,15 @@ const ProductDetailModal = ({ open, product, onClose, onAddToCart, isLoggedIn })
         </Box>
       </Paper>
 
-      {/* Reviews List */}
-      {product.reviews?.map((review) => (
-        <Paper key={review.id} elevation={0} sx={{ p: 2, bgcolor: 'grey.50' }}>
-          <Box sx={{ display: 'flex', gap: 2, mb: 1 }}>
-            <Avatar src={review.avatar}>
-              {review.user?.charAt(0) || 'U'}
-            </Avatar>
+      {product.reviews?.map(review => (
+        <Paper key={review.id} elevation={0} sx={{ p: 2, bgcolor: "grey.50" }}>
+          <Box sx={{ display: "flex", gap: 2, mb: 1 }}>
+            <Avatar src={review.avatar}>{review.user?.charAt(0) || "U"}</Avatar>
             <Box sx={{ flex: 1 }}>
               <Typography variant="subtitle2" fontWeight="bold">
                 {review.user || "Anonymous"}
               </Typography>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                 <Rating value={review.rating} size="small" readOnly />
                 <Typography variant="caption" color="text.secondary">
                   {review.date}
@@ -167,8 +207,8 @@ const ProductDetailModal = ({ open, product, onClose, onAddToCart, isLoggedIn })
       ))}
 
       {(!product.reviews || product.reviews.length === 0) && (
-        <Paper elevation={0} sx={{ p: 4, textAlign: 'center', bgcolor: 'grey.50' }}>
-          <Comment sx={{ fontSize: 48, color: 'grey.400', mb: 2 }} />
+        <Paper elevation={0} sx={{ p: 4, textAlign: "center", bgcolor: "grey.50" }}>
+          <Comment sx={{ fontSize: 48, color: "grey.400", mb: 2 }} />
           <Typography variant="h6" color="text.secondary">
             No reviews yet
           </Typography>
@@ -182,8 +222,8 @@ const ProductDetailModal = ({ open, product, onClose, onAddToCart, isLoggedIn })
 
   const renderShipping = () => (
     <Stack spacing={2}>
-      <Paper elevation={0} sx={{ p: 2, bgcolor: 'grey.50' }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
+      <Paper elevation={0} sx={{ p: 2, bgcolor: "grey.50" }}>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 1 }}>
           <LocalShipping color="primary" />
           <Typography variant="subtitle1" fontWeight="bold">
             Free Shipping
@@ -197,8 +237,8 @@ const ProductDetailModal = ({ open, product, onClose, onAddToCart, isLoggedIn })
           • Estimated delivery: 3-5 business days
         </Typography>
       </Paper>
-      <Paper elevation={0} sx={{ p: 2, bgcolor: 'grey.50' }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
+      <Paper elevation={0} sx={{ p: 2, bgcolor: "grey.50" }}>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 1 }}>
           <Verified color="primary" />
           <Typography variant="subtitle1" fontWeight="bold">
             Easy Returns
@@ -222,21 +262,18 @@ const ProductDetailModal = ({ open, product, onClose, onAddToCart, isLoggedIn })
       maxWidth="lg"
       fullWidth
       fullScreen={isMobile}
-      PaperProps={{
-        sx: {
-          borderRadius: isMobile ? 0 : 2,
-          maxHeight: '90vh',
-        }
-      }}
+      PaperProps={{ sx: { borderRadius: isMobile ? 0 : 2, maxHeight: "90vh" } }}
     >
-      <DialogTitle sx={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center',
-        pb: 1,
-        borderBottom: 1,
-        borderColor: 'divider'
-      }}>
+      <DialogTitle
+        sx={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          pb: 1,
+          borderBottom: 1,
+          borderColor: "divider",
+        }}
+      >
         <Typography variant="h5" fontWeight="bold">
           {product.title}
         </Typography>
@@ -249,104 +286,74 @@ const ProductDetailModal = ({ open, product, onClose, onAddToCart, isLoggedIn })
         <Grid container spacing={4}>
           {/* Images Column */}
           <Grid item xs={12} md={6}>
-            <Box sx={{ position: 'relative', mb: 2 }}>
-              <Box
-                sx={{
-                  width: '100%',
-                  height: 400,
-                  borderRadius: 2,
-                  overflow: 'hidden',
-                  bgcolor: 'grey.100',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}
-              >
-                <img
-                  src={productImages[selectedImageIndex]}
-                  alt={product.title}
-                  style={{
-                    maxWidth: '100%',
-                    maxHeight: '100%',
-                    objectFit: 'contain'
-                  }}
-                />
-                
-                {/* Navigation Arrows */}
-                {productImages.length > 1 && (
-                  <>
-                    <IconButton
-                      onClick={handlePreviousImage}
-                      sx={{
-                        position: 'absolute',
-                        left: 8,
-                        top: '50%',
-                        transform: 'translateY(-50%)',
-                        bgcolor: 'white',
-                        boxShadow: 1,
-                        '&:hover': { bgcolor: 'grey.100' },
-                      }}
-                    >
-                      <ArrowBack />
-                    </IconButton>
-                    <IconButton
-                      onClick={handleNextImage}
-                      sx={{
-                        position: 'absolute',
-                        right: 8,
-                        top: '50%',
-                        transform: 'translateY(-50%)',
-                        bgcolor: 'white',
-                        boxShadow: 1,
-                        '&:hover': { bgcolor: 'grey.100' },
-                      }}
-                    >
-                      <ArrowForward />
-                    </IconButton>
-                  </>
-                )}
+            <Box sx={{ position: "relative", mb: 2, width: "100%", height: isMobile ? 250 : 400 }}>
+              <img
+                src={productImages[selectedImageIndex]}
+                alt={product.title}
+                style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
+              />
 
-                {/* Discount Badge */}
-                {product.discountPercentage > 0 && (
-                  <Chip
-                    label={`${product.discountPercentage}% OFF`}
-                    color="error"
+              {productImages.length > 1 && (
+                <>
+                  <IconButton
+                    onClick={handlePreviousImage}
                     sx={{
-                      position: 'absolute',
-                      top: 16,
-                      left: 16,
-                      fontWeight: 'bold',
+                      position: "absolute",
+                      left: 8,
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      bgcolor: "rgba(255,255,255,0.8)",
+                      "&:hover": { bgcolor: "rgba(255,255,255,1)" },
                     }}
-                  />
-                )}
-              </Box>
+                  >
+                    <ArrowBack />
+                  </IconButton>
+                  <IconButton
+                    onClick={handleNextImage}
+                    sx={{
+                      position: "absolute",
+                      right: 8,
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      bgcolor: "rgba(255,255,255,0.8)",
+                      "&:hover": { bgcolor: "rgba(255,255,255,1)" },
+                    }}
+                  >
+                    <ArrowForward />
+                  </IconButton>
+                </>
+              )}
+
+              {product.discountPercentage && product.discountPercentage > 0 && (
+                <Chip
+                  label={`${product.discountPercentage}% OFF`}
+                  color="error"
+                  sx={{ position: "absolute", top: 16, left: 16, fontWeight: "bold" }}
+                />
+              )}
             </Box>
 
             {/* Thumbnails */}
             {productImages.length > 1 && (
-              <Box sx={{ display: 'flex', gap: 1, overflowX: 'auto', py: 1 }}>
+              <Box sx={{ display: "flex", gap: 1, overflowX: "auto", py: 1 }}>
                 {productImages.map((img, index) => (
                   <Box
                     key={index}
                     onClick={() => setSelectedImageIndex(index)}
                     sx={{
-                      flex: '0 0 auto',
+                      flex: "0 0 auto",
                       width: 80,
                       height: 80,
                       borderRadius: 1,
-                      overflow: 'hidden',
-                      cursor: 'pointer',
+                      overflow: "hidden",
+                      cursor: "pointer",
                       border: 3,
-                      borderColor: selectedImageIndex === index ? 'primary.main' : 'transparent',
+                      borderColor: selectedImageIndex === index ? "primary.main" : "transparent",
                       opacity: selectedImageIndex === index ? 1 : 0.7,
-                      '&:hover': { opacity: 1 },
+                      "&:hover": { opacity: 1 },
                     }}
                   >
-                    <img
-                      src={img}
-                      alt={`Thumbnail ${index + 1}`}
-                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                    />
+                    <img src={img} alt={`Thumbnail ${index + 1}`} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                   </Box>
                 ))}
               </Box>
@@ -357,87 +364,58 @@ const ProductDetailModal = ({ open, product, onClose, onAddToCart, isLoggedIn })
           <Grid item xs={12} md={6}>
             <Stack spacing={3}>
               {/* Category and Rating */}
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Chip 
-                  label={product.category} 
-                  color="secondary" 
-                  size="medium"
-                  icon={<Class fontSize="small" />}
-                />
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <Chip label={product.category} color="secondary" size="medium" icon={<Class fontSize="small" />} />
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                   <Rating value={product.rating || 0} readOnly precision={0.1} />
                   <Typography variant="body2" color="text.secondary">
-                    ({product.rating?.toFixed(1) || '0.0'})
+                    ({product.rating?.toFixed(1) || "0.0"})
                   </Typography>
-                  <Badge 
-                    badgeContent={product.reviews?.length || 0} 
-                    color="info"
-                    showZero
-                  >
+                  <Badge badgeContent={product.reviews?.length || 0} color="info" showZero>
                     <Reviews fontSize="small" />
                   </Badge>
                 </Box>
               </Box>
-              
+
               {/* Price Section */}
               <Box>
-                <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 2, mb: 1 }}>
+                <Box sx={{ display: "flex", alignItems: "baseline", gap: 2, mb: 1 }}>
                   <Typography variant="h3" fontWeight="bold" color="primary">
                     {usdFormatted.format(discountPrice)}
                   </Typography>
-                  {product.discountPercentage > 0 && (
+                  {product.discountPercentage && product.discountPercentage > 0 && (
                     <>
-                      <Typography
-                        variant="h5"
-                        color="text.disabled"
-                        sx={{ textDecoration: 'line-through' }}
-                      >
+                      <Typography variant="h5" color="text.disabled" sx={{ textDecoration: "line-through" }}>
                         {usdFormatted.format(product.price)}
                       </Typography>
-                      <Chip
-                        label={`Save ${usdFormatted.format(savings)}`}
-                        color="success"
-                        size="small"
-                        variant="outlined"
-                      />
+                      <Chip label={`Save ${usdFormatted.format(savings)}`} color="success" size="small" variant="outlined" />
                     </>
                   )}
                 </Box>
                 <Typography variant="caption" color="text.secondary">
-                  {product.discountPercentage > 0 ? `${product.discountPercentage}% OFF • ` : ''}
-                  Price includes all taxes
+                  {product.discountPercentage && product.discountPercentage > 0 ? `${product.discountPercentage}% OFF • ` : ""}Price includes all taxes
                 </Typography>
               </Box>
-              
+
               {/* Stock Status */}
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <Badge
-                  badgeContent={product.stock > 0 ? "In Stock" : "Out of Stock"}
-                  color={product.stock > 0 ? "success" : "error"}
-                  sx={{ '& .MuiBadge-badge': { fontSize: 12 } }}
-                />
+              <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                <Badge badgeContent={product.stock > 0 ? "In Stock" : "Out of Stock"} color={product.stock > 0 ? "success" : "error"} sx={{ "& .MuiBadge-badge": { fontSize: 12 } }} />
                 <Typography variant="body2" color="text.secondary">
-                  <Inventory fontSize="small" sx={{ verticalAlign: 'middle', mr: 0.5 }} />
+                  <Inventory fontSize="small" sx={{ verticalAlign: "middle", mr: 0.5 }} />
                   {product.stock} units available
                 </Typography>
               </Box>
-              
+
               {/* Tags */}
               {product.tags?.length > 0 && (
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                  <Style fontSize="small" sx={{ color: 'text.secondary' }} />
+                <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
+                  <Style fontSize="small" sx={{ color: "text.secondary" }} />
                   {product.tags.map((tag, index) => (
-                    <Chip
-                      key={index}
-                      label={tag}
-                      size="small"
-                      variant="outlined"
-                      sx={{ borderRadius: 1 }}
-                    />
+                    <Chip key={index} label={tag} size="small" variant="outlined" sx={{ borderRadius: 1 }} />
                   ))}
                 </Box>
               )}
-              
+
               {/* Full Description */}
               <Box>
                 <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
@@ -447,7 +425,7 @@ const ProductDetailModal = ({ open, product, onClose, onAddToCart, isLoggedIn })
                   {product.description}
                 </Typography>
               </Box>
-              
+
               {/* Action Buttons */}
               <Stack direction="row" spacing={2}>
                 <Button
@@ -456,37 +434,18 @@ const ProductDetailModal = ({ open, product, onClose, onAddToCart, isLoggedIn })
                   startIcon={<ShoppingCart />}
                   onClick={handleAddToCartClick}
                   disabled={!isLoggedIn}
-                  sx={{
-                    flex: 1,
-                    bgcolor: '#D4AF37',
-                    '&:hover': { bgcolor: '#C19B2E' },
-                    fontWeight: 'bold',
-                    py: 1.5,
-                  }}
+                  sx={{ flex: 1, bgcolor: "#D4AF37", "&:hover": { bgcolor: "#C19B2E" }, fontWeight: "bold", py: 1.5 }}
                 >
-                  {isLoggedIn ? 'Add to Cart' : 'Login to Purchase'}
+                  {isLoggedIn ? "Add to Cart" : "Login to Purchase"}
                 </Button>
-                <Button
-                  variant="outlined"
-                  size="large"
-                  color="primary"
-                  sx={{ 
-                    flex: 1, 
-                    fontWeight: 'bold',
-                    py: 1.5
-                  }}
-                >
+                <Button variant="outlined" size="large" color="primary" sx={{ flex: 1, fontWeight: "bold", py: 1.5 }}>
                   Buy Now
                 </Button>
               </Stack>
-              
+
               {/* Tabs */}
               <Box>
-                <Tabs 
-                  value={activeTab} 
-                  onChange={(_, value) => setActiveTab(value)}
-                  variant="fullWidth"
-                >
+                <Tabs value={activeTab} onChange={(_, value) => setActiveTab(value)} variant="fullWidth">
                   <Tab label="Specifications" />
                   <Tab label="Reviews" />
                   <Tab label="Shipping & Returns" />
