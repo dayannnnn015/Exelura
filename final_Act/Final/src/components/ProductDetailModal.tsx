@@ -1,3 +1,5 @@
+// fileName: ProductDetailModal.tsx
+
 import {
   Dialog,
   DialogContent,
@@ -505,4 +507,4 @@ const ProductDetailModal = ({ open, product, onClose, onAddToCart, isLoggedIn })
   );
 };
 
-export default ProductDetailModal;
+export default ProductDetailModal; 

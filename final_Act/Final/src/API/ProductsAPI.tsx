@@ -2,7 +2,7 @@ import axios from "axios";
 import {
     DEFAULT_PAGE,
     DEFAULT_PER_PAGE,
-    PRODUCTS_ENDPOINT
+    PRODUCTS_ENDPOINT // Assuming this is defined elsewhere, e.g., "https://dummyjson.com/products"
 } from "../configs/constants";
 
 const SeachProducts = async ({
@@ -106,44 +106,40 @@ const categoryIcons = [
     { name: 'lighting', icon: '💡', color: '#FFC107' }
 ];
 
-// Product details function (keeping your existing)
+// Product details function (FIXED to use actual API call)
 export const GetProductDetails = async (productId: number) => {
-    // Mock function - replace with actual API call
-    return {
-        id: productId,
-        title: "Product Details",
-        description: "Detailed product description...",
-        price: 99.99,
-        discountPercentage: 15,
-        rating: 4.5,
-        stock: 50,
-        category: "Electronics",
-        tags: ["New", "Popular", "Limited"],
-        thumbnail: "https://via.placeholder.com/300",
-        images: [
-            "https://via.placeholder.com/600x400",
-            "https://via.placeholder.com/600x400/2",
-            "https://via.placeholder.com/600x400/3"
-        ],
-        brand: "Premium Brand",
-        sku: "PRD-001",
-        weight: "1.5kg",
-        dimensions: "10x5x8 inches",
-        warranty: "2 Years",
-        reviews: [
-            {
-                id: 1,
-                user: "John Doe",
-                rating: 5,
-                date: "2024-01-15",
-                comment: "Excellent product, highly recommended!",
-                avatar: "https://via.placeholder.com/40"
-            },
-        ],
-        meta: {
-            qrCode: "https://via.placeholder.com/150"
-        }
-    };
+    try {
+        // Use the endpoint to fetch a single product by ID
+        const response = await axios.get(`${PRODUCTS_ENDPOINT}/${productId}`);
+        
+        // The API returns the product object directly in response.data
+        return response.data;
+
+    } catch (error) {
+        console.error(`Error fetching product details for ID ${productId}:`, error);
+        
+        // Return a fallback/error product object for safety
+        return {
+            id: productId,
+            title: "Product Not Found",
+            description: "Could not fetch detailed product information.",
+            price: 0,
+            discountPercentage: 0,
+            rating: 0,
+            stock: 0,
+            category: "Error",
+            tags: ["error"],
+            thumbnail: "https://via.placeholder.com/600x400?text=Error",
+            images: [],
+            brand: "N/A",
+            sku: "N/A",
+            weight: "N/A",
+            dimensions: "N/A",
+            warranty: "N/A",
+            reviews: [],
+            meta: {}
+        };
+    }
 };
 
 export { SeachProducts };
