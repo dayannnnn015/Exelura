@@ -11,304 +11,193 @@ import {
     useMediaQuery,
     Button,
     Stack,
-    CircularProgress
+    CircularProgress,
+    Skeleton
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import {
     ChevronRight,
     TrendingUp,
-    LocalOffer,
     NewReleases,
     Category,
-    FilterList
 } from '@mui/icons-material';
 import { GetCategories } from '../API/ProductsAPI';
+
+// Define props interface
+interface CategoriesGridProps {
+    onSelectCategory: (categorySlug: string) => void; 
+}
 
 // --- STYLED COMPONENTS ---
 
 const CategoriesContainer = styled(Box)(({ theme }) => ({
     width: '100%',
-    maxWidth: 1200,
-    margin: '0 auto',
-    borderRadius: 12,
+    height: 300,
+    borderRadius: 12, 
     backgroundColor: '#FFFFFF',
-    marginBottom: theme.spacing(4),
+    marginBottom: theme.spacing(0), 
     border: '1px solid rgba(212, 175, 55, 0.2)',
-    boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
+    boxShadow: '0 4px 20px rgba(0,0,0,0.05)', 
     overflow: 'hidden',
 }));
 
 const CategoryCard = styled(Paper)(({ theme }) => ({
-    padding: theme.spacing(2),
+    padding: theme.spacing(1.5), 
     borderRadius: 8,
     border: '1px solid rgba(212, 175, 55, 0.1)',
     backgroundColor: '#FFFEF9',
-    transition: 'all 0.3s ease',
-    cursor: 'pointer',
-    height: '100%',
     display: 'flex',
-    flexDirection: 'column',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
+    cursor: 'pointer',
+    transition: 'all 0.3s ease',
     '&:hover': {
-        transform: 'translateY(-4px)',
-        boxShadow: '0 8px 24px rgba(212, 175, 55, 0.2)',
-        borderColor: '#D4AF37',
-        backgroundColor: '#FFFDF5',
+        backgroundColor: '#F5F5F0',
+        transform: 'translateY(-2px)',
+        boxShadow: '0 4px 10px rgba(0,0,0,0.05)',
     },
 }));
 
-const CategoryIcon = styled(Box)(({ theme }) => ({
-    fontSize: '2.5rem',
-    lineHeight: 1,
-    marginBottom: theme.spacing(1),
-    filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.1))',
-}));
+// Define category type
+interface CategoryType {
+    id: number;
+    name: string;
+    slug: string;
+    displayName: string;
+    icon: string;
+    color: string;
+    isPopular: boolean;
+    isNew: boolean;
+}
 
 // --- MAIN COMPONENT ---
-
-const CategoriesGrid = () => {
-    const [categories, setCategories] = useState<any[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-    const [filter, setFilter] = useState<'all' | 'trending' | 'popular'>('all');
-    const theme = useTheme();
-    const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+const CategoriesGrid: React.FC<CategoriesGridProps> = ({ onSelectCategory }) => { 
+    const [categories, setCategories] = useState<CategoryType[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [filter, setFilter] = useState<'all' | 'new' | 'popular'>('all');
 
     useEffect(() => {
+        const fetchCategories = async () => {
+            try {
+                setIsLoading(true);
+                const data = await GetCategories();
+                // Cast the data to CategoryType[]
+                setCategories(data as CategoryType[]);
+            } catch (error) {
+                console.error("Error fetching categories:", error);
+                setCategories([]);
+            } finally {
+                setIsLoading(false);
+            }
+        };
         fetchCategories();
     }, []);
 
-    const fetchCategories = async () => {
-        try {
-            setLoading(true);
-            const data = await GetCategories();
-            // Add trending and popular flags for filtering
-            const enhancedData = data.map((cat: any, index: number) => ({
-                ...cat,
-                isTrending: index < 6, // First 6 are trending
-                isPopular: index % 3 === 0, // Every 3rd is popular
-                productCount: Math.floor(Math.random() * 500) + 50 // Mock product count
-            }));
-            setCategories(enhancedData);
-        } catch (error) {
-            console.error('Error fetching categories:', error);
-        } finally {
-            setLoading(false);
-        }
+    const handleCategoryClick = (category: CategoryType) => {
+        // Pass the category slug to filter products
+        onSelectCategory(category.slug || category.name);
     };
 
-    const handleCategoryClick = (category: any) => {
-        setSelectedCategory(category.name);
-        // You can add navigation logic here
-        console.log('Category selected:', category);
-        // Example: router.push(`/products?category=${category.name}`);
-    };
-
-    const filteredCategories = categories.filter(cat => {
-        if (filter === 'trending') return cat.isTrending;
-        if (filter === 'popular') return cat.isPopular;
-        return true;
+    const filteredCategories = categories.filter(category => {
+        if (filter === 'all') return true;
+        if (filter === 'new' && category.isNew) return true;
+        if (filter === 'popular' && category.isPopular) return true;
+        return false;
     });
 
-    const renderCategoryCard = (category: any) => (
-        <Grid key={category.id} item xs={6} sm={4} md={3} lg={2.4}>
-            <Tooltip title={`Browse ${category.productCount} products`} arrow>
-                <CategoryCard onClick={() => handleCategoryClick(category)}>
-                    <CategoryIcon sx={{ color: category.color }}>
-                        {category.icon}
-                    </CategoryIcon>
-                    
-                    <Typography
-                        variant="subtitle1"
-                        sx={{
-                            fontWeight: 700,
-                            fontSize: '0.9rem',
-                            color: '#333',
-                            textAlign: 'center',
-                            mb: 0.5,
-                            lineHeight: 1.2,
-                        }}
-                    >
-                        {category.displayName}
-                    </Typography>
-                    
-                    <Chip
-                        label={`${category.productCount}+`}
-                        size="small"
-                        sx={{
-                            fontSize: '0.7rem',
-                            height: 20,
-                            backgroundColor: 'rgba(212, 175, 55, 0.1)',
-                            color: '#D4AF37',
-                            fontWeight: 600,
-                            mt: 1,
-                        }}
-                    />
-                    
-                    {category.isTrending && (
-                        <Chip
-                            icon={<TrendingUp fontSize="small" />}
-                            label="Trending"
-                            size="small"
-                            color="success"
-                            sx={{
-                                position: 'absolute',
-                                top: 8,
-                                right: 8,
-                                fontSize: '0.6rem',
-                                height: 20,
-                            }}
-                        />
-                    )}
-                    
-                    {category.isPopular && (
-                        <Chip
-                            icon={<LocalOffer fontSize="small" />}
-                            label="Popular"
-                            size="small"
-                            color="primary"
-                            sx={{
-                                position: 'absolute',
-                                top: 8,
-                                left: 8,
-                                fontSize: '0.6rem',
-                                height: 20,
-                            }}
-                        />
-                    )}
-                </CategoryCard>
-            </Tooltip>
-        </Grid>
+    // Add "All" chip to the filter options
+    const FilterChip = ({ value, label, icon }: { value: 'all' | 'new' | 'popular', label: string, icon: React.ReactElement }) => (
+        <Chip 
+            label={label} 
+            onClick={() => setFilter(value)} 
+            icon={icon} 
+            color={filter === value ? 'warning' : 'default'}
+            variant={filter === value ? 'filled' : 'outlined'}
+            size="small"
+            sx={{ cursor: 'pointer', borderColor: '#D4AF37' }}
+        />
     );
 
-    if (loading) {
-        return (
-            <CategoriesContainer sx={{ p: 4, textAlign: 'center' }}>
-                <CircularProgress sx={{ color: '#D4AF37' }} />
-                <Typography variant="body2" sx={{ mt: 2, color: 'text.secondary' }}>
-                    Loading categories...
-                </Typography>
-            </CategoriesContainer>
-        );
-    }
-
     return (
-        <CategoriesContainer>
-            {/* Header */}
-            <Box sx={{
-                p: 3,
-                borderBottom: '1px solid rgba(212, 175, 55, 0.1)',
-                backgroundColor: '#FFFDF5',
-            }}>
-                <Stack 
-                    direction={{ xs: 'column', sm: 'row' }} 
-                    alignItems={{ xs: 'flex-start', sm: 'center' }}
-                    justifyContent="space-between"
-                    spacing={2}
-                >
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                        <Category sx={{ fontSize: 32, color: '#D4AF37' }} />
-                        <Box>
-                            <Typography variant="h5" fontWeight={700} color="#333">
-                                Shop by Category
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary">
-                                Browse {categories.length} categories with {categories.reduce((sum, cat) => sum + cat.productCount, 0).toLocaleString()}+ products
-                            </Typography>
-                        </Box>
-                    </Box>
-                    
-                    <Stack direction="row" spacing={1}>
-                        <Button
-                            variant={filter === 'all' ? 'contained' : 'outlined'}
-                            size="small"
-                            onClick={() => setFilter('all')}
-                            startIcon={<FilterList />}
-                            sx={{
-                                backgroundColor: filter === 'all' ? '#D4AF37' : 'transparent',
-                                color: filter === 'all' ? 'white' : '#D4AF37',
-                                borderColor: '#D4AF37',
-                                '&:hover': {
-                                    backgroundColor: filter === 'all' ? '#C19B2E' : 'rgba(212, 175, 55, 0.1)',
-                                },
-                            }}
-                        >
-                            All
-                        </Button>
-                        <Button
-                            variant={filter === 'trending' ? 'contained' : 'outlined'}
-                            size="small"
-                            onClick={() => setFilter('trending')}
-                            startIcon={<TrendingUp />}
-                            sx={{
-                                backgroundColor: filter === 'trending' ? '#4CAF50' : 'transparent',
-                                color: filter === 'trending' ? 'white' : '#4CAF50',
-                                borderColor: '#4CAF50',
-                                '&:hover': {
-                                    backgroundColor: filter === 'trending' ? '#388E3C' : 'rgba(76, 175, 80, 0.1)',
-                                },
-                            }}
-                        >
-                            Trending
-                        </Button>
-                        <Button
-                            variant={filter === 'popular' ? 'contained' : 'outlined'}
-                            size="small"
-                            onClick={() => setFilter('popular')}
-                            startIcon={<LocalOffer />}
-                            sx={{
-                                backgroundColor: filter === 'popular' ? '#2196F3' : 'transparent',
-                                color: filter === 'popular' ? 'white' : '#2196F3',
-                                borderColor: '#2196F3',
-                                '&:hover': {
-                                    backgroundColor: filter === 'popular' ? '#1976D2' : 'rgba(33, 150, 243, 0.1)',
-                                },
-                            }}
-                        >
-                            Popular
-                        </Button>
-                    </Stack>
+        <CategoriesContainer> 
+            <Box sx={{ p: 2 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                    <Typography 
+                        variant="h6" 
+                        fontWeight={700}
+                        sx={{ color: '#333' }}
+                    >
+                        <Category sx={{ verticalAlign: 'middle', mr: 1, color: '#D4AF37' }} />
+                        Product Categories
+                    </Typography>
+                </Box>
+
+                {/* Filter Chips */}
+                <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
+                    <FilterChip value="all" label="All" icon={<Category />} />
+                    <FilterChip value="popular" label="Popular" icon={<TrendingUp />} />
+                    <FilterChip value="new" label="New" icon={<NewReleases />} />
                 </Stack>
-            </Box>
-            
-            {/* Categories Grid */}
-            <Box sx={{ p: 3 }}>
-                <Grid container spacing={2}>
-                    {filteredCategories.map(renderCategoryCard)}
-                </Grid>
-                
-                {filteredCategories.length === 0 && (
-                    <Paper sx={{ p: 4, textAlign: 'center', bgcolor: 'grey.50' }}>
-                        <NewReleases sx={{ fontSize: 48, color: 'grey.400', mb: 2 }} />
-                        <Typography variant="h6" color="text.secondary">
-                            No categories found
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                            Try a different filter or check back later
-                        </Typography>
-                    </Paper>
-                )}
-                
-                {/* View All Button */}
-                {filter !== 'all' && (
-                    <Box sx={{ textAlign: 'center', mt: 3 }}>
-                        <Button
-                            variant="text"
-                            endIcon={<ChevronRight />}
-                            onClick={() => setFilter('all')}
-                            sx={{
-                                color: '#D4AF37',
-                                fontWeight: 600,
-                                '&:hover': {
-                                    backgroundColor: 'rgba(212, 175, 55, 0.1)',
-                                },
-                            }}
-                        >
-                            View All {categories.length} Categories
-                        </Button>
-                    </Box>
-                )}
+
+                {/* Categories Grid */}
+                <Box sx={{ height: 200, overflowY: 'auto', pr: 1 }}>
+                    <Grid container spacing={1}>
+                        {isLoading ? (
+                            // Loading skeletons
+                            Array.from(new Array(8)).map((_, index) => (
+                                <Grid item xs={12} key={index}>
+                                    <Skeleton variant="rectangular" height={40} sx={{ borderRadius: 2 }} />
+                                </Grid>
+                            ))
+                        ) : filteredCategories.length > 0 ? (
+                            filteredCategories.slice(0, 8).map((category) => ( 
+                                <Grid item xs={12} key={category.id}> 
+                                    <CategoryCard 
+                                        elevation={0} 
+                                        onClick={() => handleCategoryClick(category)}
+                                        sx={{
+                                            borderLeft: `3px solid ${category.color}`
+                                        }}
+                                    >
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                            <Typography sx={{ fontSize: '1.2rem' }}>
+                                                {category.icon}
+                                            </Typography>
+                                            <Typography 
+                                                variant="body2" 
+                                                fontWeight={600}
+                                                sx={{ color: '#555' }}
+                                            >
+                                                {category.displayName}
+                                            </Typography>
+                                            {category.isNew && (
+                                                <Chip 
+                                                    label="New" 
+                                                    size="small" 
+                                                    color="success"
+                                                    sx={{ height: 18, fontSize: '0.6rem' }}
+                                                />
+                                            )}
+                                            {category.isPopular && (
+                                                <Chip 
+                                                    label="Popular" 
+                                                    size="small" 
+                                                    color="warning"
+                                                    sx={{ height: 18, fontSize: '0.6rem' }}
+                                                />
+                                            )}
+                                        </Box>
+                                        <ChevronRight fontSize="small" sx={{ color: '#D4AF37' }} />
+                                    </CategoryCard>
+                                </Grid>
+                            ))
+                        ) : (
+                            <Typography variant="body2" color="text.secondary" sx={{ p: 2, textAlign: 'center' }}>
+                                No categories found.
+                            </Typography>
+                        )}
+                    </Grid>
+                </Box>
             </Box>
         </CategoriesContainer>
     );

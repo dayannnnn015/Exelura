@@ -14,7 +14,6 @@ import {
     Pagination,
     Paper,
     Rating,
-    TextField,
     Tooltip,
     Typography,
     Button,
@@ -448,11 +447,6 @@ const ProductCardSkeleton = () => (
 const ProductSearchSkeleton = () => {
     return (
         <Box sx={{ my: 2 }}>
-            <Box alignContent="center" alignItems="center" display="flex" justifyContent="center" sx={{ my: 2, height: 40, display: { xs: 'none', sm: 'flex' } }}>
-                <Skeleton variant="rounded" width={200} height={32} animation="wave" />
-                <Skeleton variant="text" width={100} sx={{ ml: 2 }} animation="wave" />
-            </Box>
-
             <Grid container spacing={2} sx={{ my: 2 }}>
                 {[...Array(8)].map((_, index) => (
                     <Grid key={index} item xs={12} sm={6} md={4} lg={3}>
@@ -465,6 +459,7 @@ const ProductSearchSkeleton = () => {
 };
 
 // --- MAIN COMPONENT ---
+
 
 const ProductSearch = () => {
     const [products, setProducts] = useState([]);
@@ -527,40 +522,40 @@ const ProductSearch = () => {
     };
 
     const handleProductClick = async (product: any) => {
-  setSelectedProduct(product);
-  try {
-    setIsLoading(true);
-    
-    // Fetch additional product details
-    const details = await GetProductDetails(product.id);
-    
-    // Merge the basic product data with additional details
-    const enhancedProduct = {
-      ...product,
-      images: details.images || [product.thumbnail],
-      brand: details.brand,
-      sku: details.sku,
-      weight: details.weight,
-      dimensions: details.dimensions,
-      warranty: details.warranty,
-      reviews: details.reviews || product.reviews || []
+        setSelectedProduct(product);
+        try {
+            setIsLoading(true);
+            
+            // Fetch additional product details
+            const details = await GetProductDetails(product.id);
+            
+            // Merge the basic product data with additional details
+            const enhancedProduct = {
+                ...product,
+                images: details.images || [product.thumbnail],
+                brand: details.brand,
+                sku: details.sku,
+                weight: details.weight,
+                dimensions: details.dimensions,
+                warranty: details.warranty,
+                reviews: details.reviews || product.reviews || []
+            };
+            
+            setProductDetails(enhancedProduct);
+            setModalOpen(true);
+        } catch (error) {
+            console.error('Error fetching product details:', error);
+            // Fallback to basic product info with just the thumbnail as image
+            setProductDetails({
+                ...product,
+                images: [product.thumbnail],
+                reviews: product.reviews || []
+            });
+            setModalOpen(true);
+        } finally {
+            setIsLoading(false);
+        }
     };
-    
-    setProductDetails(enhancedProduct);
-    setModalOpen(true);
-  } catch (error) {
-    console.error('Error fetching product details:', error);
-    // Fallback to basic product info with just the thumbnail as image
-    setProductDetails({
-      ...product,
-      images: [product.thumbnail],
-      reviews: product.reviews || []
-    });
-    setModalOpen(true);
-  } finally {
-    setIsLoading(false);
-  }
-};
 
     const handleCloseModal = () => {
         setModalOpen(false);
@@ -571,36 +566,12 @@ const ProductSearch = () => {
         setSnackbarOpen(false);
     };
 
+    // Search functionality is now handled by the AccountMenu search bar
+    // The searchTerm is passed from AccountMenu or you can keep local state
+    // if you want separate search behavior
+
     return (
         <>
-            <TextField
-                fullWidth
-                onChange={(e) => {
-                    const value = e.target.value;
-                    if (debounceTimer.current) {
-                        clearTimeout(debounceTimer.current);
-                    }
-                    debounceTimer.current = setTimeout(() => {
-                        setSearchTerm(value);
-                        setPage(1);
-                    }, 500);
-                }}
-                placeholder="Search products..."
-                slotProps={{
-                    input: {
-                        sx: {
-                            backgroundColor: 'white',
-                            borderRadius: 1,
-                        },
-                        endAdornment: (
-                            <InputAdornment position="end">
-                                <Search color="primary" />
-                            </InputAdornment>
-                        ),
-                    },
-                }}
-            />
-
             {/* CONDITIONAL RENDERING */}
             {isLoading
                 ? <ProductSearchSkeleton />

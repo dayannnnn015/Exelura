@@ -1,3 +1,4 @@
+
 import * as React from 'react';
 import Box from '@mui/material/Box';
 import Avatar from '@mui/material/Avatar';
@@ -24,8 +25,6 @@ import useMediaQuery from '@mui/material/useMediaQuery';
 
 export default function AccountMenu() {
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
-  const [loginDialogOpen, setLoginDialogOpen] = React.useState(false);
-  const [registerDialogOpen, setRegisterDialogOpen] = React.useState(false);
   const [searchTerm, setSearchTerm] = React.useState('');
   
   const theme = useTheme();
@@ -122,10 +121,6 @@ export default function AccountMenu() {
         mb: 5,
         px: 2,
         py: 2,
-        backgroundColor: 'rgba(240, 238, 179, 0.3)', // #F0EEB3 with opacity
-        borderRadius: 2,
-        boxShadow: '0 4px 12px rgba(212, 175, 55, 0.1)',
-        border: '1px solid rgba(212, 175, 55, 0.2)',
         gap: 2
       }}>
         {/* Logo Section */}
