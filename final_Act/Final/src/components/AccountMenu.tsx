@@ -16,12 +16,16 @@ import LoginIcon from '@mui/icons-material/Login';
 import Badge from '@mui/material/Badge';
 import { useUserStore } from '../store/userStore';
 import { useCartStore } from '../store/cartStore';
+import ProfileSettingsDialog from '../components/ProfileSettingDialog';   // ⬅️ NEW IMPORT
 
 export default function AccountMenu() {
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const [loginDialogOpen, setLoginDialogOpen] = React.useState(false);
   const [registerDialogOpen, setRegisterDialogOpen] = React.useState(false);
-  
+
+  // ⬅️ NEW STATE FOR PROFILE SETTINGS
+  const [profileDialogOpen, setProfileDialogOpen] = React.useState(false);
+
   // Zustand stores
   const { 
     currentUser, 
@@ -45,7 +49,6 @@ export default function AccountMenu() {
   };
   
   const handleLogin = () => {
-    // Simulate login with dummy user
     login({
       id: 1,
       name: 'John Doe',
@@ -58,7 +61,6 @@ export default function AccountMenu() {
   };
   
   const handleRegister = () => {
-    // Simulate registration
     const newUser = {
       id: Date.now(),
       name: 'New User',
@@ -68,7 +70,6 @@ export default function AccountMenu() {
       createdAt: new Date().toISOString()
     };
     
-    // In a real app, you'd call register() from store
     login(newUser);
     handleClose();
   };
@@ -81,10 +82,8 @@ export default function AccountMenu() {
   const handleCartClick = () => {
     if (!isLoggedIn) {
       alert('Please login to view your cart');
-      // You could open login dialog instead
     } else {
       openCart();
-      // Navigate to cart or open cart drawer
     }
   };
   
@@ -97,7 +96,7 @@ export default function AccountMenu() {
         mb: 5,
         px: 2,
         py: 2,
-        backgroundColor: 'rgba(240, 238, 179, 0.3)', // #F0EEB3 with opacity
+        backgroundColor: 'rgba(240, 238, 179, 0.3)',
         borderRadius: 2,
         boxShadow: '0 4px 12px rgba(212, 175, 55, 0.1)',
         border: '1px solid rgba(212, 175, 55, 0.2)'
@@ -153,7 +152,7 @@ export default function AccountMenu() {
           gap: 4,
           mr: 2
         }}>
-          {/* Cart Icon with Badge */}
+          {/* Cart Icon */}
           <Tooltip title={isLoggedIn ? "Your Cart" : "Please login to view cart"}>
             <IconButton
               onClick={handleCartClick}
@@ -166,13 +165,11 @@ export default function AccountMenu() {
                 },
                 transition: 'all 0.3s ease',
                 width: 48,
-                height: 48,
-                position: 'relative'
+                height: 48
               }}
             >
               <Badge 
                 badgeContent={cartCount} 
-                color="error"
                 sx={{
                   '& .MuiBadge-badge': {
                     backgroundColor: '#D4AF37',
@@ -185,7 +182,7 @@ export default function AccountMenu() {
               </Badge>
             </IconButton>
           </Tooltip>
-          
+
           {/* Account Menu */}
           <Tooltip title={isLoggedIn ? `Welcome, ${currentUser?.name}` : "Login / Register"}>
             <IconButton
@@ -203,25 +200,13 @@ export default function AccountMenu() {
                 width: 48,
                 height: 48
               }}
-              aria-controls={open ? 'account-menu' : undefined}
-              aria-haspopup="true"
-              aria-expanded={open ? 'true' : undefined}
             >
               {isLoggedIn ? (
-                <Avatar sx={{ 
-                  width: 36, 
-                  height: 36,
-                  backgroundColor: '#D4AF37',
-                  fontWeight: 'bold'
-                }}>
-                  {currentUser?.name?.charAt(0).toUpperCase() || 'U'}
+                <Avatar sx={{ width: 36, height: 36, bgcolor: '#D4AF37', fontWeight: 'bold' }}>
+                  {currentUser?.name?.charAt(0).toUpperCase()}
                 </Avatar>
               ) : (
-                <Avatar sx={{ 
-                  width: 36, 
-                  height: 36,
-                  backgroundColor: 'rgba(212, 175, 55, 0.3)'
-                }}>
+                <Avatar sx={{ width: 36, height: 36, backgroundColor: 'rgba(212, 175, 55, 0.3)' }}>
                   <LoginIcon sx={{ color: '#D4AF37' }} />
                 </Avatar>
               )}
@@ -229,8 +214,8 @@ export default function AccountMenu() {
           </Tooltip>
         </Box>
       </Box>
-      
-      {/* Account Menu Dropdown */}
+
+      {/* Menu Dropdown */}
       <Menu
         anchorEl={anchorEl}
         id="account-menu"
@@ -245,68 +230,39 @@ export default function AccountMenu() {
               mt: 1.5,
               minWidth: 220,
               backgroundColor: '#FDFBF5',
-              '& .MuiAvatar-root': {
-                width: 32,
-                height: 32,
-                ml: -0.5,
-                mr: 1,
-              },
-              '& .MuiMenuItem-root': {
-                '&:hover': {
-                  backgroundColor: 'rgba(212, 175, 55, 0.1)',
-                }
-              },
-              '&::before': {
-                content: '""',
-                display: 'block',
-                position: 'absolute',
-                top: 0,
-                right: 14,
-                width: 10,
-                height: 10,
-                bgcolor: '#FDFBF5',
-                transform: 'translateY(-50%) rotate(45deg)',
-                zIndex: 0,
-              },
             },
           },
         }}
-        transformOrigin={{ horizontal: 'right', vertical: 'top' }}
-        anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
       >
         {isLoggedIn ? (
           <>
             <MenuItem onClick={handleClose}>
               <ListItemIcon>
                 <Avatar sx={{ width: 24, height: 24, bgcolor: '#D4AF37' }}>
-                  {currentUser?.name?.charAt(0).toUpperCase() || 'U'}
+                  {currentUser?.name?.charAt(0).toUpperCase()}
                 </Avatar>
               </ListItemIcon>
               <Box>
-                <Typography variant="body1" fontWeight="bold">
-                  {currentUser?.name}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  {currentUser?.email}
-                </Typography>
+                <Typography fontWeight="bold">{currentUser?.name}</Typography>
+                <Typography variant="caption">{currentUser?.email}</Typography>
               </Box>
             </MenuItem>
-            <Divider sx={{ my: 1, backgroundColor: 'rgba(212, 175, 55, 0.2)' }} />
-            <MenuItem onClick={handleClose}>
+
+            <Divider />
+
+            {/* ➤ OPEN PROFILE SETTINGS DIALOG */}
+            <MenuItem
+              onClick={() => {
+                setProfileDialogOpen(true);
+                handleClose();
+              }}
+            >
               <ListItemIcon>
                 <Settings fontSize="small" sx={{ color: '#D4AF37' }} />
               </ListItemIcon>
               <Typography>Profile Settings</Typography>
             </MenuItem>
-            <MenuItem onClick={handleClose}>
-              <ListItemIcon>
-                <Settings fontSize="small" sx={{ color: '#D4AF37' }} />
-              </ListItemIcon>
-              <Typography>Address & Contact</Typography>
-              <Typography variant="caption" sx={{ ml: 1, color: '#D4AF37' }}>
-                Edit
-              </Typography>
-            </MenuItem>
+
             <MenuItem onClick={handleLogout}>
               <ListItemIcon>
                 <Logout fontSize="small" sx={{ color: '#D4AF37' }} />
@@ -321,26 +277,23 @@ export default function AccountMenu() {
                 <LoginIcon fontSize="small" sx={{ color: '#D4AF37' }} />
               </ListItemIcon>
               <Typography fontWeight="bold">Login</Typography>
-              <Typography variant="caption" sx={{ ml: 1, color: '#D4AF37' }}>
-                (Demo: john@xelura.com)
-              </Typography>
             </MenuItem>
+
             <MenuItem onClick={handleRegister}>
               <ListItemIcon>
                 <PersonAdd fontSize="small" sx={{ color: '#D4AF37' }} />
               </ListItemIcon>
               <Typography>Register</Typography>
             </MenuItem>
-            <Divider sx={{ my: 1, backgroundColor: 'rgba(212, 175, 55, 0.2)' }} />
-            <MenuItem onClick={handleClose}>
-              <ListItemIcon>
-                <Settings fontSize="small" sx={{ color: '#D4AF37' }} />
-              </ListItemIcon>
-              <Typography>About Xelura</Typography>
-            </MenuItem>
           </>
         )}
       </Menu>
+
+      {/* ✅ ADD PROFILE SETTINGS DIALOG */}
+      <ProfileSettingsDialog
+        open={profileDialogOpen}
+        onClose={() => setProfileDialogOpen(false)}
+      />
     </React.Fragment>
   );
 }
