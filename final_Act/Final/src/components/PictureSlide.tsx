@@ -1,198 +1,362 @@
-import React, { useState } from 'react';
+// File: EnhancedPictureSlide.tsx
+import React, { useState, useEffect } from 'react';
 import {
   Box,
-  Grid,
   Typography,
   Button,
   Chip,
-  Paper,
   IconButton,
-  useTheme,
-  useMediaQuery
+  alpha
 } from '@mui/material';
-import { styled } from '@mui/material/styles';
-import { ChevronLeft, ChevronRight } from '@mui/icons-material'; 
+import { styled, keyframes } from '@mui/material/styles';
+import {
+  ChevronLeft,
+  ChevronRight,
+  ShoppingBag,
+  FlashOn,
+  LocalFireDepartment
+} from '@mui/icons-material';
 
-// --- STYLED COMPONENTS ---
+const fadeIn = keyframes`
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+`;
+
+const float = keyframes`
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+`;
 
 const SlideContainer = styled(Box)(({ theme }) => ({
-  width: '100%',
-  margin: '0 auto', 
-  borderRadius: 12,
-  backgroundColor: '#FFFFFF',
-  marginBottom: theme.spacing(0), 
-  border: '1px solid rgba(212, 175, 55, 0.2)',
-  boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
-  overflow: 'hidden',
-}));
-
-const MainSlide = styled(Box)(({ theme }) => ({
-  height: 300,
-  background: 'linear-gradient(135deg, #D4AF37 0%, #F0EEB3 100%)',
   position: 'relative',
+  width: '100%',
+  height: 300, // Reduced from 400 to 300
+  borderRadius: 24,
+  overflow: 'hidden',
+  background: 'linear-gradient(135deg, #0F0C29 0%, #302B63 50%, #24243E 100%)',
+  boxShadow: '0 20px 40px rgba(0, 0, 0, 0.4)', // Reduced shadow
+  border: '1px solid rgba(120, 119, 198, 0.3)',
+  animation: `${fadeIn} 0.8s ease-out`,
+}));
+const SlideContent = styled(Box)(({ theme }) => ({
+  position: 'relative',
+  zIndex: 2,
+  padding: theme.spacing(5),
+  height: '100%',
   display: 'flex',
   flexDirection: 'column',
   justifyContent: 'center',
-  padding: theme.spacing(4),
+  maxWidth: '60%',
+  [theme.breakpoints.down('md')]: {
+    maxWidth: '80%',
+    padding: theme.spacing(3),
+  },
 }));
 
-// ... (slides data - assume this is here)
+const BackgroundPattern = styled(Box)(({ theme }) => ({
+  position: 'absolute',
+  top: 0,
+  right: 0,
+  bottom: 0,
+  width: '50%',
+  background: 'linear-gradient(45deg, rgba(120, 119, 198, 0.1) 0%, transparent 100%)',
+  clipPath: 'polygon(20% 0%, 100% 0%, 100% 100%, 0% 100%)',
+  zIndex: 1,
+}));
+
 const slides = [
-  // ... (Your slides data)
   {
-    title: "Seasonal Sale: 30% Off",
-    subtitle: "Spring Collection",
-    image: "...",
-    color: "#D4AF37",
-    buttonText: "Shop Now",
-    chipText: "LIMITED TIME",
-    description: "Discover new arrivals for the spring season."
+    id: 1,
+    title: 'PREMIUM COLLECTION',
+    subtitle: 'Limited Edition',
+    description: 'Exclusive luxury items curated for the discerning customer',
+    badge: '70% OFF',
+    buttonText: 'SHOP NOW',
+    color: '#FF6B95',
+    bgPattern: 'linear-gradient(135deg, rgba(255, 107, 149, 0.1) 0%, rgba(120, 119, 198, 0.1) 100%)',
+    icon: <FlashOn />
   },
   {
-    title: "New Tech Gadgets",
-    subtitle: "Smart Devices",
-    image: "...",
-    color: "#4CAF50",
-    buttonText: "Explore",
-    chipText: "HOT",
-    description: "The latest innovations in smart technology."
-  }
+    id: 2,
+    title: 'NEW ARRIVALS',
+    subtitle: 'Spring Collection',
+    description: 'Fresh styles just arrived from top luxury brands',
+    badge: 'NEW',
+    buttonText: 'EXPLORE',
+    color: '#4ECDC4',
+    bgPattern: 'linear-gradient(135deg, rgba(78, 205, 196, 0.1) 0%, rgba(69, 183, 209, 0.1) 100%)',
+    icon: <LocalFireDepartment />
+  },
+  {
+    id: 3,
+    title: 'CLEARANCE SALE',
+    subtitle: 'Final Reductions',
+    description: 'Last chance to grab luxury items at unbelievable prices',
+    badge: 'UP TO 90%',
+    buttonText: 'GRAB DEALS',
+    color: '#7877C6',
+    bgPattern: 'linear-gradient(135deg, rgba(120, 119, 198, 0.1) 0%, rgba(69, 183, 209, 0.1) 100%)',
+    icon: <LocalFireDepartment />
+  },
 ];
 
-// --- MAIN COMPONENT ---
 const PictureSlide = () => {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [isAnimating, setIsAnimating] = useState(false);
 
-  const totalSlides = slides.length;
-  const slide = slides[currentSlide];
-
-  const handleNext = () => {
-    setCurrentSlide((prev) => (prev + 1) % totalSlides);
+  const nextSlide = () => {
+    if (isAnimating) return;
+    setIsAnimating(true);
+    setCurrentSlide((prev) => (prev + 1) % slides.length);
+    setTimeout(() => setIsAnimating(false), 500);
   };
 
-  const handlePrev = () => {
-    setCurrentSlide((prev) => (prev - 1 + totalSlides) % totalSlides);
+  const prevSlide = () => {
+    if (isAnimating) return;
+    setIsAnimating(true);
+    setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length);
+    setTimeout(() => setIsAnimating(false), 500);
   };
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      nextSlide();
+    }, 7000);
+    return () => clearInterval(interval);
+  }, [currentSlide]);
+
+  const currentSlideData = slides[currentSlide];
 
   return (
-    <SlideContainer elevation={0} >
-      <Grid container>
-        {/* Main Slide: now takes full width of its parent Grid item (lg=8) */}
-        <Grid item xs={12}> 
-          <MainSlide>
-            {/* Chip */}
-            <Chip 
-              label={slide.chipText}
-              size="small"
-              sx={{ 
-                bgcolor: slide.color, 
-                color: '#fff', 
-                fontWeight: 'bold', 
-                mb: 1, 
-                alignSelf: 'flex-start',
-              }}
-            />
+    <SlideContainer>
+      {/* Background Pattern */}
+      <BackgroundPattern sx={{
+        background: currentSlideData.bgPattern
+      }} />
 
-            {/* Title & Subtitle */}
-            <Typography 
-              variant={isMobile ? "h4" : "h2"} 
-              component="div"
-              sx={{ 
-                fontWeight: 800, 
-                color: '#333',
-                textShadow: '0 2px 4px rgba(0,0,0,0.1)',
-                mb: 1,
-              }}
-            >
-              {slide.title}
-            </Typography>
-            <Typography 
-              variant={isMobile ? "h6" : "h5"} 
-              component="div"
-              sx={{ 
-                fontWeight: 600, 
-                color: '#555',
-                mb: 3,
-              }}
-            >
-              {slide.subtitle}
-            </Typography>
+      {/* Floating Elements */}
+      <Box
+        sx={{
+          position: 'absolute',
+          top: '20%',
+          right: '15%',
+          animation: `${float} 3s ease-in-out infinite`,
+          zIndex: 1,
+          opacity: 0.3,
+        }}
+      >
+        <Box
+          sx={{
+            width: 100,
+            height: 100,
+            borderRadius: '50%',
+            background: `radial-gradient(circle, ${alpha(currentSlideData.color, 0.3)} 0%, transparent 70%)`,
+          }}
+        />
+      </Box>
 
-            {/* Button */}
-            <Button
-              variant="contained"
-              size="large"
-              sx={{
-                bgcolor: slide.color,
-                color: '#fff',
-                fontWeight: 'bold',
-                maxWidth: 200,
-                transition: 'transform 0.2s',
-                '&:hover': {
-                  bgcolor: slide.color,
-                  opacity: 0.9,
-                  transform: 'scale(1.05)',
-                },
-              }}
-            >
-              {slide.buttonText}
-            </Button>
-            
-            {/* Slide Navigation Buttons */}
-            <IconButton 
-              onClick={handlePrev}
-              sx={{ 
-                position: 'absolute', 
-                left: 10, 
-                top: '50%', 
-                transform: 'translateY(-50%)',
-                bgcolor: 'rgba(255, 255, 255, 0.8)',
-                '&:hover': { bgcolor: 'rgba(255, 255, 255, 1)' },
-              }}
-            >
-              <ChevronLeft />
-            </IconButton>
-            <IconButton 
-              onClick={handleNext}
-              sx={{ 
-                position: 'absolute', 
-                right: 10, 
-                top: '50%', 
-                transform: 'translateY(-50%)',
-                bgcolor: 'rgba(255, 255, 255, 0.8)',
-                '&:hover': { bgcolor: 'rgba(255, 255, 255, 1)' },
-              }}
-            >
-              <ChevronRight />
-            </IconButton>
-            
-            {/* Dots */}
-            <Box sx={{ position: 'absolute', bottom: 10, left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 1 }}>
-              {slides.map((_, index) => (
-                <Box
-                  key={index}
-                  onClick={() => setCurrentSlide(index)}
-                  sx={{
-                    width: 8,
-                    height: 8,
-                    borderRadius: '50%',
-                    bgcolor: index === currentSlide ? slide.color : 'rgba(255, 255, 255, 0.6)',
-                    cursor: 'pointer',
-                    transition: 'all 0.3s',
-                    border: index === currentSlide ? '2px solid #fff' : 'none'
-                  }}
-                />
-              ))}
-            </Box>
-            
-          </MainSlide>
-        </Grid>
-        
-        {/* The SideColumn Grid item was removed here */}
+      <SlideContent>
+        {/* Badge */}
+        <Chip
+          label={currentSlideData.badge}
+          icon={currentSlideData.icon}
+          sx={{
+            backgroundColor: alpha(currentSlideData.color, 0.2),
+            color: currentSlideData.color,
+            border: `1px solid ${alpha(currentSlideData.color, 0.3)}`,
+            mb: 3,
+            fontWeight: 700,
+            fontSize: '0.75rem',
+            height: 32,
+            animation: `${fadeIn} 0.6s ease-out`,
+            alignSelf: 'flex-start',
+            backdropFilter: 'blur(10px)',
+          }}
+        />
 
-      </Grid>
+        {/* Title */}
+        <Typography
+          variant="h2"
+          sx={{
+            fontWeight: 800,
+            color: 'white',
+            fontSize: { xs: '2rem', md: '3rem' }, // Reduced from 4rem to 3rem
+            mb: 2,
+            animation: `${fadeIn} 1s ease-out`,
+            textShadow: '0 4px 12px rgba(0,0,0,0.3)',
+            lineHeight: 1,
+          }}
+        >
+          {currentSlideData.subtitle}
+        </Typography>
+
+        {/* Subtitle */}
+        <Typography
+          variant="h2"
+          sx={{
+            fontWeight: 800,
+            color: 'white',
+            fontSize: { xs: '2.5rem', md: '4rem' },
+            mb: 2,
+            animation: `${fadeIn} 1s ease-out`,
+            textShadow: '0 4px 12px rgba(0,0,0,0.3)',
+            lineHeight: 1,
+          }}
+        >
+          {currentSlideData.subtitle}
+        </Typography>
+
+        {/* Description */}
+        <Typography
+          variant="h6"
+          sx={{
+            color: alpha('#ffffff', 0.8),
+            mb: 4,
+            fontSize: '1.1rem',
+            maxWidth: '80%',
+            animation: `${fadeIn} 1.2s ease-out`,
+            fontWeight: 400,
+          }}
+        >
+          {currentSlideData.description}
+        </Typography>
+
+        {/* Action Button */}
+        <Button
+          variant="contained"
+          startIcon={<ShoppingBag />}
+          onClick={() => window.scrollTo({ top: 600, behavior: 'smooth' })}
+          sx={{
+            background: `linear-gradient(135deg, ${currentSlideData.color} 0%, ${alpha(currentSlideData.color, 0.8)} 100%)`,
+            color: 'white',
+            fontWeight: 700,
+            fontSize: '1rem',
+            px: 4,
+            py: 1.5,
+            borderRadius: 12,
+            maxWidth: 200,
+            animation: `${fadeIn} 1.4s ease-out`,
+            '&:hover': {
+              transform: 'translateY(-2px)',
+              boxShadow: `0 12px 24px ${alpha(currentSlideData.color, 0.4)}`,
+              background: `linear-gradient(135deg, ${alpha(currentSlideData.color, 0.9)} 0%, ${alpha(currentSlideData.color, 0.7)} 100%)`,
+            },
+            boxShadow: `0 8px 20px ${alpha(currentSlideData.color, 0.3)}`,
+            transition: 'all 0.3s ease',
+          }}
+        >
+          {currentSlideData.buttonText}
+        </Button>
+      </SlideContent>
+
+      {/* Navigation Buttons */}
+      <IconButton
+        onClick={prevSlide}
+        disabled={isAnimating}
+        sx={{
+          position: 'absolute',
+          left: 16,
+          top: '50%',
+          transform: 'translateY(-50%)',
+          backgroundColor: alpha('#ffffff', 0.15),
+          backdropFilter: 'blur(10px)',
+          color: 'white',
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+          '&:hover': {
+            backgroundColor: alpha('#ffffff', 0.25),
+            transform: 'translateY(-50%) scale(1.1)',
+          },
+          zIndex: 2,
+          transition: 'all 0.3s ease',
+        }}
+      >
+        <ChevronLeft />
+      </IconButton>
+
+      <IconButton
+        onClick={nextSlide}
+        disabled={isAnimating}
+        sx={{
+          position: 'absolute',
+          right: 16,
+          top: '50%',
+          transform: 'translateY(-50%)',
+          backgroundColor: alpha('#ffffff', 0.15),
+          backdropFilter: 'blur(10px)',
+          color: 'white',
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+          '&:hover': {
+            backgroundColor: alpha('#ffffff', 0.25),
+            transform: 'translateY(-50%) scale(1.1)',
+          },
+          zIndex: 2,
+          transition: 'all 0.3s ease',
+        }}
+      >
+        <ChevronRight />
+      </IconButton>
+
+      {/* Slide Indicators */}
+      <Box
+        sx={{
+          position: 'absolute',
+          bottom: 24,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          display: 'flex',
+          gap: 1,
+          zIndex: 2,
+        }}
+      >
+        {slides.map((_, index) => (
+          <Box
+            key={index}
+            onClick={() => !isAnimating && setCurrentSlide(index)}
+            sx={{
+              width: index === currentSlide ? 24 : 8,
+              height: 8,
+              borderRadius: 4,
+              backgroundColor: index === currentSlide
+                ? currentSlideData.color
+                : alpha('#ffffff', 0.3),
+              cursor: 'pointer',
+              transition: 'all 0.3s ease',
+              '&:hover': {
+                backgroundColor: index === currentSlide
+                  ? alpha(currentSlideData.color, 0.8)
+                  : alpha('#ffffff', 0.5),
+                transform: 'scale(1.2)',
+              },
+            }}
+          />
+        ))}
+      </Box>
+
+      {/* Timer Progress */}
+      <Box
+        sx={{
+          position: 'absolute',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          height: 3,
+          backgroundColor: alpha('#ffffff', 0.1),
+          overflow: 'hidden',
+        }}
+      >
+        <Box
+          sx={{
+            height: '100%',
+            width: '100%',
+            backgroundColor: currentSlideData.color,
+            animation: 'timer 7s linear infinite',
+            '@keyframes timer': {
+              from: { transform: 'translateX(-100%)' },
+              to: { transform: 'translateX(0%)' },
+            },
+          }}
+        />
+      </Box>
     </SlideContainer>
   );
 };

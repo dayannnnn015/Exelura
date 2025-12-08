@@ -1,42 +1,122 @@
-#root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
+/* Global Styles for 1920x1200 Optimization */
+:root {
+  --primary-dark: #1B1833;
+  --primary-purple: #441752;
+  --primary-pink: #AB4459;
+  --primary-orange: #F29F58;
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+* {
+  box-sizing: border-box;
 }
 
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+}
+
+/* Luxury Scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: #1B1833;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #F29F58 0%, #AB4459 100%);
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #AB4459 0%, #441752 100%);
+}
+/* Add to App.css */
+
+/* Consistent Product Box Sizing */
+.product-card {
+  min-height: 450px !important;
+  max-height: 500px !important;
+  transition: all 0.3s ease !important;
+}
+
+.product-image-container {
+  height: 240px !important;
+  min-height: 240px !important;
+  max-height: 240px !important;
+  overflow: hidden !important;
+}
+
+.product-content {
+  flex: 1;
+  min-height: 210px !important;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+/* Consistent Grid Layout */
+.MuiGrid-item {
+  height: 500px !important;
+}
+
+/* Fixed Sticky Header */
+.sticky-header {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 1300 !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+}
+
+/* Smooth Scrolling */
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 80px; /* Account for sticky header */
+}
+
+/* Animation Classes */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -1000px 0; }
+  100% { background-position: 1000px 0; }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.6s ease-out;
+}
+
+/* Luxury Loading Animation */
+.luxury-shimmer {
+  background: linear-gradient(90deg, #1B1833 25%, #441752 50%, #1B1833 75%);
+  background-size: 1000px 100%;
+  animation: shimmer 2s infinite linear;
+}
+
+/* Responsive Typography */
+@media (min-width: 1920px) {
+  html {
+    font-size: 18px;
   }
-  to {
-    transform: rotate(360deg);
+  
+  .MuiContainer-maxWidthXl {
+    max-width: 1800px !important;
   }
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
+/* Print Styles */
+@media print {
+  .no-print {
+    display: none !important;
   }
-}
-
-.card {
-  padding: 2em;
-}
-
-.read-the-docs {
-  color: #888;
 }
