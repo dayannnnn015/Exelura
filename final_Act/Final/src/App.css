@@ -4,6 +4,8 @@
   --primary-purple: #441752;
   --primary-pink: #AB4459;
   --primary-orange: #F29F58;
+  --button-cart-bg: linear-gradient(135deg, #7877C6 0%, #5A59A1 100%);
+  --button-buynow-bg: linear-gradient(135deg, #FF6B95 0%, #FF5252 100%);
 }
 
 * {
@@ -12,6 +14,7 @@
 
 html {
   scroll-behavior: smooth;
+  scroll-padding-top: 80px; /* Account for sticky header */
 }
 
 body {
@@ -37,12 +40,22 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: linear-gradient(180deg, #AB4459 0%, #441752 100%);
 }
-/* Add to App.css */
+
+/* Global Grid and Layout Fixes */
+.MuiGrid-container {
+  flex-wrap: nowrap !important;
+  width: 100% !important;
+}
+
+.MuiGrid-item {
+  flex-shrink: 0 !important;
+  min-width: 0 !important;
+}
 
 /* Consistent Product Box Sizing */
 .product-card {
-  min-height: 450px !important;
-  max-height: 500px !important;
+  min-height: 500px !important;
+  max-height: 550px !important;
   transition: all 0.3s ease !important;
 }
 
@@ -55,15 +68,16 @@ body {
 
 .product-content {
   flex: 1;
-  min-height: 210px !important;
+  min-height: 260px !important;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  padding: 16px !important;
 }
 
 /* Consistent Grid Layout */
 .MuiGrid-item {
-  height: 500px !important;
+  height: 550px !important;
 }
 
 /* Fixed Sticky Header */
@@ -92,6 +106,11 @@ html {
   100% { background-position: 1000px 0; }
 }
 
+@keyframes timer {
+  from { transform: 'translateX(-100%)'; }
+  to { transform: 'translateX(0%)'; }
+}
+
 .animate-fadeIn {
   animation: fadeIn 0.6s ease-out;
 }
@@ -112,6 +131,49 @@ html {
   .MuiContainer-maxWidthXl {
     max-width: 1800px !important;
   }
+  
+  /* Large screen optimizations */
+  .MuiGrid-item {
+    min-height: 570px !important;
+  }
+  
+  .product-card {
+    min-height: 530px !important;
+    max-height: 570px !important;
+  }
+}
+
+/* Tablet Optimizations */
+@media (max-width: 1024px) and (min-width: 768px) {
+  .product-card {
+    min-height: 470px !important;
+    max-height: 510px !important;
+  }
+  
+  .product-image-container {
+    height: 200px !important;
+  }
+}
+
+/* Mobile Optimizations */
+@media (max-width: 767px) {
+  .MuiGrid-container {
+    flex-wrap: wrap !important;
+  }
+  
+  .MuiGrid-item {
+    height: auto !important;
+    min-height: 450px !important;
+  }
+  
+  .product-card {
+    min-height: 430px !important;
+    max-height: 470px !important;
+  }
+  
+  .product-image-container {
+    height: 180px !important;
+  }
 }
 
 /* Print Styles */
@@ -119,4 +181,273 @@ html {
   .no-print {
     display: none !important;
   }
+  
+  body {
+    background: white !important;
+    color: black !important;
+  }
+}
+
+/* Accessibility */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Focus States for Accessibility */
+:focus-visible {
+  outline: 2px solid var(--primary-orange) !important;
+  outline-offset: 2px !important;
+}
+
+/* Performance Optimizations */
+img {
+  content-visibility: auto;
+}
+
+.lazy-image {
+  background: linear-gradient(90deg, #1B1833 0%, #441752 50%, #1B1833 100%);
+  background-size: 400% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* Sticky Categories Fix */
+.sticky-categories {
+  position: sticky !important;
+  top: 100px !important;
+  transition: top 0.3s ease !important;
+  z-index: 100 !important;
+}
+
+.sticky-categories.header-scrolled {
+  top: 80px !important;
+}
+
+/* Ensure proper scroll behavior */
+.MuiGrid-item.sticky-categories {
+  max-height: calc(100vh - 120px) !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+}
+
+/* Custom scrollbar for sticky categories */
+.sticky-categories::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sticky-categories::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 3px;
+}
+
+.sticky-categories::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #F29F58 0%, #AB4459 100%);
+  border-radius: 3px;
+}
+
+/* Hide scrollbar on mobile */
+@media (max-width: 1199px) {
+  .sticky-categories {
+    position: static !important;
+    top: auto !important;
+    max-height: none !important;
+    overflow-y: visible !important;
+  }
+  
+  .sticky-categories::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Ensure main content doesn't overlap */
+@media (min-width: 1200px) {
+  .main-content-column {
+    margin-left: calc(280px + 24px) !important; /* category width + spacing */
+  }
+}
+
+/* Fix for 1920x1200 resolution */
+@media (min-width: 1920px) {
+  .sticky-categories {
+    top: 120px !important;
+  }
+  
+  .sticky-categories.header-scrolled {
+    top: 100px !important;
+  }
+}
+
+/* Product Action Buttons - No Wrap */
+.product-actions-stack {
+  flex-wrap: nowrap !important;
+  width: 100% !important;
+}
+
+.product-actions-stack .MuiButton-root {
+  min-width: 0 !important;
+  flex-shrink: 1 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+/* Grid View Buttons */
+.product-card .product-actions-stack.grid-view .MuiButton-root {
+  height: 32px !important;
+  min-height: 32px !important;
+  font-size: 0.75rem !important;
+}
+
+/* List View Buttons */
+.product-actions-stack.list-view .MuiButton-root {
+  height: 28px !important;
+  min-height: 28px !important;
+  font-size: 0.7rem !important;
+}
+
+/* Icon sizes */
+.product-actions-stack .MuiButton-startIcon {
+  margin-right: 4px !important;
+  margin-left: 0 !important;
+}
+
+.product-actions-stack .MuiButton-startIcon .MuiSvgIcon-root {
+  font-size: 0.9em !important;
+}
+
+/* Mobile adjustments */
+@media (max-width: 767px) {
+  .product-actions-stack.grid-view .MuiButton-root {
+    font-size: 0.7rem !important;
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+  }
+  
+  .product-actions-stack.list-view {
+    flex-direction: row !important;
+  }
+  
+  .product-actions-stack.list-view .MuiButton-root {
+    font-size: 0.65rem !important;
+    padding-left: 6px !important;
+    padding-right: 6px !important;
+  }
+}
+
+/* Ensure no text wrapping */
+.MuiButton-root {
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+/* Button Icons */
+.add-to-cart-button .MuiButton-startIcon,
+.buy-now-button .MuiButton-startIcon {
+  margin-right: 4px !important;
+  margin-left: 0 !important;
+  font-size: 1rem !important; /* Smaller icon */
+}
+
+/* Button Text */
+.add-to-cart-button span,
+.buy-now-button span {
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+/* Mobile Button Adjustments */
+@media (max-width: 767px) {
+  .product-actions-stack {
+    flex-direction: row !important; /* Keep side-by-side on mobile */
+    gap: 6px !important;
+  }
+  
+  .product-card .add-to-cart-button,
+  .product-card .buy-now-button {
+    height: 32px !important;
+    min-height: 32px !important;
+    font-size: 0.75rem !important;
+    padding: 0 8px !important;
+  }
+}
+
+/* Tablet Button Adjustments */
+@media (max-width: 1024px) and (min-width: 768px) {
+  .product-actions-stack {
+    flex-direction: row !important; /* Keep side-by-side on tablet */
+  }
+  
+  .product-card .add-to-cart-button,
+  .product-card .buy-now-button {
+    height: 34px !important;
+    min-height: 34px !important;
+  }
+}
+
+/* Desktop Button Adjustments */
+@media (min-width: 1200px) {
+  .product-actions-stack {
+    flex-direction: row !important; /* Ensure side-by-side */
+  }
+}
+
+/* Large Desktop Button Adjustments */
+@media (min-width: 1920px) {
+  .product-card .add-to-cart-button,
+  .product-card .buy-now-button {
+    height: 38px !important;
+    min-height: 38px !important;
+    font-size: 0.9rem !important;
+    border-radius: 8px !important;
+  }
+}
+
+/* Button Icon Sizes */
+.add-to-cart-button .MuiSvgIcon-root,
+.buy-now-button .MuiSvgIcon-root {
+  font-size: 1rem !important; /* Adjusted size */
+}
+
+/* Ensure consistent button spacing in product cards */
+.product-content .MuiStack-root:last-child {
+  padding-top: 8px !important;
+  margin-top: 8px !important;
+}
+
+
+/* Button focus states */
+.add-to-cart-button:focus-visible,
+.buy-now-button:focus-visible {
+  outline: 2px solid var(--primary-orange) !important;
+  outline-offset: 2px !important;
+}
+
+/* Disabled button states */
+.add-to-cart-button:disabled,
+.buy-now-button:disabled {
+  opacity: 0.6 !important;
+  cursor: not-allowed !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* CRITICAL FIX: Override any flex-direction: column that might be coming from elsewhere */
+.MuiStack-root.product-actions-stack,
+.product-actions-stack.MuiStack-root {
+  flex-direction: row !important;
+}
+
+/* Ensure buttons don't wrap */
+.product-actions-stack {
+  flex-wrap: nowrap !important;
+}
+
+/* Make sure the Stack component doesn't have any conflicting styles */
+.MuiStack-root {
+  display: flex !important;
 }

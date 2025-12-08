@@ -19,6 +19,7 @@
     "grid": "^4.10.8",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
+    "route": "^0.2.5",
     "zustand": "^5.0.9"
   },
   "devDependencies": {

@@ -1,4 +1,4 @@
-// Updated AccountMenu.tsx - Added Search Functionality
+// AccountMenu.tsx - Fixed imports
 import * as React from 'react';
 import Box from '@mui/material/Box';
 import Avatar from '@mui/material/Avatar';
@@ -11,28 +11,32 @@ import Tooltip from '@mui/material/Tooltip';
 import PersonAdd from '@mui/icons-material/PersonAdd';
 import Settings from '@mui/icons-material/Settings';
 import Logout from '@mui/icons-material/Logout';
-import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
 import LoginIcon from '@mui/icons-material/Login';
-import Badge from '@mui/material/Badge';
 import TextField from '@mui/material/TextField';
 import InputAdornment from '@mui/material/InputAdornment';
 import SearchIcon from '@mui/icons-material/Search';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { useTheme } from '@mui/material/styles';
 import { useUserStore } from '../store/userStore';
-import { useCartStore } from '../store/cartStore';
 import ProfileSettingsDialog from '../components/ProfileSettingDialog';
 import DiamondIcon from '@mui/icons-material/Diamond';
 import WorkspacePremiumIcon from '@mui/icons-material/WorkspacePremium';
+import Snackbar from '@mui/material/Snackbar';
+import Alert from '@mui/material/Alert';
 
 interface AccountMenuProps {
   onSearch: (searchTerm: string) => void;
+  // 🆕 NEW: Prop to control conditional styling on scroll
+  scrolled: boolean; 
 }
 
-export default function AccountMenu({ onSearch }: AccountMenuProps) {
+// 🔄 MODIFIED: Accept the 'scrolled' prop
+export default function AccountMenu({ onSearch, scrolled }: AccountMenuProps) {
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const [searchTerm, setSearchTerm] = React.useState("");
   const [profileDialogOpen, setProfileDialogOpen] = React.useState(false);
+  const [snackbarOpen, setSnackbarOpen] = React.useState(false);
+  const [snackbarMessage, setSnackbarMessage] = React.useState("");
 
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
@@ -41,12 +45,9 @@ export default function AccountMenu({ onSearch }: AccountMenuProps) {
   const { 
     currentUser, 
     isLoggedIn, 
-    cartCount,
     login, 
     logout
   } = useUserStore();
-
-  const { openCart } = useCartStore();
 
   const open = Boolean(anchorEl);
   
@@ -79,6 +80,8 @@ export default function AccountMenu({ onSearch }: AccountMenuProps) {
       createdAt: new Date().toISOString()
     });
     handleClose();
+    setSnackbarMessage('Logged in successfully!');
+    setSnackbarOpen(true);
   };
   
   const handleRegister = () => {
@@ -92,20 +95,17 @@ export default function AccountMenu({ onSearch }: AccountMenuProps) {
     };
     login(newUser);
     handleClose();
+    setSnackbarMessage('Registered successfully!');
+    setSnackbarOpen(true);
   };
   
   const handleLogout = () => {
     logout();
     handleClose();
+    setSnackbarMessage('Logged out successfully');
+    setSnackbarOpen(true);
   };
   
-  const handleCartClick = () => {
-    if (!isLoggedIn) {
-      alert('Please login to view your cart');
-    } else {
-      openCart();
-    }
-  };
 
   return (
     <React.Fragment>
@@ -115,10 +115,19 @@ export default function AccountMenu({ onSearch }: AccountMenuProps) {
         justifyContent: 'space-between',
         px: { xs: 1, sm: 2 },
         py: 2,
-        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+        // 🔄 MODIFIED: Apply conditional glassy style based on the 'scrolled' prop
+        backgroundColor: scrolled
+          ? 'rgba(255, 255, 255, 0.1)' // More transparent when scrolled
+          : 'rgba(255, 255, 255, 0.2)', // Slightly less transparent when at the top
+        backdropFilter: scrolled 
+          ? 'blur(20px)' // Sharper blur when scrolled (more 'glassy')
+          : 'blur(10px)', // Lighter blur when at the top
+        border: scrolled
+          ? '1px solid rgba(242, 159, 88, 0.4)' // More defined border when scrolled
+          : '1px solid rgba(242, 159, 88, 0.2)', // Subtler border when at the top
+        transition: 'all 0.3s ease-in-out', // Smooth transition for the effect
+        
         borderRadius: 3,
-        backdropFilter: 'blur(10px)',
-        border: '1px solid rgba(242, 159, 88, 0.2)',
         flexDirection: { xs: 'column', sm: 'row' },
         gap: { xs: 2, sm: 0 }
       }}>
@@ -169,7 +178,7 @@ export default function AccountMenu({ onSearch }: AccountMenuProps) {
           </Box>
         </Box>
 
-        {/* SEARCH BAR */}
+        {/* 🔄 MODIFIED: SEARCH BAR DESIGN FIX */}
         <Box 
           component="form" 
           onSubmit={handleSearchSubmit}
@@ -207,18 +216,25 @@ export default function AccountMenu({ onSearch }: AccountMenuProps) {
                 </InputAdornment>
               ),
               sx: {
-                backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                // FIXED: Use a darker translucent background for better contrast on a dark theme
+                backgroundColor: 'rgba(27, 24, 51, 0.4)', 
+                color: 'white', // Fixed: Input text is white
                 borderRadius: 2,
+                // Fixed: Style the placeholder text
+                '& .MuiInputBase-input::placeholder': {
+                  color: 'rgba(255, 255, 255, 0.7)',
+                  opacity: 1, // Needed for some browsers
+                },
                 '& .MuiOutlinedInput-notchedOutline': {
-                  borderColor: 'rgba(242, 159, 88, 0.3)',
+                  borderColor: 'rgba(255, 255, 255, 0.2)', // Subtle light border
                 },
                 '&:hover .MuiOutlinedInput-notchedOutline': {
-                  borderColor: '#F29F58',
+                  borderColor: '#F29F58', // Highlight on hover
                 },
                 '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
                   borderColor: '#F29F58',
                   borderWidth: 2,
-                }
+                },
               }
             }}
           />
@@ -232,28 +248,6 @@ export default function AccountMenu({ onSearch }: AccountMenuProps) {
             </Tooltip>
           )}
           
-          <IconButton 
-            onClick={handleCartClick}
-            sx={{
-              backgroundColor: 'rgba(242, 159, 88, 0.1)',
-              '&:hover': {
-                backgroundColor: 'rgba(242, 159, 88, 0.2)',
-              }
-            }}
-          >
-            <Badge 
-              badgeContent={cartCount} 
-              color="error"
-              sx={{
-                '& .MuiBadge-badge': {
-                  backgroundColor: '#AB4459',
-                  fontWeight: 'bold'
-                }
-              }}
-            >
-              <ShoppingCartIcon sx={{ color: '#F29F58' }} />
-            </Badge>
-          </IconButton>
 
           <Tooltip title={isLoggedIn ? "Account" : "Login"}>
             <IconButton 
@@ -359,6 +353,33 @@ export default function AccountMenu({ onSearch }: AccountMenuProps) {
         open={profileDialogOpen}
         onClose={() => setProfileDialogOpen(false)}
       />
+
+      {/* Snackbar for notifications */}
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={3000}
+        onClose={() => setSnackbarOpen(false)}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert 
+          onClose={() => setSnackbarOpen(false)} 
+          severity="info"
+          variant="filled"
+          sx={{
+            backgroundColor: '#1B1833',
+            color: 'white',
+            border: '1px solid rgba(242, 159, 88, 0.3)',
+            backdropFilter: 'blur(10px)',
+            fontWeight: 500,
+            borderRadius: 2,
+            '& .MuiAlert-icon': {
+              color: '#F29F58',
+            }
+          }}
+        >
+          {snackbarMessage}
+        </Alert>
+      </Snackbar>
     </React.Fragment>
   );
 }
