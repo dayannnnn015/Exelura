@@ -20,7 +20,7 @@ import Alert from '@mui/material/Alert';
 // ✅ Added imports for routing
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import MyProfilePage from './pages/MyProfilePage';
-import ProfileSettingPage from './pages/ProfileSettingPage';
+import ProfileSettingDialog from './pages/ProfileSettingDialog';
 
 
 
@@ -181,7 +181,7 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/my-profile" element={<MyProfilePage />} />
-        <Route path="/profile-setting" element={<ProfileSettingPage />} />
+        <Route path="/profile-setting" element={<ProfileSettingDialog />} />
         <Route path="/*" element={
           <Box
             sx={{

@@ -22,6 +22,7 @@ import ReceiptIcon from "@mui/icons-material/Receipt";
 import PaymentIcon from "@mui/icons-material/Payment";
 import CancelIcon from "@mui/icons-material/Cancel";
 import HistoryIcon from "@mui/icons-material/History";
+import CloseIcon from "@mui/icons-material/Close";
 import { alpha } from "@mui/material/styles";
 import { useUserStore } from "../store/userStore";
 
@@ -46,7 +47,7 @@ const sidebarItems = [
 ];
 
 const MyProfilePage: React.FC = () => {
-  const { currentUser, purchases, logout } = useUserStore();
+  const { currentUser, purchases } = useUserStore();
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -71,12 +72,12 @@ const MyProfilePage: React.FC = () => {
           return true;
       }
     })
-    .filter((item: any) => {
+    ?.filter((item: any) => {
       if (!searchQuery) return true;
-      const query = searchQuery.toLowerCase();
+      const q = searchQuery.toLowerCase();
       return (
-        item.productName?.toLowerCase().includes(query) ||
-        item.orderId?.toString().includes(query)
+        item.productName?.toLowerCase().includes(q) ||
+        item.orderId?.toString().includes(q)
       );
     });
 
@@ -86,8 +87,8 @@ const MyProfilePage: React.FC = () => {
     border: `1px solid ${alpha(CSS_VARS.primaryOrange, 0.4)}`,
     borderRadius: 2,
     mb: 1,
-    "&:hover": { backgroundColor: alpha(CSS_VARS.primaryOrange, 0.1) },
     "& .MuiAccordionSummary-content": { alignItems: "center" },
+    "&:hover": { backgroundColor: alpha(CSS_VARS.primaryOrange, 0.1) },
   };
 
   return (
@@ -97,6 +98,7 @@ const MyProfilePage: React.FC = () => {
         display: "flex",
         flexDirection: "column",
         background: `linear-gradient(180deg, #0A081F 0%, #1A173B 30%, #2A2660 70%, #3A3485 100%)`,
+        position: "relative",
       }}
     >
       {/* HEADER */}
@@ -119,6 +121,7 @@ const MyProfilePage: React.FC = () => {
           EXELURA
         </Typography>
 
+        {/* SEARCH */}
         <input
           placeholder="Search products..."
           value={searchQuery}
@@ -134,12 +137,13 @@ const MyProfilePage: React.FC = () => {
           }}
         />
 
+        {/* USER AVATAR */}
         <Avatar sx={{ bgcolor: CSS_VARS.primaryPink, ml: "auto" }}>
           {currentUser?.name?.charAt(0).toUpperCase()}
         </Avatar>
       </Box>
 
-      {/* MAIN CONTENT */}
+      {/* MAIN LAYOUT */}
       <Box sx={{ display: "flex", flex: 1 }}>
         {/* SIDEBAR */}
         <Box
@@ -177,11 +181,14 @@ const MyProfilePage: React.FC = () => {
         {/* CONTENT AREA */}
         <Container maxWidth="lg" sx={{ flex: 1, py: 3 }}>
           <Stack spacing={2}>
-            {/* Purchase-related sections */}
+            {/* PURCHASE LIST */}
             {selectedIndex <= 5 && (
               <>
                 {(!filteredPurchases || filteredPurchases.length === 0) && (
-                  <Typography textAlign="center" sx={{ color: "rgba(255,255,255,0.6)", fontStyle: "italic" }}>
+                  <Typography
+                    textAlign="center"
+                    sx={{ color: "rgba(255,255,255,0.6)", fontStyle: "italic" }}
+                  >
                     No purchases found for this category.
                   </Typography>
                 )}
@@ -191,7 +198,10 @@ const MyProfilePage: React.FC = () => {
                     key={item.id}
                     sx={{
                       backgroundColor: alpha(CSS_VARS.primaryPurple, 0.3),
-                      border: `1px solid ${alpha(CSS_VARS.primaryOrange, 0.3)}`,
+                      border: `1px solid ${alpha(
+                        CSS_VARS.primaryOrange,
+                        0.3
+                      )}`,
                       borderRadius: 2,
                       p: 2,
                     }}
@@ -204,14 +214,20 @@ const MyProfilePage: React.FC = () => {
                           width: 70,
                           height: 70,
                           borderRadius: 2,
-                          border: `1px solid ${alpha(CSS_VARS.primaryOrange, 0.4)}`,
+                          border: `1px solid ${alpha(
+                            CSS_VARS.primaryOrange,
+                            0.4
+                          )}`,
                         }}
                       />
                       <Box sx={{ flex: 1, minWidth: 0 }}>
                         <Typography variant="subtitle1" fontWeight={600} noWrap>
                           {item.productName}
                         </Typography>
-                        <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.6)", mt: 0.5 }}>
+                        <Typography
+                          variant="body2"
+                          sx={{ color: "rgba(255,255,255,0.6)", mt: 0.5 }}
+                        >
                           ₱{item.price?.toLocaleString()}
                         </Typography>
                       </Box>
@@ -221,7 +237,7 @@ const MyProfilePage: React.FC = () => {
               </>
             )}
 
-            {/* Info sections */}
+            {/* PAYMENT INFO */}
             {selectedIndex === 6 && (
               <>
                 <Accordion sx={ACCORDION_STYLE}>
@@ -229,49 +245,59 @@ const MyProfilePage: React.FC = () => {
                     <Typography>Stored Payment Cards</Typography>
                   </AccordionSummary>
                   <AccordionDetails>
-                    <Typography>Visa, Mastercard, or other saved cards and billing addresses.</Typography>
+                    <Typography>
+                      Your saved credit/debit cards and billing details.
+                    </Typography>
                   </AccordionDetails>
                 </Accordion>
+
                 <Accordion sx={ACCORDION_STYLE}>
                   <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                     <Typography>Billing Addresses</Typography>
                   </AccordionSummary>
                   <AccordionDetails>
-                    <Typography>Saved billing addresses for your orders.</Typography>
+                    <Typography>Saved billing addresses for orders.</Typography>
                   </AccordionDetails>
                 </Accordion>
               </>
             )}
 
+            {/* COMMUNICATION */}
             {selectedIndex === 7 && (
               <Accordion sx={ACCORDION_STYLE}>
                 <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                   <Typography>Communication & Support</Typography>
                 </AccordionSummary>
                 <AccordionDetails>
-                  <Typography>History of chats with customer service or merchandise partners.</Typography>
+                  <Typography>
+                    Your customer service chats and communication history.
+                  </Typography>
                 </AccordionDetails>
               </Accordion>
             )}
 
+            {/* USER CONTENT */}
             {selectedIndex === 8 && (
               <Accordion sx={ACCORDION_STYLE}>
                 <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                   <Typography>User-Generated Content</Typography>
                 </AccordionSummary>
                 <AccordionDetails>
-                  <Typography>Access to your product reviews and ratings.</Typography>
+                  <Typography>Your reviews and ratings.</Typography>
                 </AccordionDetails>
               </Accordion>
             )}
 
+            {/* PROMOTIONS */}
             {selectedIndex === 9 && (
               <Accordion sx={ACCORDION_STYLE}>
                 <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                   <Typography>Promotions</Typography>
                 </AccordionSummary>
                 <AccordionDetails>
-                  <Typography>Information about contests, giveaways, or surveys you participated in.</Typography>
+                  <Typography>
+                    Contest participation, giveaways, and rewards.
+                  </Typography>
                 </AccordionDetails>
               </Accordion>
             )}
@@ -279,9 +305,36 @@ const MyProfilePage: React.FC = () => {
         </Container>
       </Box>
 
+      {/* FIXED BOTTOM-RIGHT CLOSE BUTTON */}
+      <Button
+        onClick={() => window.history.back()}
+        startIcon={<CloseIcon />}
+        sx={{
+          position: "fixed",
+          bottom: 20,
+          right: 20,
+          zIndex: 3000,
+          backgroundColor: CSS_VARS.primaryPink,
+          color: "#fff",
+          textTransform: "none",
+          fontWeight: 600,
+          borderRadius: "30px",
+          px: 3,
+          py: 1,
+          boxShadow: "0px 4px 20px rgba(0,0,0,0.3)",
+          "&:hover": {
+            backgroundColor: alpha(CSS_VARS.primaryPink, 0.8),
+          },
+        }}
+      >
+        Close
+      </Button>
+
       {/* FOOTER */}
       <Box sx={{ py: 2, textAlign: "center", bgcolor: CSS_VARS.primaryDark }}>
-        <Typography sx={{ color: "rgba(255,255,255,0.6)" }}>© 2025 Exelura</Typography>
+        <Typography sx={{ color: "rgba(255,255,255,0.6)" }}>
+          © 2025 Exelura
+        </Typography>
       </Box>
     </Box>
   );
