@@ -8,18 +8,14 @@ import {
   TextField,
   Button,
   Chip,
-  RadioGroup,
-  FormControlLabel,
-  Radio,
-  Switch,
   Tabs,
   Tab,
   IconButton,
   alpha,
 } from "@mui/material";
-import { Close, Edit, PhotoCamera, Verified, Logout, CreditCard } from "@mui/icons-material";
+import { Close, Edit, PhotoCamera, Verified, Logout } from "@mui/icons-material";
 import { useUserStore } from "../store/userStore";
-import ExeluraLogo from '../assets/exelura-logo.png'; // your logo path
+import ExeluraLogo from '../assets/exelura-logo.png';
 import { useNavigate } from 'react-router-dom';
 
 const ProfileSettingPage: React.FC = () => {
@@ -35,16 +31,6 @@ const ProfileSettingPage: React.FC = () => {
     gender: currentUser?.gender || "female",
     dob: currentUser?.dob || "1990-05-15",
     address: "123 Luxury Avenue, Beverly Hills, CA 90210",
-    preferences: {
-      newsletter: true,
-      promotions: true,
-      orderUpdates: true,
-      securityAlerts: true,
-    },
-    paymentMethods: [
-      { id: 1, type: 'Visa', last4: '1234', expiry: '12/25' },
-      { id: 2, type: 'MasterCard', last4: '5678', expiry: '08/24' },
-    ],
     currentPassword: '',
     newPassword: '',
     confirmNewPassword: '',
@@ -54,16 +40,6 @@ const ProfileSettingPage: React.FC = () => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handlePreferenceChange = (preference: string) => {
-    setFormData(prev => ({
-      ...prev,
-      preferences: {
-        ...prev.preferences,
-        [preference]: !prev.preferences[preference as keyof typeof prev.preferences],
-      },
-    }));
-  };
-
   const handleSave = () => {
     setIsEditing(false);
     console.log("Saved profile:", formData);
@@ -71,7 +47,7 @@ const ProfileSettingPage: React.FC = () => {
 
   const handleLogout = () => {
     logout();
-    navigate('/'); // redirect after logout
+    navigate('/');
   };
 
   return (
@@ -112,7 +88,6 @@ const ProfileSettingPage: React.FC = () => {
       >
         <Tab label="Profile" />
         <Tab label="Security" />
-        <Tab label="Payment" />
       </Tabs>
 
       <Box sx={{ px: 3, pt: 3, pb: 8 }}>
@@ -148,18 +123,6 @@ const ProfileSettingPage: React.FC = () => {
                 <TextField fullWidth multiline rows={4} label="Address" value={formData.address} onChange={(e) => handleInputChange('address', e.target.value)} disabled={!isEditing} sx={{ mb: 3, input: { color: 'white' } }} />
               </Paper>
             </Grid>
-
-            <Grid item xs={12} md={6}>
-              <Paper elevation={0} sx={{ p: 3, bgcolor: alpha('#FFFFFF', 0.05), borderRadius: 2 }}>
-                <Typography variant="h6" sx={{ mb: 2 }}>Preferences</Typography>
-                {Object.entries(formData.preferences).map(([key, value]) => (
-                  <Box key={key} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                    <Typography>{key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1')}</Typography>
-                    <Switch checked={value} onChange={() => handlePreferenceChange(key)} disabled={!isEditing} />
-                  </Box>
-                ))}
-              </Paper>
-            </Grid>
           </Grid>
         )}
 
@@ -174,29 +137,6 @@ const ProfileSettingPage: React.FC = () => {
 
             <Button variant="contained" onClick={() => console.log("Change Password clicked")} sx={{ mt: 2, background: 'linear-gradient(135deg, #7877C6 0%, #5A59A1 100%)' }}>
               Change Password
-            </Button>
-          </Paper>
-        )}
-
-        {/* PAYMENT TAB */}
-        {activeTab === 2 && (
-          <Paper elevation={0} sx={{ p: 3, bgcolor: alpha('#FFFFFF', 0.05), borderRadius: 2 }}>
-            <Typography variant="h6" sx={{ mb: 2 }}>Payment Methods</Typography>
-
-            {formData.paymentMethods.length > 0 ? formData.paymentMethods.map(method => (
-              <Paper key={method.id} sx={{ p: 2, mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', bgcolor: alpha('#FFFFFF', 0.1), borderRadius: 1 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                  <CreditCard />
-                  <Typography>{method.type} ending in {method.last4}</Typography>
-                </Box>
-                <Typography>Expires {method.expiry}</Typography>
-              </Paper>
-            )) : (
-              <Typography>No payment methods added.</Typography>
-            )}
-
-            <Button variant="outlined" sx={{ borderColor: '#7877C6', color: '#7877C6', mt: 1 }} onClick={() => console.log("Add new card clicked")}>
-              Add New Card
             </Button>
           </Paper>
         )}
