@@ -1,3 +1,4 @@
+// userStore.ts - FINAL VERSION
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 
@@ -19,8 +20,8 @@ export interface CartItem {
   thumbnail: string;
   discountPercentage?: number;
   originalPrice?: number;
-  category?: string; // Added for consistency
-  // 💡 FIXED: Added the required property for the checklist
+  category?: string;
+  // 💡 REQUIRED: Added for checklist functionality
   isSelected: boolean; 
 }
 
@@ -28,17 +29,16 @@ export interface CartItem {
 export interface Product {
   id: number;
   title: string;
-  description?: string; // Made optional
+  description?: string;
   price: number;
-  discountPercentage?: number; // Made optional
-  rating?: number; // Made optional
-  stock?: number; // Made optional
-  tags?: string[]; // Made optional
+  discountPercentage?: number;
+  rating?: number;
+  stock?: number;
+  tags?: string[];
   thumbnail: string;
-  category?: string; // Made optional
-  qrCode?: string; // Made optional
-  reviews?: any[]; // Made optional and more flexible
-  // Add any additional properties that might come from API
+  category?: string;
+  qrCode?: string;
+  reviews?: any[];
   [key: string]: any; // Allow extra properties
 }
 
@@ -74,14 +74,16 @@ interface UserStore {
   register: (user: User) => void;
   updateProfile: (userData: Partial<User>) => void;
   
-  // Cart actions - UPDATED WITH FLEXIBLE PARAMETER TYPE
+  // Cart actions
   addToCart: (product: ProductInput, quantity?: number) => void;
   removeFromCart: (itemId: number) => void;
   updateCartItem: (itemId: number, quantity: number) => void;
   clearCart: () => void;
-  // 💡 FIXED: Added actions for checklist
+  
+  // 💡 REQUIRED: Actions for checklist functionality
   toggleCartItemSelection: (itemId: number) => void;
   toggleAllSelection: (checked: boolean) => void;
+  checkoutSelectedItems: () => void; // 💡 NEW: Remove selected items after purchase
   
   // Products actions
   setProducts: (products: Product[]) => void;
@@ -199,7 +201,7 @@ export const useUserStore = create<UserStore>()(
         let newCart: CartItem[];
         
         if (existingItem) {
-          // 💡 NOTE: Existing item's isSelected status is preserved by default with the spread operator
+          // Preserve isSelected status when updating existing item
           newCart = state.cart.map(item =>
             item.productId === product.id
               ? { 
@@ -208,7 +210,9 @@ export const useUserStore = create<UserStore>()(
                   price: discountedPrice,
                   productName: productName,
                   thumbnail: thumbnail,
-                  category: category
+                  category: category,
+                  // Keep existing isSelected status
+                  isSelected: item.isSelected
                 }
               : item
           );
@@ -225,7 +229,7 @@ export const useUserStore = create<UserStore>()(
               thumbnail: thumbnail,
               discountPercentage: discountPercentage,
               category: category,
-              isSelected: true, // 💡 FIXED: New items are selected by default
+              isSelected: true, // New items are selected by default
             }
           ];
         }
@@ -267,18 +271,17 @@ export const useUserStore = create<UserStore>()(
         cartCount: 0 
       }),
 
-      // 💡 FIXED: New Action - Toggle a single item's selection status
+      // 💡 REQUIRED: Toggle a single item's selection status
       toggleCartItemSelection: (itemId) => set((state) => {
         const newCart = state.cart.map((item) =>
           item.id === itemId
             ? { ...item, isSelected: !item.isSelected }
             : item
         );
-        // Do not recalculate total/count here, as it only affects the *selected* total/count, which is calculated in the component.
-        return { cart: newCart }; 
+        return { cart: newCart };
       }),
 
-      // 💡 FIXED: New Action - Toggle all items' selection status
+      // 💡 REQUIRED: Toggle all items' selection status
       toggleAllSelection: (checked) => set((state) => {
         const newCart = state.cart.map((item) => ({ 
           ...item, 
@@ -286,6 +289,16 @@ export const useUserStore = create<UserStore>()(
         }));
         return { cart: newCart };
       }),
+
+      // 💡 REQUIRED: Remove only selected items after checkout
+      checkoutSelectedItems: () => {
+        const state = get();
+        // Keep only items that are NOT selected (remove selected ones)
+        const newCart = state.cart.filter(item => !item.isSelected);
+        set({ cart: newCart });
+        state.calculateCartTotal();
+        console.log('✅ Checkout complete, removed selected items:', newCart.length, 'items remaining');
+      },
       
       // Products actions
       setProducts: (products) => set({ products }),
@@ -313,7 +326,7 @@ export const useUserStore = create<UserStore>()(
     {
       name: 'xelura-store',
       storage: createJSONStorage(() => localStorage),
-      // 💡 NOTE: 'cart' is correctly included here, ensuring 'isSelected' persists
+      // 💡 IMPORTANT: Ensure cart (with isSelected property) is persisted
       partialize: (state) => ({ 
         currentUser: state.currentUser,
         isLoggedIn: state.isLoggedIn,

@@ -145,6 +145,10 @@ html {
 
 /* Tablet Optimizations */
 @media (max-width: 1024px) and (min-width: 768px) {
+  html {
+    font-size: 15px;
+  }
+  
   .product-card {
     min-height: 470px !important;
     max-height: 510px !important;
@@ -153,26 +157,365 @@ html {
   .product-image-container {
     height: 200px !important;
   }
+  
+  /* Smaller typography for tablet */
+  .MuiTypography-h1 { font-size: 2.5rem !important; }
+  .MuiTypography-h2 { font-size: 2rem !important; }
+  .MuiTypography-h3 { font-size: 1.75rem !important; }
+  .MuiTypography-h4 { font-size: 1.5rem !important; }
+  .MuiTypography-h5 { font-size: 1.25rem !important; }
+  .MuiTypography-h6 { font-size: 1rem !important; }
+  .MuiTypography-body1 { font-size: 0.9rem !important; }
+  .MuiTypography-body2 { font-size: 0.8rem !important; }
 }
 
-/* Mobile Optimizations */
+/* MOBILE — INSTAGRAM-STYLE SQUARE CARDS WITH HORIZONTAL SCROLL */
 @media (max-width: 767px) {
+  html {
+    font-size: 14px;
+  }
+  
   .MuiGrid-container {
     flex-wrap: wrap !important;
   }
   
   .MuiGrid-item {
     height: auto !important;
-    min-height: 450px !important;
+    min-height: 400px !important;
   }
   
+  /* Force 2 columns for normal grid */
+  .MuiGrid-item {
+    width: 50% !important;
+    flex-basis: 50% !important;
+    max-width: 50% !important;
+  }
+
+  /* Perfect square container */
   .product-card {
-    min-height: 430px !important;
-    max-height: 470px !important;
+    aspect-ratio: 1 / 1 !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: auto !important;
+    max-height: none !important;
+    animation: mobile-scale-in 0.35s ease both;
+  }
+
+  /* Square images */
+  .product-card .MuiCardMedia-root {
+    aspect-ratio: 1 / 1 !important;
+    width: 100% !important;
+    height: auto !important;
+    object-fit: cover !important;
+  }
+
+  /* Prevent content from overflowing */
+  .product-card .MuiCardContent-root {
+    padding: 8px !important;
+  }
+
+  /* Horizontal scroll container for products */
+  .mobile-horizontal-scroll {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    scroll-snap-type: x mandatory !important;
+    -webkit-overflow-scrolling: touch !important;
+    scrollbar-width: none !important; /* Firefox */
+    margin-left: -16px !important;
+    margin-right: -16px !important;
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+    width: calc(100% + 32px) !important;
+    padding-bottom: 16px !important;
+  }
+
+  .mobile-horizontal-scroll::-webkit-scrollbar {
+    display: none !important; /* Chrome, Safari, Edge */
+  }
+
+  /* Individual scrollable items */
+  .mobile-scroll-item {
+    flex: 0 0 auto !important;
+    width: calc(50vw - 24px) !important; /* Half viewport minus padding */
+    scroll-snap-align: start !important;
+    margin-right: 16px !important;
+    min-width: 0 !important;
+  }
+
+  .mobile-scroll-item:last-child {
+    margin-right: 16px !important;
+    padding-right: 16px !important;
+  }
+
+  /* Perfect square cards */
+  .product-card.mobile-square {
+    aspect-ratio: 1 / 1 !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: auto !important;
+    max-height: none !important;
+    animation: mobile-scale-in 0.35s ease both;
+    position: relative;
+  }
+
+  /* Square images */
+  .product-card.mobile-square .MuiCardMedia-root {
+    aspect-ratio: 1 / 1 !important;
+    width: 100% !important;
+    height: auto !important;
+    object-fit: cover !important;
+  }
+
+  /* Glassmorphism hover effect */
+  .product-card.mobile-square:hover {
+    transform: scale(1.02) !important;
+    box-shadow: 
+      0 10px 30px rgba(0, 0, 0, 0.3),
+      inset 0 0 0 1px rgba(255, 255, 255, 0.1),
+      0 0 30px rgba(120, 119, 198, 0.3) !important;
+    backdrop-filter: blur(20px) !important;
+    border-color: rgba(120, 119, 198, 0.4) !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  }
+
+  /* Compact content for mobile */
+  .product-card.mobile-square .MuiCardContent-root {
+    padding: 12px !important;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+
+  /* Smaller text for mobile */
+  .product-card.mobile-square .MuiTypography-subtitle2 {
+    font-size: 0.8rem !important;
+    line-height: 1.2 !important;
+    height: 38px !important;
+    margin-bottom: 8px !important;
+  }
+
+  /* Price styling */
+  .product-card.mobile-square .MuiTypography-h6 {
+    font-size: 1rem !important;
+    margin-bottom: 8px !important;
+  }
+
+  /* Action buttons - stacked on mobile */
+  .product-card.mobile-square .product-actions-stack {
+    flex-direction: column !important;
+    gap: 8px !important;
+  }
+
+  .product-card.mobile-square .MuiButton-root {
+    width: 100% !important;
+    height: 32px !important;
+    font-size: 0.75rem !important;
+    border-radius: 8px !important;
+  }
+
+  /* Hide some elements on mobile for cleaner look */
+  .product-card.mobile-square .MuiChip-root.inventory-chip {
+    display: none !important;
+  }
+
+  /* Rating compact */
+  .product-card.mobile-square .MuiRating-root {
+    font-size: 0.9rem !important;
+  }
+
+  /* Gradient border effect */
+  .product-card.mobile-square::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border-radius: 12px;
+    padding: 1px;
+    background: linear-gradient(
+      135deg,
+      rgba(120, 119, 198, 0.3),
+      rgba(255, 107, 149, 0.3),
+      rgba(78, 205, 196, 0.3)
+    );
+    -webkit-mask: 
+      linear-gradient(#fff 0 0) content-box, 
+      linear-gradient(#fff 0 0);
+    mask: 
+      linear-gradient(#fff 0 0) content-box, 
+      linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+
+  /* Hover glow effect */
+  @keyframes mobile-glow {
+    0%, 100% {
+      box-shadow: 
+        0 5px 15px rgba(120, 119, 198, 0.2),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+    }
+    50% {
+      box-shadow: 
+        0 8px 25px rgba(120, 119, 198, 0.3),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.1),
+        0 0 20px rgba(255, 107, 149, 0.2);
+    }
+  }
+
+  .product-card.mobile-square:hover {
+    animation: mobile-glow 2s infinite ease-in-out !important;
+  }
+
+  /* Active tap effect */
+  .product-card.mobile-square:active {
+    transform: scale(0.98) !important;
+    transition: transform 0.1s !important;
+  }
+
+  /* SCALE-IN ANIMATION */
+  @keyframes mobile-scale-in {
+    0% {
+      opacity: 0;
+      transform: scale(0.85);
+    }
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  /* Smaller buttons */
+  .MuiButton-root {
+    font-size: 0.7rem !important;
+    padding: 4px 8px !important;
+    min-height: 32px !important;
   }
   
-  .product-image-container {
-    height: 180px !important;
+  /* Smaller icons */
+  .MuiSvgIcon-root {
+    font-size: 1rem !important;
+  }
+  
+  /* Smaller form elements */
+  .MuiTextField-root {
+    font-size: 0.8rem !important;
+  }
+  
+  .MuiInputBase-input {
+    font-size: 0.8rem !important;
+    padding: 8px !important;
+  }
+  
+  /* Smaller chips */
+  .MuiChip-root {
+    font-size: 0.6rem !important;
+    height: 20px !important;
+  }
+
+  /* SCROLL INDICATORS FOR HORIZONTAL SCROLL */
+  .mobile-horizontal-scroll-container {
+    position: relative !important;
+  }
+
+  .mobile-scroll-indicator {
+    position: absolute !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    width: 30px !important;
+    height: 30px !important;
+    border-radius: 50% !important;
+    background: rgba(255, 255, 255, 0.1) !important;
+    backdrop-filter: blur(10px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    color: white !important;
+    z-index: 10 !important;
+    cursor: pointer !important;
+    opacity: 0.8 !important;
+    transition: all 0.3s !important;
+  }
+
+  .mobile-scroll-indicator:hover {
+    opacity: 1 !important;
+    background: rgba(120, 119, 198, 0.2) !important;
+  }
+
+  .mobile-scroll-indicator.left {
+    left: 8px !important;
+  }
+
+  .mobile-scroll-indicator.right {
+    right: 8px !important;
+  }
+
+  .mobile-scroll-indicator .MuiSvgIcon-root {
+    font-size: 20px !important;
+  }
+
+  /* Hide indicators on touch devices when not needed */
+  @media (hover: none) and (pointer: coarse) {
+    .mobile-scroll-indicator {
+      display: none !important;
+    }
+  }
+
+  /* SCROLLBAR STYLING (when visible) */
+  .mobile-horizontal-scroll::-webkit-scrollbar {
+    height: 4px !important;
+    display: block !important;
+  }
+
+  .mobile-horizontal-scroll::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05) !important;
+    border-radius: 2px !important;
+  }
+
+  .mobile-horizontal-scroll::-webkit-scrollbar-thumb {
+    background: linear-gradient(90deg, #FF6B95, #7877C6) !important;
+    border-radius: 2px !important;
+  }
+}
+
+/* EXTRA SMALL DEVICES (≤ 360px) */
+@media (max-width: 360px) {
+  .mobile-scroll-item {
+    width: calc(55vw - 24px) !important;
+  }
+
+  .product-card.mobile-square {
+    transform: scale(0.95) !important;
+    transform-origin: center !important;
+  }
+
+  .product-card.mobile-square .MuiCardContent-root {
+    padding: 8px !important;
+  }
+
+  .product-card.mobile-square .MuiTypography-subtitle2 {
+    font-size: 0.75rem !important;
+    height: 34px !important;
+  }
+
+  .product-card.mobile-square .MuiTypography-h6 {
+    font-size: 0.9rem !important;
+  }
+
+  .product-card.mobile-square .MuiButton-root {
+    height: 28px !important;
+    font-size: 0.7rem !important;
+  }
+
+  /* Even smaller action buttons */
+  .product-card.mobile-square .product-actions-stack {
+    gap: 6px !important;
   }
 }
 
@@ -322,9 +665,11 @@ img {
 /* Mobile adjustments */
 @media (max-width: 767px) {
   .product-actions-stack.grid-view .MuiButton-root {
-    font-size: 0.7rem !important;
-    padding-left: 8px !important;
-    padding-right: 8px !important;
+    font-size: 0.65rem !important;
+    padding-left: 6px !important;
+    padding-right: 6px !important;
+    height: 28px !important;
+    min-height: 28px !important;
   }
   
   .product-actions-stack.list-view {
@@ -332,9 +677,11 @@ img {
   }
   
   .product-actions-stack.list-view .MuiButton-root {
-    font-size: 0.65rem !important;
-    padding-left: 6px !important;
-    padding-right: 6px !important;
+    font-size: 0.6rem !important;
+    padding-left: 4px !important;
+    padding-right: 4px !important;
+    height: 24px !important;
+    min-height: 24px !important;
   }
 }
 
@@ -344,12 +691,13 @@ img {
   overflow: hidden !important;
   text-overflow: ellipsis !important;
 }
+
 /* Button Icons */
 .add-to-cart-button .MuiButton-startIcon,
 .buy-now-button .MuiButton-startIcon {
   margin-right: 4px !important;
   margin-left: 0 !important;
-  font-size: 1rem !important; /* Smaller icon */
+  font-size: 1rem !important;
 }
 
 /* Button Text */
@@ -363,36 +711,42 @@ img {
 /* Mobile Button Adjustments */
 @media (max-width: 767px) {
   .product-actions-stack {
-    flex-direction: row !important; /* Keep side-by-side on mobile */
-    gap: 6px !important;
+    flex-direction: row !important;
+    gap: 4px !important;
   }
   
   .product-card .add-to-cart-button,
   .product-card .buy-now-button {
-    height: 32px !important;
-    min-height: 32px !important;
-    font-size: 0.75rem !important;
-    padding: 0 8px !important;
+    height: 28px !important;
+    min-height: 28px !important;
+    font-size: 0.65rem !important;
+    padding: 0 6px !important;
+  }
+  
+  .add-to-cart-button .MuiSvgIcon-root,
+  .buy-now-button .MuiSvgIcon-root {
+    font-size: 0.8rem !important;
   }
 }
 
 /* Tablet Button Adjustments */
 @media (max-width: 1024px) and (min-width: 768px) {
   .product-actions-stack {
-    flex-direction: row !important; /* Keep side-by-side on tablet */
+    flex-direction: row !important;
   }
   
   .product-card .add-to-cart-button,
   .product-card .buy-now-button {
-    height: 34px !important;
-    min-height: 34px !important;
+    height: 30px !important;
+    min-height: 30px !important;
+    font-size: 0.7rem !important;
   }
 }
 
 /* Desktop Button Adjustments */
 @media (min-width: 1200px) {
   .product-actions-stack {
-    flex-direction: row !important; /* Ensure side-by-side */
+    flex-direction: row !important;
   }
 }
 
@@ -410,7 +764,7 @@ img {
 /* Button Icon Sizes */
 .add-to-cart-button .MuiSvgIcon-root,
 .buy-now-button .MuiSvgIcon-root {
-  font-size: 1rem !important; /* Adjusted size */
+  font-size: 1rem !important;
 }
 
 /* Ensure consistent button spacing in product cards */
@@ -418,7 +772,6 @@ img {
   padding-top: 8px !important;
   margin-top: 8px !important;
 }
-
 
 /* Button focus states */
 .add-to-cart-button:focus-visible,
@@ -450,4 +803,224 @@ img {
 /* Make sure the Stack component doesn't have any conflicting styles */
 .MuiStack-root {
   display: flex !important;
+}
+
+/* Payment Status Styles */
+.payment-confirmed {
+  position: relative;
+}
+
+.payment-confirmed::after {
+  content: "✓";
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  width: 20px;
+  height: 20px;
+  background: linear-gradient(135deg, #4ECDC4 0%, #36A398 100%);
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: bold;
+  z-index: 10;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+.gcash-confirmed .MuiButton-root,
+.paymaya-confirmed .MuiButton-root {
+  opacity: 0.6 !important;
+  cursor: not-allowed !important;
+  pointer-events: none !important;
+  background: linear-gradient(135deg, #2E7D32 0%, #1B5E20 100%) !important;
+}
+
+.gcash-confirmed .MuiButton-root::before,
+.paymaya-confirmed .MuiButton-root::before {
+  content: "✓ Paid";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: white;
+  font-weight: bold;
+  font-size: 0.8rem;
+  z-index: 2;
+}
+
+.gcash-confirmed .MuiButton-root span,
+.paymaya-confirmed .MuiButton-root span {
+  visibility: hidden !important;
+}
+
+/* GCash specific colors */
+.gcash-confirmed {
+  border: 2px solid rgba(0, 123, 255, 0.5) !important;
+  box-shadow: 0 0 15px rgba(0, 123, 255, 0.3) !important;
+}
+
+/* PayMaya specific colors */
+.paymaya-confirmed {
+  border: 2px solid rgba(244, 67, 54, 0.5) !important;
+  box-shadow: 0 0 15px rgba(244, 67, 54, 0.3) !important;
+}
+
+/* Auto-hide receipt button when payment is confirmed */
+.payment-confirmed .generate-receipt-button {
+  display: none !important;
+}
+
+/* Status badges for confirmed payments */
+.payment-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: bold;
+  margin-top: 10px;
+}
+
+.gcash-badge {
+  background: linear-gradient(135deg, rgba(0, 123, 255, 0.2) 0%, rgba(78, 205, 196, 0.2) 100%);
+  color: #007BFF;
+  border: 1px solid rgba(0, 123, 255, 0.3);
+}
+
+.paymaya-badge {
+  background: linear-gradient(135deg, rgba(244, 67, 54, 0.2) 0%, rgba(255, 215, 0, 0.2) 100%);
+  color: #F44336;
+  border: 1px solid rgba(244, 67, 54, 0.3);
+}
+
+/* Confirmed payment summary */
+.confirmed-payment-summary {
+  animation: fadeIn 0.5s ease-out;
+  padding: 12px;
+  border-radius: 8px;
+  margin-top: 10px;
+}
+
+.gcash-confirmed .confirmed-payment-summary {
+  background: linear-gradient(135deg, rgba(0, 123, 255, 0.1) 0%, rgba(78, 205, 196, 0.1) 100%);
+  border-left: 4px solid #007BFF;
+}
+
+.paymaya-confirmed .confirmed-payment-summary {
+  background: linear-gradient(135deg, rgba(244, 67, 54, 0.1) 0%, rgba(255, 215, 0, 0.1) 100%);
+  border-left: 4px solid #F44336;
+}
+
+/* Mobile optimizations for payment components */
+@media (max-width: 767px) {
+  .payment-confirmed::after {
+    width: 16px;
+    height: 16px;
+    font-size: 10px;
+    top: -3px;
+    right: -3px;
+  }
+  
+  .payment-status-badge {
+    font-size: 0.65rem;
+    padding: 3px 8px;
+    gap: 4px;
+  }
+  
+  .confirmed-payment-summary {
+    padding: 8px;
+    font-size: 0.7rem;
+  }
+  
+  .gcash-confirmed .MuiButton-root::before,
+  .paymaya-confirmed .MuiButton-root::before {
+    font-size: 0.65rem;
+  }
+}
+
+/* Small screen optimizations for modals */
+@media (max-width: 767px) {
+  .MuiModal-root .MuiPaper-root {
+    margin: 8px !important;
+    max-height: 90vh !important;
+  }
+  
+  /* Smaller modal content */
+  .checkout-modal .MuiBox-root {
+    padding: 12px !important;
+  }
+  
+  .checkout-modal .MuiTypography-h4 {
+    font-size: 1.2rem !important;
+  }
+  
+  .checkout-modal .MuiTypography-h6 {
+    font-size: 1rem !important;
+  }
+  
+  .checkout-modal .MuiButton-root {
+    font-size: 0.75rem !important;
+    padding: 6px 12px !important;
+  }
+  
+  /* Smaller payment modal */
+  .payment-modal .MuiAvatar-root {
+    width: 60px !important;
+    height: 60px !important;
+  }
+  
+  .payment-modal .MuiTypography-h5 {
+    font-size: 1.1rem !important;
+  }
+  
+  .payment-modal .MuiTypography-h4 {
+    font-size: 1.3rem !important;
+  }
+}
+
+/* Extra small screen optimizations */
+@media (max-width: 480px) {
+  html {
+    font-size: 13px;
+  }
+  
+  .product-card {
+    min-height: 350px !important;
+    max-height: 380px !important;
+  }
+  
+  .product-image-container {
+    height: 120px !important;
+  }
+  
+  .product-content {
+    min-height: 230px !important;
+    padding: 8px !important;
+  }
+  
+  /* Even smaller typography */
+  .MuiTypography-h1 { font-size: 1.5rem !important; }
+  .MuiTypography-h2 { font-size: 1.3rem !important; }
+  .MuiTypography-h3 { font-size: 1.1rem !important; }
+  .MuiTypography-h4 { font-size: 1rem !important; }
+  .MuiTypography-h5 { font-size: 0.9rem !important; }
+  .MuiTypography-h6 { font-size: 0.8rem !important; }
+  .MuiTypography-body1 { font-size: 0.75rem !important; }
+  .MuiTypography-body2 { font-size: 0.65rem !important; }
+  
+  /* Even smaller buttons */
+  .MuiButton-root {
+    font-size: 0.65rem !important;
+    padding: 3px 6px !important;
+    min-height: 28px !important;
+  }
+  
+  .product-actions-stack.grid-view .MuiButton-root {
+    font-size: 0.6rem !important;
+    height: 24px !important;
+    min-height: 24px !important;
+  }
 }

@@ -1,4 +1,4 @@
-// AccountMenu.tsx - Fixed imports
+// AccountMenu.tsx - Fixed color format error
 import * as React from 'react';
 import Box from '@mui/material/Box';
 import Avatar from '@mui/material/Avatar';
@@ -23,24 +23,32 @@ import DiamondIcon from '@mui/icons-material/Diamond';
 import WorkspacePremiumIcon from '@mui/icons-material/WorkspacePremium';
 import Snackbar from '@mui/material/Snackbar';
 import Alert from '@mui/material/Alert';
+import CloseIcon from '@mui/icons-material/Close';
+import { alpha } from '@mui/material/styles';
 
 interface AccountMenuProps {
   onSearch: (searchTerm: string) => void;
-  // 🆕 NEW: Prop to control conditional styling on scroll
-  scrolled: boolean; 
+  scrolled: boolean;
 }
 
-// 🔄 MODIFIED: Accept the 'scrolled' prop
+// Define CSS Variables from App.css for type-safe use
+const CSS_VARS = {
+  primaryDark: '#1B1833',
+  primaryPurple: '#441752',
+  primaryPink: '#AB4459',
+  primaryOrange: '#F29F58',
+};
+
 export default function AccountMenu({ onSearch, scrolled }: AccountMenuProps) {
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const [searchTerm, setSearchTerm] = React.useState("");
   const [profileDialogOpen, setProfileDialogOpen] = React.useState(false);
   const [snackbarOpen, setSnackbarOpen] = React.useState(false);
   const [snackbarMessage, setSnackbarMessage] = React.useState("");
+  const [isSearchExpanded, setIsSearchExpanded] = React.useState(false);
 
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
-  const isTablet = useMediaQuery(theme.breakpoints.between("sm", "md"));
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
   const { 
     currentUser, 
@@ -62,15 +70,37 @@ export default function AccountMenu({ onSearch, scrolled }: AccountMenuProps) {
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSearch(searchTerm);
+    if (isMobile && isSearchExpanded) {
+      setTimeout(() => setIsSearchExpanded(false), 200);
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       onSearch(searchTerm);
+      if (isMobile && isSearchExpanded) {
+        setTimeout(() => setIsSearchExpanded(false), 200);
+      }
     }
   };
 
-  const handleLogin = () => {
+  const handleMobileSearchClick = () => {
+    setIsSearchExpanded(true);
+  };
+
+  const handleCloseSearch = () => {
+    setIsSearchExpanded(false);
+    setSearchTerm('');
+    onSearch('');
+  };
+
+  const handleSimulatedAction = (message: string, action: () => void) => {
+    action();
+    setSnackbarMessage(message);
+    setSnackbarOpen(true);
+  };
+  
+  const handleLogin = () => handleSimulatedAction('Logged in successfully!', () => 
     login({
       id: 1,
       name: 'John Doe',
@@ -78,90 +108,96 @@ export default function AccountMenu({ onSearch, scrolled }: AccountMenuProps) {
       phone: '+1234567890',
       address: '123 Main Street, New York, NY',
       createdAt: new Date().toISOString()
-    });
-    handleClose();
-    setSnackbarMessage('Logged in successfully!');
-    setSnackbarOpen(true);
-  };
+    })
+  );
   
-  const handleRegister = () => {
-    const newUser = {
+  const handleRegister = () => handleSimulatedAction('Registered successfully!', () => 
+    login({
       id: Date.now(),
       name: 'New User',
       email: 'new@xelura.com',
       phone: '+1111111111',
       address: '789 Pine Road, Chicago, IL',
       createdAt: new Date().toISOString()
-    };
-    login(newUser);
-    handleClose();
-    setSnackbarMessage('Registered successfully!');
-    setSnackbarOpen(true);
-  };
+    })
+  );
   
-  const handleLogout = () => {
-    logout();
-    handleClose();
-    setSnackbarMessage('Logged out successfully');
-    setSnackbarOpen(true);
-  };
-  
+  const handleLogout = () => handleSimulatedAction('Logged out successfully', logout);
+
+  // Show/hide logic
+  const showBrandSection = !isMobile || !isSearchExpanded;
+  const showRightButtons = !isMobile || !isSearchExpanded;
+  const showSearchBar = !isMobile || isSearchExpanded;
 
   return (
     <React.Fragment>
-      <Box sx={{ 
-        display: 'flex', 
-        alignItems: 'center', 
+      <Box sx={{
+        position: 'sticky',
+        top: 0,
+        zIndex: 1300,
+        display: 'flex',
+        alignItems: 'center',
         justifyContent: 'space-between',
-        px: { xs: 1, sm: 2 },
+        px: { xs: 2, sm: 3 },
         py: 2,
-        // 🔄 MODIFIED: Apply conditional glassy style based on the 'scrolled' prop
         backgroundColor: scrolled
-          ? 'rgba(255, 255, 255, 0.1)' // More transparent when scrolled
-          : 'rgba(255, 255, 255, 0.2)', // Slightly less transparent when at the top
-        backdropFilter: scrolled 
-          ? 'blur(20px)' // Sharper blur when scrolled (more 'glassy')
-          : 'blur(10px)', // Lighter blur when at the top
-        border: scrolled
-          ? '1px solid rgba(242, 159, 88, 0.4)' // More defined border when scrolled
-          : '1px solid rgba(242, 159, 88, 0.2)', // Subtler border when at the top
-        transition: 'all 0.3s ease-in-out', // Smooth transition for the effect
-        
-        borderRadius: 3,
-        flexDirection: { xs: 'column', sm: 'row' },
-        gap: { xs: 2, sm: 0 }
+          ? alpha(CSS_VARS.primaryDark, 0.95)
+          : alpha(CSS_VARS.primaryDark, 0.85),
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+        borderBottom: scrolled
+          ? `1px solid ${alpha(CSS_VARS.primaryOrange, 0.4)}`
+          : `1px solid ${alpha(CSS_VARS.primaryOrange, 0.2)}`,
+        transition: 'all 0.3s ease',
+        flexDirection: 'row',
+        gap: { xs: 1, sm: 3 },
+        width: '100%',
+        flexWrap: 'nowrap',
+        minHeight: '72px',
       }}>
-
-        {/* LOGO & BRAND */}
+        {/* LOGO & BRAND SECTION */}
         <Box sx={{ 
           display: 'flex', 
           alignItems: 'center', 
-          gap: 2,
-          flexShrink: 0 
+          gap: { xs: 1, sm: 2 },
+          flexShrink: 0,
+          minWidth: 0,
+          transition: 'opacity 0.3s ease, width 0.3s ease',
+          opacity: showBrandSection ? 1 : 0,
+          width: showBrandSection ? 'auto' : 0,
+          overflow: 'hidden',
         }}>
           <Box 
             sx={{ 
-              width: 60, 
-              height: 60, 
+              width: { xs: 40, sm: 50 },
+              height: { xs: 40, sm: 50 },
               borderRadius: '50%',
-              background: 'linear-gradient(135deg, #F29F58 0%, #AB4459 50%, #441752 100%)',
+              background: `linear-gradient(135deg, ${CSS_VARS.primaryOrange} 0%, ${CSS_VARS.primaryPink} 50%, ${CSS_VARS.primaryPurple} 100%)`,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              boxShadow: '0 4px 20px rgba(242, 159, 88, 0.3)'
+              boxShadow: `0 4px 20px ${alpha(CSS_VARS.primaryOrange, 0.3)}`,
+              flexShrink: 0,
             }}
           >
-            <DiamondIcon sx={{ color: 'white', fontSize: 32 }} />
+            <DiamondIcon sx={{ 
+              color: '#FFFFFF', // Fixed: use hex instead of 'white' string
+              fontSize: { xs: 20, sm: 28 },
+            }} />
           </Box>
-          <Box>
+          <Box sx={{ minWidth: 0, flexShrink: 1 }}>
             <Typography 
-              variant={isMobile ? "h5" : "h4"}
+              variant={isMobile ? "h6" : "h5"}
               sx={{ 
                 fontWeight: 800,
-                background: 'linear-gradient(135deg, #F29F58 0%, #AB4459 100%)',
+                background: `linear-gradient(135deg, ${CSS_VARS.primaryOrange} 0%, ${CSS_VARS.primaryPink} 100%)`,
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
-                letterSpacing: '0.1em'
+                letterSpacing: '0.05em',
+                fontSize: { xs: '1rem', sm: '1.25rem' },
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
               }}
             >
               XELURA
@@ -178,99 +214,151 @@ export default function AccountMenu({ onSearch, scrolled }: AccountMenuProps) {
           </Box>
         </Box>
 
-        {/* 🔄 MODIFIED: SEARCH BAR DESIGN FIX */}
+        {/* SEARCH BAR */}
         <Box 
           component="form" 
           onSubmit={handleSearchSubmit}
           sx={{ 
             flex: 1,
-            maxWidth: isMobile ? '100%' : isTablet ? '500px' : '700px',
-            mx: isMobile ? 0 : 4
+            maxWidth: isMobile ? '100%' : 500,
+            mx: isMobile ? 0 : 3,
+            display: 'flex',
+            alignItems: 'center',
+            transition: 'all 0.3s ease',
+            opacity: showSearchBar ? 1 : 0,
+            width: showSearchBar ? '100%' : 0,
+            overflow: 'hidden',
           }}
         >
-          <TextField
-            fullWidth
-            variant="outlined"
-            placeholder="Search luxury products..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            onKeyPress={handleKeyPress}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon sx={{ color: '#F29F58' }} />
-                </InputAdornment>
-              ),
-              endAdornment: searchTerm && (
-                <InputAdornment position="end">
-                  <IconButton 
-                    size="small" 
-                    onClick={() => {
-                      setSearchTerm('');
-                      onSearch('');
-                    }}
-                    sx={{ color: '#F29F58' }}
-                  >
-                    ×
-                  </IconButton>
-                </InputAdornment>
-              ),
-              sx: {
-                // FIXED: Use a darker translucent background for better contrast on a dark theme
-                backgroundColor: 'rgba(27, 24, 51, 0.4)', 
-                color: 'white', // Fixed: Input text is white
-                borderRadius: 2,
-                // Fixed: Style the placeholder text
-                '& .MuiInputBase-input::placeholder': {
-                  color: 'rgba(255, 255, 255, 0.7)',
-                  opacity: 1, // Needed for some browsers
-                },
-                '& .MuiOutlinedInput-notchedOutline': {
-                  borderColor: 'rgba(255, 255, 255, 0.2)', // Subtle light border
-                },
-                '&:hover .MuiOutlinedInput-notchedOutline': {
-                  borderColor: '#F29F58', // Highlight on hover
-                },
-                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                  borderColor: '#F29F58',
-                  borderWidth: 2,
-                },
-              }
-            }}
-          />
+          {showSearchBar && (
+            <TextField
+              autoFocus={isMobile && isSearchExpanded}
+              fullWidth
+              variant={isMobile ? "standard" : "outlined"}
+              placeholder="Search luxury products..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              onKeyPress={handleKeyPress}
+              InputProps={{
+                disableUnderline: isMobile,
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon sx={{ 
+                      color: CSS_VARS.primaryOrange,
+                      fontSize: 24,
+                      mr: isMobile ? 1 : 0,
+                    }} />
+                  </InputAdornment>
+                ),
+                endAdornment: isMobile && isSearchExpanded && (
+                  <InputAdornment position="end">
+                    <IconButton
+                      onClick={handleCloseSearch}
+                      sx={{
+                        color: CSS_VARS.primaryOrange,
+                        ml: 1,
+                        width: 40,
+                        height: 40,
+                      }}
+                    >
+                      <CloseIcon />
+                    </IconButton>
+                  </InputAdornment>
+                ),
+                sx: {
+                  backgroundColor: isMobile ? 'transparent' : alpha(CSS_VARS.primaryDark, 0.8),
+                  color: '#FFFFFF', // Fixed: use hex instead of 'white' string
+                  borderRadius: 2,
+                  fontSize: '1rem',
+                  border: isMobile ? 'none' : '1px solid transparent',
+                  '& .MuiInputBase-input::placeholder': {
+                    color: 'rgba(255, 255, 255, 0.7)',
+                    opacity: 1,
+                  },
+                  '& .MuiOutlinedInput-notchedOutline': {
+                    borderColor: 'rgba(255, 255, 255, 0.2)',
+                    display: isMobile ? 'none' : 'block',
+                  },
+                  '&:hover .MuiOutlinedInput-notchedOutline': {
+                    borderColor: CSS_VARS.primaryOrange,
+                  },
+                  '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                    borderColor: CSS_VARS.primaryOrange,
+                    borderWidth: 2,
+                  },
+                }
+              }}
+            />
+          )}
         </Box>
 
         {/* RIGHT SIDE BUTTONS */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 2 } }}>
-          {isLoggedIn && (
-            <Tooltip title="Premium Member">
-              <WorkspacePremiumIcon sx={{ color: '#F29F58', fontSize: 28 }} />
+        <Box sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: { xs: 0.5, sm: 2 },
+          flexShrink: 0,
+          transition: 'opacity 0.3s ease, width 0.3s ease',
+          opacity: showRightButtons ? 1 : 0,
+          width: showRightButtons ? 'auto' : 0,
+          overflow: 'hidden',
+        }}>
+          {/* Mobile search icon (only when search is not expanded) */}
+          {isMobile && !isSearchExpanded && (
+            <Tooltip title="Search">
+              <IconButton
+                onClick={handleMobileSearchClick}
+                sx={{ 
+                  color: CSS_VARS.primaryOrange,
+                  backgroundColor: alpha(CSS_VARS.primaryOrange, 0.1),
+                  border: `1px solid ${alpha(CSS_VARS.primaryOrange, 0.3)}`,
+                  '&:hover': {
+                    backgroundColor: alpha(CSS_VARS.primaryOrange, 0.2),
+                  },
+                }}
+              >
+                <SearchIcon />
+              </IconButton>
             </Tooltip>
           )}
           
+          {isLoggedIn && !isMobile && (
+            <Tooltip title="Premium Member">
+              <WorkspacePremiumIcon sx={{ 
+                color: CSS_VARS.primaryOrange, 
+                fontSize: 28,
+              }} />
+            </Tooltip>
+          )}
 
           <Tooltip title={isLoggedIn ? "Account" : "Login"}>
             <IconButton 
               onClick={handleClick}
               sx={{
-                backgroundColor: 'rgba(27, 24, 51, 0.2)',
-                border: '1px solid rgba(242, 159, 88, 0.3)',
+                backgroundColor: alpha(CSS_VARS.primaryPurple, 0.4),
+                border: `1px solid ${alpha(CSS_VARS.primaryOrange, 0.3)}`,
                 '&:hover': {
-                  backgroundColor: 'rgba(242, 159, 88, 0.1)',
-                }
+                  backgroundColor: alpha(CSS_VARS.primaryPurple, 0.6),
+                },
+                width: { xs: 40, sm: 48 },
+                height: { xs: 40, sm: 48 },
               }}
             >
               {isLoggedIn ? (
                 <Avatar sx={{ 
-                  bgcolor: '#AB4459',
-                  width: 36,
-                  height: 36
+                  bgcolor: CSS_VARS.primaryPink,
+                  width: { xs: 28, sm: 32 },
+                  height: { xs: 28, sm: 32 },
                 }}>
                   {currentUser?.name?.charAt(0).toUpperCase()}
                 </Avatar>
               ) : (
-                <Avatar sx={{ bgcolor: '#441752', width: 36, height: 36 }}>
-                  <LoginIcon />
+                <Avatar sx={{ 
+                  bgcolor: CSS_VARS.primaryPurple,
+                  width: { xs: 28, sm: 32 },
+                  height: { xs: 28, sm: 32 },
+                }}>
+                  <LoginIcon sx={{ fontSize: { xs: 18, sm: 20 } }} />
                 </Avatar>
               )}
             </IconButton>
@@ -285,46 +373,77 @@ export default function AccountMenu({ onSearch, scrolled }: AccountMenuProps) {
         onClose={handleClose}
         PaperProps={{
           sx: {
-            backgroundColor: '#1B1833',
-            color: 'white',
-            border: '1px solid rgba(242, 159, 88, 0.3)',
-            boxShadow: '0 10px 40px rgba(0,0,0,0.3)',
+            backgroundColor: CSS_VARS.primaryDark,
+            color: '#FFFFFF', // Fixed: use hex instead of 'white' string
+            border: `1px solid ${alpha(CSS_VARS.primaryOrange, 0.3)}`,
+            boxShadow: '0 10px 40px rgba(0,0,0,0.5)',
             mt: 1,
-            minWidth: 200,
+            minWidth: 220,
           }
+        }}
+        transformOrigin={{
+          vertical: 'top',
+          horizontal: 'right',
+        }}
+        anchorOrigin={{
+          vertical: 'bottom',
+          horizontal: 'right',
         }}
       >
         {isLoggedIn ? (
           <>
-            <MenuItem sx={{ '&:hover': { backgroundColor: '#441752' } }}>
+            <MenuItem 
+              sx={{ 
+                '&:hover': { backgroundColor: CSS_VARS.primaryPurple },
+                py: 1.5,
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
               <ListItemIcon>
-                <Avatar sx={{ width: 24, height: 24, bgcolor: '#AB4459' }}>
+                <Avatar sx={{ 
+                  width: 32, 
+                  height: 32, 
+                  bgcolor: CSS_VARS.primaryPink,
+                  mr: 1,
+                }}>
                   {currentUser?.name?.charAt(0).toUpperCase()}
                 </Avatar>
               </ListItemIcon>
-              <Box>
-                <Typography variant="body2" fontWeight={600}>
+              <Box sx={{ minWidth: 0 }}>
+                <Typography variant="body1" fontWeight={600}>
                   {currentUser?.name}
                 </Typography>
-                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)' }}>
+                <Typography variant="caption" sx={{ 
+                  color: 'rgba(255, 255, 255, 0.7)', // Fixed: use rgba instead of alpha('white', 0.7)
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: 0.5 
+                }}>
+                  <WorkspacePremiumIcon sx={{ fontSize: 14, color: CSS_VARS.primaryOrange }} />
                   Premium Member
                 </Typography>
               </Box>
             </MenuItem>
 
+            <Box sx={{ borderTop: `1px solid rgba(255, 255, 255, 0.1)`, my: 0.5 }} /> {/* Fixed */}
+
             <MenuItem 
               onClick={() => { setProfileDialogOpen(true); handleClose(); }}
-              sx={{ '&:hover': { backgroundColor: '#441752' } }}
+              sx={{ '&:hover': { backgroundColor: CSS_VARS.primaryPurple } }}
             >
-              <ListItemIcon><Settings fontSize="small" sx={{ color: '#F29F58' }} /></ListItemIcon>
+              <ListItemIcon>
+                <Settings fontSize="small" sx={{ color: CSS_VARS.primaryOrange }} />
+              </ListItemIcon>
               Profile Settings
             </MenuItem>
 
             <MenuItem 
               onClick={handleLogout}
-              sx={{ '&:hover': { backgroundColor: '#441752' } }}
+              sx={{ '&:hover': { backgroundColor: CSS_VARS.primaryPurple } }}
             >
-              <ListItemIcon><Logout fontSize="small" sx={{ color: '#F29F58' }} /></ListItemIcon>
+              <ListItemIcon>
+                <Logout fontSize="small" sx={{ color: CSS_VARS.primaryOrange }} />
+              </ListItemIcon>
               Logout
             </MenuItem>
           </>
@@ -332,17 +451,21 @@ export default function AccountMenu({ onSearch, scrolled }: AccountMenuProps) {
           <>
             <MenuItem 
               onClick={handleLogin}
-              sx={{ '&:hover': { backgroundColor: '#441752' } }}
+              sx={{ '&:hover': { backgroundColor: CSS_VARS.primaryPurple } }}
             >
-              <ListItemIcon><LoginIcon fontSize="small" sx={{ color: '#F29F58' }} /></ListItemIcon>
+              <ListItemIcon>
+                <LoginIcon fontSize="small" sx={{ color: CSS_VARS.primaryOrange }} />
+              </ListItemIcon>
               Login
             </MenuItem>
 
             <MenuItem 
               onClick={handleRegister}
-              sx={{ '&:hover': { backgroundColor: '#441752' } }}
+              sx={{ '&:hover': { backgroundColor: CSS_VARS.primaryPurple } }}
             >
-              <ListItemIcon><PersonAdd fontSize="small" sx={{ color: '#F29F58' }} /></ListItemIcon>
+              <ListItemIcon>
+                <PersonAdd fontSize="small" sx={{ color: CSS_VARS.primaryOrange }} />
+              </ListItemIcon>
               Register
             </MenuItem>
           </>
@@ -354,7 +477,6 @@ export default function AccountMenu({ onSearch, scrolled }: AccountMenuProps) {
         onClose={() => setProfileDialogOpen(false)}
       />
 
-      {/* Snackbar for notifications */}
       <Snackbar
         open={snackbarOpen}
         autoHideDuration={3000}
@@ -366,14 +488,14 @@ export default function AccountMenu({ onSearch, scrolled }: AccountMenuProps) {
           severity="info"
           variant="filled"
           sx={{
-            backgroundColor: '#1B1833',
-            color: 'white',
-            border: '1px solid rgba(242, 159, 88, 0.3)',
+            backgroundColor: CSS_VARS.primaryDark,
+            color: '#FFFFFF', // Fixed: use hex instead of 'white' string
+            border: `1px solid ${alpha(CSS_VARS.primaryOrange, 0.3)}`,
             backdropFilter: 'blur(10px)',
             fontWeight: 500,
             borderRadius: 2,
             '& .MuiAlert-icon': {
-              color: '#F29F58',
+              color: CSS_VARS.primaryOrange,
             }
           }}
         >
