@@ -22,6 +22,7 @@ import ShoppingBagIcon from "@mui/icons-material/ShoppingBag";
 import LocalShippingIcon from "@mui/icons-material/LocalShipping";
 import ReceiptIcon from "@mui/icons-material/Receipt";
 import PaymentIcon from "@mui/icons-material/Payment";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import { alpha } from "@mui/material/styles";
 import { useUserStore } from "../store/userStore";
 
@@ -38,22 +39,34 @@ interface MyPurchaseDialogProps {
 }
 
 const MyPurchaseDialog: React.FC<MyPurchaseDialogProps> = ({ open, onClose }) => {
-  const { purchases } = useUserStore();
+  const { orders, currentUser, isSeller, updateOrderStatus } = useUserStore();
   const [tab, setTab] = useState(0);
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTab(newValue);
   };
 
-  const filteredPurchases = purchases?.filter((item: any) => {
+  // Flatten all items from all orders for the current user
+  const allItems = (orders || [])
+    .filter(order => !currentUser || order.userId === currentUser.id)
+    .flatMap(order =>
+      order.items.map(item => ({
+        ...item,
+        orderId: order.id,
+        status: order.status,
+        createdAt: order.createdAt,
+      }))
+    );
+
+  const filteredPurchases = allItems.filter((item: any) => {
     switch (tab) {
-      case 1: return item.status === "To Pay";
-      case 2: return item.status === "Processing" || item.status === "Shipping";
-      case 3: return item.status === "Delivered";
-      case 4: return item.status === "Return/Refund";
-      case 5: return item.status === "Cancelled";
-      case 6: return item.status === "Payment"; // New Payment tab filter
-      default: return true; // All
+      case 1: return item.status === "pending" || item.status === "to pay" || item.status === "To Pay";
+      case 2: return item.status === "approved" || item.status === "processing" || item.status === "Processing" || item.status === "Shipping";
+      case 3: return item.status === "delivered" || item.status === "Delivered";
+      case 4: return item.status === "return/refund" || item.status === "Return/Refund";
+      case 5: return item.status === "cancelled" || item.status === "Cancelled";
+      case 6: return item.status === "payment" || item.status === "Payment";
+      default: return true;
     }
   });
 
@@ -134,7 +147,7 @@ const MyPurchaseDialog: React.FC<MyPurchaseDialogProps> = ({ open, onClose }) =>
         <Stack spacing={2}>
           {filteredPurchases?.map((item: any) => (
             <Card
-              key={item.id}
+              key={item.id + "-" + item.orderId}
               sx={{
                 backgroundColor: alpha(CSS_VARS.primaryPurple, 0.3),
                 border: `1px solid ${alpha(CSS_VARS.primaryOrange, 0.3)}`,
@@ -143,10 +156,10 @@ const MyPurchaseDialog: React.FC<MyPurchaseDialogProps> = ({ open, onClose }) =>
                 cursor: "pointer",
               }}
             >
-              <Stack direction="row" spacing={2}>
+              <Stack direction="row" spacing={2} alignItems="center">
                 <Avatar
                   variant="rounded"
-                  src={item.image}
+                  src={item.thumbnail}
                   sx={{
                     width: 70,
                     height: 70,
@@ -159,7 +172,7 @@ const MyPurchaseDialog: React.FC<MyPurchaseDialogProps> = ({ open, onClose }) =>
                     {item.productName}
                   </Typography>
                   <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.6)", mt: 0.5 }}>
-                    ₱{item.price?.toLocaleString()}
+                    ₱{item.price?.toLocaleString()} x {item.quantity}
                   </Typography>
                   <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
                     <Chip
@@ -182,6 +195,19 @@ const MyPurchaseDialog: React.FC<MyPurchaseDialogProps> = ({ open, onClose }) =>
                       }}
                     />
                   </Stack>
+                  {/* Approve button for seller */}
+                  {isSeller && (item.status === "pending" || item.status === "to pay" || item.status === "To Pay") && (
+                    <Button
+                      variant="contained"
+                      color="success"
+                      size="small"
+                      sx={{ mt: 1, ml: 0.5, fontWeight: 600, borderRadius: 2 }}
+                      startIcon={<CheckCircleIcon />}
+                      onClick={() => updateOrderStatus(item.orderId, "approved")}
+                    >
+                      Approve
+                    </Button>
+                  )}
                   {item.status === "Payment" && (
                     <Button
                       sx={{

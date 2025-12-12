@@ -34,6 +34,7 @@ import CheckCircle from '@mui/icons-material/CheckCircle';
 import { useUserStore } from '../store/userStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import PaymentModal from './PaymentModal';
+import MyPurchaseDialog from './MyPurchaseDialog'; // Import MyPurchaseDialog
 
 const usdFormatted = new Intl.NumberFormat('en-US', {
   style: 'currency',
@@ -78,6 +79,7 @@ const CheckoutPopover: React.FC<CheckoutPopoverProps> = ({
   const [generatedReceipt, setGeneratedReceipt] = useState<string | null>(null);
   const [isPaymentConfirmed, setIsPaymentConfirmed] = useState(false);
   const [confirmedPaymentMethod, setConfirmedPaymentMethod] = useState<'GCASH' | 'PAYMAYA' | null>(null);
+  const [purchaseDialogOpen, setPurchaseDialogOpen] = useState(false); // State to control MyPurchaseDialog
 
   useEffect(() => {
     if (isOpen) {
@@ -242,6 +244,7 @@ const CheckoutPopover: React.FC<CheckoutPopoverProps> = ({
         setTimeout(() => {
           onClose();
           setIsProcessing(false);
+          setPurchaseDialogOpen(true); // Open MyPurchaseDialog after checkout
         }, 2000);
 
       } else {
@@ -260,6 +263,7 @@ const CheckoutPopover: React.FC<CheckoutPopoverProps> = ({
           setIsProcessing(false);
           setIsPaymentConfirmed(false);
           setConfirmedPaymentMethod(null);
+          setPurchaseDialogOpen(true); // Open MyPurchaseDialog after checkout
         }, 2000);
       }
     } catch (error) {
@@ -1051,6 +1055,12 @@ const CheckoutPopover: React.FC<CheckoutPopoverProps> = ({
         paymentMethod={paymentMethod}
         amount={selectedTotal}
         onAutoCheckout={handleAutoCheckout}
+      />
+
+      {/* MyPurchaseDialog */}
+      <MyPurchaseDialog
+        open={purchaseDialogOpen}
+        onClose={() => setPurchaseDialogOpen(false)} // Close handler for MyPurchaseDialog
       />
 
       {/* Notification Snackbar */}

@@ -28,6 +28,7 @@ import { alpha } from "@mui/material/styles";
 import { useUserStore } from "../store/userStore";
 import { useNavigate } from "react-router-dom"; // Import useNavigate for internal navigation
 import AccountMenu from "../components/AccountMenu";
+import DeleteIcon from "@mui/icons-material/Delete";
 
 // NOTE: HEADER_HEIGHT is now only for reference/padding, the fixed positioning is gone
 const HEADER_HEIGHT = 64; 
@@ -51,7 +52,7 @@ const sidebarItems = [
 ];
 
 const MyProfilePage: React.FC = () => {
-  const { currentUser, purchases, logout } = useUserStore();
+  const { currentUser, orders, logout, cancelOrder, updateOrderStatus } = useUserStore(); // add updateOrderStatus
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
   const navigate = useNavigate();
@@ -66,16 +67,28 @@ const MyProfilePage: React.FC = () => {
   const handleSearch = (term: string) => {};
   const handleNavigateToSellerDashboard = () => {};
 
-  const filteredPurchases = purchases
+  // Flatten all items from all orders for the current user
+  const allItems = (orders || [])
+    .filter(order => !currentUser || order.userId === currentUser.id)
+    .flatMap(order =>
+      order.items.map(item => ({
+        ...item,
+        orderId: order.id,
+        status: order.status,
+        createdAt: order.createdAt,
+      }))
+    );
+
+  const filteredPurchases = allItems
     ?.filter((item: any) => {
       switch (selectedIndex) {
-        case 0: return item.status === "To Pay";
-        case 1: return item.status === "Processing" || item.status === "Shipping";
-        case 2: return item.status === "Delivered";
-        case 3: return item.status === "Return/Refund";
-        case 4: return item.status === "Cancelled";
-        case 5: return true; // All Purchases
-        default: return false; // Non-purchase categories don't show items
+        case 0: return item.status === "pending" || item.status === "to pay" || item.status === "To Pay";
+        case 1: return item.status === "approved" || item.status === "processing" || item.status === "Processing" || item.status === "Shipping";
+        case 2: return item.status === "delivered" || item.status === "Delivered";
+        case 3: return item.status === "return/refund" || item.status === "Return/Refund";
+        case 4: return item.status === "cancelled" || item.status === "Cancelled";
+        case 5: return true; // All Purchases
+        default: return false;
       }
     })
     ?.filter((item: any) => {
@@ -86,6 +99,22 @@ const MyProfilePage: React.FC = () => {
         item.orderId?.toString().includes(q)
       );
     });
+
+  // Handler for cancel and delete
+  const handleCancel = (orderId: number) => {
+    if (window.confirm("Are you sure you want to cancel this order?")) {
+      cancelOrder(orderId);
+    }
+  };
+  const handleDelete = (orderId: number) => {
+    // Remove the order from the store (hard delete)
+    if (window.confirm("Are you sure you want to permanently delete this order?")) {
+      // Remove order from orders array
+      const ordersCopy = [...orders];
+      const updatedOrders = ordersCopy.filter(order => order.id !== orderId);
+      useUserStore.setState({ orders: updatedOrders });
+    }
+  };
 
   const ACCORDION_STYLE = {
     backgroundColor: alpha(CSS_VARS.primaryPurple, 0.3),
@@ -240,7 +269,7 @@ const MyProfilePage: React.FC = () => {
 
               {filteredPurchases?.map((item: any) => (
                 <Card
-                  key={item.id}
+                  key={item.id + "-" + item.orderId}
                   sx={{
                     backgroundColor: alpha(CSS_VARS.primaryPurple, 0.3),
                     border: `1px solid ${alpha(CSS_VARS.primaryOrange, 0.3)}`,
@@ -254,15 +283,12 @@ const MyProfilePage: React.FC = () => {
                   <Stack direction="row" spacing={2} alignItems="center">
                     <Avatar
                       variant="rounded"
-                      src={item.image}
+                      src={item.thumbnail}
                       sx={{
                         width: 70,
                         height: 70,
                         borderRadius: 2,
-                        border: `1px solid ${alpha(
-                          CSS_VARS.primaryOrange,
-                          0.4
-                        )}`,
+                        border: `1px solid ${alpha(CSS_VARS.primaryOrange, 0.4)}`,
                       }}
                     />
                     <Box sx={{ flex: 1, minWidth: 0 }}>
@@ -276,9 +302,30 @@ const MyProfilePage: React.FC = () => {
                         ₱{item.price?.toLocaleString()}
                       </Typography>
                     </Box>
-                      <Typography variant="body2" fontWeight={600} sx={{ color: CSS_VARS.primaryOrange, textAlign: 'right' }}>
-                          Status: {item.status}
-                      </Typography>
+                    <Typography variant="body2" fontWeight={600} sx={{ color: CSS_VARS.primaryOrange, textAlign: 'right', mr: 2 }}>
+                      Status: {item.status}
+                    </Typography>
+                    {/* Cancel and Delete buttons */}
+                    <Button
+                      variant="outlined"
+                      color="warning"
+                      size="small"
+                      sx={{ minWidth: 90, mr: 1 }}
+                      onClick={() => handleCancel(item.orderId)}
+                      disabled={item.status === "cancelled" || item.status === "Cancelled"}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      color="error"
+                      size="small"
+                      sx={{ minWidth: 90 }}
+                      onClick={() => handleDelete(item.orderId)}
+                    >
+                      <DeleteIcon fontSize="small" />
+                      Delete
+                    </Button>
                   </Stack>
                 </Card>
               ))}
