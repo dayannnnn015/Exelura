@@ -1,4 +1,3 @@
-
 import axios from "axios";
 import {
     DEFAULT_PAGE,
@@ -7,7 +6,7 @@ import {
 } from "../configs/constants";
 import { useUserStore } from "../store/userStore";
 
-// Enhanced search with better error handling and logging
+// Search products - ALL products belong to seller 2
 export const SearchProducts = async ({
     searchKey,
     category = '',
@@ -27,17 +26,14 @@ export const SearchProducts = async ({
         
         // Determine the endpoint based on parameters
         if (category) {
-            // Filter by category - CORRECT ENDPOINT FOR DUMMYJSON
             url = `${PRODUCTS_ENDPOINT}/category/${encodeURIComponent(category)}`;
             console.log(`📁 Category endpoint: ${url}`);
             isSearchEndpoint = false;
         } else if (searchKey && searchKey.trim() !== '') {
-            // Search by keyword
             url = `${PRODUCTS_ENDPOINT}/search?q=${encodeURIComponent(searchKey.trim())}`;
             console.log(`🔎 Search endpoint: ${url}`);
             isSearchEndpoint = true;
         } else {
-            // Get all products
             url = `${PRODUCTS_ENDPOINT}?`;
             console.log(`📦 All products endpoint: ${url}`);
             isSearchEndpoint = false;
@@ -47,25 +43,34 @@ export const SearchProducts = async ({
         const paginationParams = `limit=${perPage}&skip=${(page - 1) * perPage}`;
         
         if (category) {
-            // For category endpoint, fetch all and paginate client-side
+            // For category endpoint
             const response = await axios.get(url);
             console.log(`✅ Category response:`, response.data);
             
             let products = response.data.products || [];
             const total = response.data.total || products.length;
             
-            // Manual pagination for category endpoint
+            // Manual pagination
             const startIndex = (page - 1) * perPage;
             const endIndex = Math.min(startIndex + perPage, total);
             const paginatedProducts = products.slice(startIndex, endIndex);
             
-            // Add QR codes to products
+            // Enhance products with seller info (ALL belong to seller 2)
             const enhancedProducts = paginatedProducts.map((product: any, index: number) => ({
                 ...product,
-                qrCode: product.qrCode || `QR-${product.id || `CAT-${category}-${index + 1}`}`,
+                qrCode: `QR-${product.id || `CAT-${category}-${index + 1}`}`,
                 thumbnail: product.thumbnail || product.images?.[0] || `https://via.placeholder.com/300x300?text=${encodeURIComponent(product.title || 'Product')}`,
-                // Add seller info
-                sellerInfo: getSellerInfoForProduct(product.id || index)
+                sellerId: 2, // ALL products belong to seller 2
+                sellerInfo: {
+                    id: 2,
+                    name: "Luxury Elite Store",
+                    rating: 4.8,
+                    totalProducts: 42,
+                    joined: "2023-01-15",
+                    verified: true,
+                    responseRate: 98,
+                    shippingTime: "1-2 days"
+                }
             }));
             
             return { 
@@ -76,7 +81,7 @@ export const SearchProducts = async ({
                 lastPage: Math.ceil(total / perPage) 
             };
         } else {
-            // For search and all products, use API pagination
+            // For search and all products
             url += url.includes('?') ? `&${paginationParams}` : `?${paginationParams}`;
             
             const response = await axios.get(url);
@@ -91,13 +96,22 @@ export const SearchProducts = async ({
                 total = response.data.total || products.length;
             }
 
-            // Add QR codes and seller info to products
+            // Enhance products with seller info (ALL belong to seller 2)
             const enhancedProducts = products.map((product: any) => ({
                 ...product,
-                qrCode: product.qrCode || `QR-${product.id}`,
+                qrCode: `QR-${product.id}`,
                 thumbnail: product.thumbnail || product.images?.[0] || `https://via.placeholder.com/300x300?text=${encodeURIComponent(product.title || 'Product')}`,
-                // Add seller info
-                sellerInfo: getSellerInfoForProduct(product.id)
+                sellerId: 2, // ALL products belong to seller 2
+                sellerInfo: {
+                    id: 2,
+                    name: "Luxury Elite Store",
+                    rating: 4.8,
+                    totalProducts: 42,
+                    joined: "2023-01-15",
+                    verified: true,
+                    responseRate: 98,
+                    shippingTime: "1-2 days"
+                }
             }));
 
             return { 
@@ -110,73 +124,70 @@ export const SearchProducts = async ({
         }
     } catch (error) {
         console.error('❌ Error fetching products:', error);
-        // Return enhanced mock data on error with seller info
+        // Return mock data with seller 2
         return getMockProducts(searchKey, category, page, perPage);
     }
 }
 
-// Get seller products (for seller dashboard)
+// Get seller products (ALL products belong to seller 2)
 export const GetSellerProducts = async (sellerId?: number) => {
-    console.log(`🛍️ GetSellerProducts called for seller:`, sellerId);
+    console.log(`🛍️ GetSellerProducts called for seller:`, sellerId || 2);
     
     try {
-        // In a real app, this would be a separate endpoint for seller products
-        // For now, we'll use the store or filter from the main API
+        const sellerIdToUse = 2; // Always seller 2
         
-        // Get all products
-        const response = await axios.get(`${PRODUCTS_ENDPOINT}?limit=100`);
+        // Get all products from API
+        const response = await axios.get(`${PRODUCTS_ENDPOINT}?limit=50`);
         let products = response.data.products || [];
         
-        // Filter products that belong to this seller
-        // Since dummyjson doesn't have seller info, we'll simulate it
-        const sellerProducts = products
-            .filter((product: any) => {
-                // Simulate: products with IDs divisible by seller's ID (if provided) or by 3
-                if (sellerId) {
-                    return product.id % sellerId === 0 || product.id % 3 === 0;
-                }
-                return product.id % 3 === 0; // Default seller products
-            })
-            .map((product: any) => ({
-                ...product,
-                sellerId: sellerId || 2, // Default to seller ID 2
-                status: product.stock > 0 ? 'active' : 'out_of_stock',
-                sold: Math.floor(Math.random() * 50) + 10,
-                createdAt: new Date(Date.now() - Math.random() * 31536000000).toISOString(), // Random date within last year
-                updatedAt: new Date().toISOString(),
-                sellerInfo: getSellerInfoForProduct(product.id, sellerId)
-            }));
+        // Assign ALL products to seller 2
+        const sellerProducts = products.map((product: any) => ({
+            ...product,
+            sellerId: 2, // ALL products belong to seller 2
+            status: 'active',
+            sold: Math.floor(Math.random() * 50) + 10,
+            stock: product.stock || Math.floor(Math.random() * 100) + 20,
+            createdAt: new Date(Date.now() - Math.random() * 31536000000).toISOString(),
+            updatedAt: new Date().toISOString(),
+            thumbnail: product.thumbnail || product.images?.[0] || `https://via.placeholder.com/300x300?text=Product+${product.id}`,
+            category: product.category || 'uncategorized',
+            price: product.price || 99.99
+        }));
         
-        console.log(`✅ Found ${sellerProducts.length} products for seller ${sellerId}`);
+        console.log(`✅ Found ${sellerProducts.length} products for seller 2`);
         return sellerProducts;
         
     } catch (error) {
         console.error('❌ Error fetching seller products:', error);
-        // Return mock seller products
-        return getMockSellerProducts(sellerId);
+        // Return mock products all assigned to seller 2
+        return getMockProductsForSeller2();
     }
 }
 
-// Get seller-specific product details
+// Get seller product details
 export const GetSellerProductDetails = async (productId: number, sellerId?: number) => {
-    console.log(`🛍️ GetSellerProductDetails: ${productId} for seller ${sellerId}`);
+    console.log(`🛍️ GetSellerProductDetails: ${productId} for seller 2`);
     
     try {
         const response = await axios.get(`${PRODUCTS_ENDPOINT}/${productId}`);
         
-        // Enhance with seller-specific data
+        // Enhance with seller-specific data (seller 2)
         const sellerProduct = {
             ...response.data,
-            sellerId: sellerId || 2,
-            sellerInfo: getSellerInfoForProduct(productId, sellerId),
+            sellerId: 2, // Always seller 2
+            sellerInfo: {
+                id: 2,
+                name: "Luxury Elite Store",
+                rating: 4.8,
+                verified: true
+            },
             stock: response.data.stock || 50,
             sold: Math.floor(Math.random() * 100) + 20,
-            status: response.data.stock > 0 ? 'active' : 'out_of_stock',
+            status: 'active',
             views: Math.floor(Math.random() * 500) + 100,
             revenue: (response.data.price || 0) * (Math.floor(Math.random() * 50) + 10),
             createdAt: new Date(Date.now() - Math.random() * 31536000000).toISOString(),
             updatedAt: new Date().toISOString(),
-            // Add seller management fields
             canEdit: true,
             canDelete: true,
             isFeatured: productId % 5 === 0,
@@ -187,21 +198,19 @@ export const GetSellerProductDetails = async (productId: number, sellerId?: numb
         
     } catch (error) {
         console.error('❌ Error fetching seller product details:', error);
-        return getMockSellerProductDetails(productId, sellerId);
+        return getMockSellerProductDetails(productId);
     }
 }
 
 // Update seller product stock
 export const UpdateSellerProductStock = async (productId: number, newStock: number, sellerId?: number) => {
-    console.log(`📦 UpdateSellerProductStock: ${productId} to ${newStock} for seller ${sellerId}`);
+    console.log(`📦 UpdateSellerProductStock: ${productId} to ${newStock} for seller 2`);
     
-    // In a real app, this would be a PUT/PATCH request
-    // For now, simulate API call and update store
     try {
         // Simulate API delay
         await new Promise(resolve => setTimeout(resolve, 500));
         
-        // Update in store (in a real app, this would come from API response)
+        // Update in store
         const { updateSellerProduct } = useUserStore.getState();
         updateSellerProduct(productId, { 
             stock: newStock,
@@ -213,7 +222,7 @@ export const UpdateSellerProductStock = async (productId: number, newStock: numb
             message: `Stock updated to ${newStock}`,
             productId,
             newStock,
-            sellerId
+            sellerId: 2
         };
         
     } catch (error) {
@@ -223,20 +232,17 @@ export const UpdateSellerProductStock = async (productId: number, newStock: numb
             message: 'Failed to update stock',
             productId,
             newStock,
-            sellerId
+            sellerId: 2
         };
     }
 }
 
-// Add new product (seller)
+// Add new product (for seller 2)
 export const AddSellerProduct = async (productData: any, sellerId?: number) => {
-    console.log(`➕ AddSellerProduct for seller ${sellerId}:`, productData);
+    console.log(`➕ AddSellerProduct for seller 2:`, productData);
     
     try {
-        // In a real app, this would be a POST request
-        // For now, simulate API call and update store
-        
-        // Generate a unique ID (in real app, this would come from server)
+        // Generate a unique ID
         const newProductId = Date.now();
         
         // Simulate API delay
@@ -256,13 +262,18 @@ export const AddSellerProduct = async (productData: any, sellerId?: number) => {
                 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=600&h=400&fit=crop'
             ],
             status: 'active',
-            sellerId: sellerId || 2,
+            sellerId: 2, // Always seller 2
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
-            sellerInfo: getSellerInfoForProduct(newProductId, sellerId)
+            sellerInfo: {
+                id: 2,
+                name: "Luxury Elite Store",
+                rating: 4.8,
+                verified: true
+            }
         };
         
-        // Add to store (in a real app, this would come from API response)
+        // Add to store
         const { addSellerProduct } = useUserStore.getState();
         addSellerProduct(newProduct);
         
@@ -285,13 +296,13 @@ export const AddSellerProduct = async (productData: any, sellerId?: number) => {
 
 // Delete seller product
 export const DeleteSellerProduct = async (productId: number, sellerId?: number) => {
-    console.log(`🗑️ DeleteSellerProduct: ${productId} for seller ${sellerId}`);
+    console.log(`🗑️ DeleteSellerProduct: ${productId} for seller 2`);
     
     try {
         // Simulate API delay
         await new Promise(resolve => setTimeout(resolve, 600));
         
-        // Delete from store (in a real app, this would be a DELETE request)
+        // Delete from store
         const { deleteSellerProduct } = useUserStore.getState();
         deleteSellerProduct(productId);
         
@@ -299,7 +310,7 @@ export const DeleteSellerProduct = async (productId: number, sellerId?: number) 
             success: true,
             message: 'Product deleted successfully',
             productId,
-            sellerId
+            sellerId: 2
         };
         
     } catch (error) {
@@ -308,24 +319,24 @@ export const DeleteSellerProduct = async (productId: number, sellerId?: number) 
             success: false,
             message: 'Failed to delete product',
             productId,
-            sellerId
+            sellerId: 2
         };
     }
 }
 
-// Get seller statistics
+// Get seller statistics for seller 2
 export const GetSellerStats = async (sellerId?: number) => {
-    console.log(`📊 GetSellerStats for seller:`, sellerId);
+    console.log(`📊 GetSellerStats for seller 2`);
     
     try {
         // Get seller products
-        const sellerProducts = await GetSellerProducts(sellerId);
+        const sellerProducts = await GetSellerProducts(2);
         
         // Calculate statistics
         const totalProducts = sellerProducts.length;
         const totalRevenue = sellerProducts.reduce((sum: number, product: any) => 
             sum + (product.price * (product.sold || 0)), 0);
-        const totalOrders = Math.floor(totalRevenue / 100); // Simplified calculation
+        const totalOrders = Math.floor(totalRevenue / 100);
         
         // Get low stock products
         const lowStockProducts = sellerProducts.filter((product: any) => 
@@ -348,12 +359,12 @@ export const GetSellerStats = async (sellerId?: number) => {
             .slice(0, 5);
         
         return {
-            sellerId: sellerId || 2,
+            sellerId: 2,
             totalRevenue: Math.round(totalRevenue),
             totalOrders,
             totalProducts,
-            totalCustomers: Math.floor(totalOrders * 0.7), // Estimated
-            monthlyGrowth: 12.5, // Static for now
+            totalCustomers: Math.floor(totalOrders * 0.7),
+            monthlyGrowth: 12.5,
             lowStockProducts: lowStockProducts.length,
             outOfStockProducts: outOfStockProducts.length,
             popularCategories,
@@ -362,56 +373,11 @@ export const GetSellerStats = async (sellerId?: number) => {
         
     } catch (error) {
         console.error('❌ Error fetching seller stats:', error);
-        return getMockSellerStats(sellerId);
+        return getMockSellerStats();
     }
 }
 
-// Helper function to get seller info for a product
-const getSellerInfoForProduct = (productId: number, sellerId?: number) => {
-    const sellerIdToUse = sellerId || 2; // Default seller ID
-    
-    const sellers = [
-        {
-            id: 2,
-            name: "Luxury Elite Store",
-            rating: 4.8,
-            totalProducts: 42,
-            joined: "2023-01-15",
-            verified: true,
-            responseRate: 98,
-            shippingTime: "1-2 days"
-        },
-        {
-            id: 3,
-            name: "Premium Collections",
-            rating: 4.9,
-            totalProducts: 28,
-            joined: "2023-03-20",
-            verified: true,
-            responseRate: 99,
-            shippingTime: "2-3 days"
-        },
-        {
-            id: 4,
-            name: "Designer Hub",
-            rating: 4.7,
-            totalProducts: 35,
-            joined: "2023-02-10",
-            verified: true,
-            responseRate: 95,
-            shippingTime: "3-5 days"
-        }
-    ];
-    
-    // Pick seller based on product ID or provided sellerId
-    const sellerIndex = sellerIdToUse ? 
-        sellers.findIndex(s => s.id === sellerIdToUse) : 
-        productId % sellers.length;
-    
-    return sellers[sellerIndex] || sellers[0];
-}
-
-// Mock data generator for fallback with seller info
+// Mock data generator for fallback (ALL products belong to seller 2)
 const getMockProducts = (searchKey: string, category: string, page: number, perPage: number) => {
     const mockProducts = [];
     const total = 45;
@@ -419,12 +385,11 @@ const getMockProducts = (searchKey: string, category: string, page: number, perP
     
     for (let i = 0; i < Math.min(perPage, 10); i++) {
         const id = startIndex + i + 1;
-        const sellerInfo = getSellerInfoForProduct(id);
         
         const product = {
             id: id,
             title: `${category ? category.charAt(0).toUpperCase() + category.slice(1) : 'Premium'} Product ${searchKey ? `"${searchKey}"` : ''} #${id}`,
-            description: "Experience unparalleled luxury and sophistication with this exclusive item. Crafted with meticulous attention to detail using only the finest materials available.",
+            description: "Experience unparalleled luxury and sophistication with this exclusive item.",
             price: 99.99 + (id * 10),
             discountPercentage: id % 3 === 0 ? 15 : 0,
             rating: 4 + (Math.random() * 1),
@@ -434,13 +399,21 @@ const getMockProducts = (searchKey: string, category: string, page: number, perP
             thumbnail: `https://images.unsplash.com/photo-${1546868871 + id}?w=300&h=300&fit=crop`,
             images: [
                 `https://images.unsplash.com/photo-${1546868871 + id}?w-600&h=400&fit=crop`,
-                `https://images.unsplash.com/photo-${1560769629 + id}?w=600&h=400&fit=crop`,
-                `https://images.unsplash.com/photo-${1556656793 + id}?w=600&h=400&fit=crop`
+                `https://images.unsplash.com/photo-${1560769629 + id}?w=600&h=400&fit=crop`
             ],
             brand: "Luxury Elite",
             qrCode: `QR-${id}`,
-            sellerInfo: sellerInfo,
-            sellerId: sellerInfo.id,
+            sellerId: 2, // Always seller 2
+            sellerInfo: {
+                id: 2,
+                name: "Luxury Elite Store",
+                rating: 4.8,
+                totalProducts: 42,
+                joined: "2023-01-15",
+                verified: true,
+                responseRate: 98,
+                shippingTime: "1-2 days"
+            },
             reviews: [
                 {
                     id: 1,
@@ -450,10 +423,7 @@ const getMockProducts = (searchKey: string, category: string, page: number, perP
                     date: "2024-01-15",
                     avatar: "https://randomuser.me/api/portraits/women/1.jpg"
                 }
-            ],
-            weight: "1.2 kg",
-            dimensions: "30 × 20 × 15 cm",
-            warranty: "2 Year Warranty"
+            ]
         };
         mockProducts.push(product);
     }
@@ -467,27 +437,26 @@ const getMockProducts = (searchKey: string, category: string, page: number, perP
     };
 };
 
-// Mock seller products
-const getMockSellerProducts = (sellerId?: number) => {
+// Mock products for seller 2
+const getMockProductsForSeller2 = () => {
     const products = [];
     const productCount = 12;
-    const sellerIdToUse = sellerId || 2;
     
     for (let i = 1; i <= productCount; i++) {
-        const id = sellerIdToUse * 100 + i;
+        const id = i;
         products.push({
             id: id,
-            title: `Seller Product ${i}`,
-            description: `Premium product from seller ${sellerIdToUse}`,
+            title: `Product ${i}`,
+            description: `Premium product from our store`,
             price: 49.99 + (i * 25),
             stock: Math.floor(Math.random() * 50) + 10,
             sold: Math.floor(Math.random() * 100) + 20,
             category: ['smartphones', 'laptops', 'fragrances', 'beauty'][i % 4],
-            status: i % 5 === 0 ? 'out_of_stock' : 'active',
+            status: 'active',
             rating: 4 + (Math.random() * 1),
             images: [`https://images.unsplash.com/photo-${1546868871 + id}?w=300&h=300&fit=crop`],
             thumbnail: `https://images.unsplash.com/photo-${1546868871 + id}?w=300&h=300&fit=crop`,
-            sellerId: sellerIdToUse,
+            sellerId: 2, // Always seller 2
             createdAt: new Date(Date.now() - Math.random() * 31536000000).toISOString(),
             updatedAt: new Date().toISOString()
         });
@@ -497,9 +466,7 @@ const getMockSellerProducts = (sellerId?: number) => {
 };
 
 // Mock seller product details
-const getMockSellerProductDetails = (productId: number, sellerId?: number) => {
-    const sellerIdToUse = sellerId || 2;
-    
+const getMockSellerProductDetails = (productId: number) => {
     return {
         id: productId,
         title: `Seller Exclusive Product #${productId}`,
@@ -508,15 +475,20 @@ const getMockSellerProductDetails = (productId: number, sellerId?: number) => {
         stock: 25 + (productId % 30),
         sold: Math.floor(Math.random() * 100) + 30,
         category: "luxury",
-        status: productId % 5 === 0 ? 'out_of_stock' : 'active',
+        status: 'active',
         rating: 4.5 + (Math.random() * 0.5),
         images: [
             "https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=600&h=400&fit=crop",
             "https://images.unsplash.com/photo-1560769629-975ec94e6a86?w=600&h=400&fit=crop"
         ],
         thumbnail: "https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=600&h=400&fit=crop",
-        sellerId: sellerIdToUse,
-        sellerInfo: getSellerInfoForProduct(productId, sellerIdToUse),
+        sellerId: 2,
+        sellerInfo: {
+            id: 2,
+            name: "Luxury Elite Store",
+            rating: 4.8,
+            verified: true
+        },
         views: 350 + (productId * 10),
         revenue: (199.99 + (productId * 10)) * (Math.floor(Math.random() * 50) + 30),
         createdAt: new Date(Date.now() - Math.random() * 31536000000).toISOString(),
@@ -528,17 +500,15 @@ const getMockSellerProductDetails = (productId: number, sellerId?: number) => {
     };
 };
 
-// Mock seller stats
-const getMockSellerStats = (sellerId?: number) => {
-    const sellerIdToUse = sellerId || 2;
-    
+// Mock seller stats for seller 2
+const getMockSellerStats = () => {
     return {
-        sellerId: sellerIdToUse,
-        totalRevenue: 24580 + (sellerIdToUse * 1000),
-        totalOrders: 156 + (sellerIdToUse * 10),
-        totalProducts: 42 + (sellerIdToUse * 2),
-        totalCustomers: 1245 + (sellerIdToUse * 50),
-        monthlyGrowth: 12.5 + (sellerIdToUse * 0.5),
+        sellerId: 2,
+        totalRevenue: 24580,
+        totalOrders: 156,
+        totalProducts: 42,
+        totalCustomers: 1245,
+        monthlyGrowth: 12.5,
         lowStockProducts: 3,
         outOfStockProducts: 2,
         popularCategories: [
@@ -552,107 +522,7 @@ const getMockSellerStats = (sellerId?: number) => {
     };
 };
 
-// Enhanced category fetching with product counts
-export const GetCategoriesWithCounts = async () => {
-  console.log('📊 Fetching categories with counts...');
-  
-  try {
-    // First, get all categories
-    const categoriesResponse = await axios.get(`${PRODUCTS_ENDPOINT}/categories`);
-    
-    if (!categoriesResponse.data || !Array.isArray(categoriesResponse.data)) {
-      console.warn('⚠️ Invalid categories response, using mock data');
-      return getMockCategoriesWithCounts();
-    }
-    
-    // Get all products to count by category
-    const productsResponse = await axios.get(`${PRODUCTS_ENDPOINT}?limit=100`);
-    const products = productsResponse.data.products || [];
-    
-    // Count products per category
-    const categoryCounts: { [key: string]: number } = {};
-    products.forEach((product: any) => {
-      const category = product.category;
-      if (category) {
-        categoryCounts[category] = (categoryCounts[category] || 0) + 1;
-      }
-    });
-    
-    const enhancedCategories = categoriesResponse.data.map((category: string, index: number) => {
-      const categoryData = categoryIcons.find(c => 
-        c.name.toLowerCase() === category.toLowerCase()
-      ) || {
-        icon: categoryIcons[index % categoryIcons.length].icon,
-        color: categoryIcons[index % categoryIcons.length].color
-      };
-      
-      // Determine if category is popular or new
-      const isPopular = ['smartphones', 'laptops', 'fragrances', 'beauty', 'womens-dresses', 'mens-shirts']
-        .includes(category.toLowerCase());
-      const isNew = ['motorcycle', 'vehicle']
-        .includes(category.toLowerCase());
-      
-      // Get product count for this category
-      const productCount = categoryCounts[category] || Math.floor(Math.random() * 20) + 5;
-      
-      return {
-        id: index + 1,
-        name: category,
-        slug: category.toLowerCase().replace(/ /g, '-'),
-        displayName: formatCategoryName(category),
-        isPopular,
-        isNew,
-        productCount,
-        hasProducts: productCount > 0,
-        ...categoryData
-      };
-    });
-    
-    // Sort by popularity and product count
-    const sortedCategories = enhancedCategories.sort((a, b) => {
-      if (a.isPopular && !b.isPopular) return -1;
-      if (!a.isPopular && b.isPopular) return 1;
-      if (a.isNew && !b.isNew) return -1;
-      if (!a.isNew && b.isNew) return 1;
-      return b.productCount - a.productCount;
-    });
-    
-    console.log(`✅ Loaded ${sortedCategories.length} categories`);
-    return sortedCategories;
-    
-  } catch (error) {
-    console.error('❌ Error fetching categories with counts:', error);
-    return getMockCategoriesWithCounts();
-  }
-};
-
-// Mock categories with counts for fallback
-const getMockCategoriesWithCounts = () => {
-  return categoryIcons
-    .map((cat, index) => ({
-      id: index + 1,
-      name: cat.name,
-      slug: cat.name.toLowerCase(),
-      displayName: formatCategoryName(cat.name),
-      isPopular: ['smartphones', 'laptops', 'fragrances', 'beauty', 'womens-dresses', 'mens-shirts']
-        .includes(cat.name.toLowerCase()),
-      isNew: ['motorcycle', 'vehicle']
-        .includes(cat.name.toLowerCase()),
-      productCount: Math.floor(Math.random() * 30) + 5,
-      hasProducts: true,
-      icon: cat.icon,
-      color: cat.color
-    }))
-    .sort((a, b) => {
-      if (a.isPopular && !b.isPopular) return -1;
-      if (!a.isPopular && b.isPopular) return 1;
-      if (a.isNew && !b.isNew) return -1;
-      if (!a.isNew && b.isNew) return 1;
-      return b.productCount - a.productCount;
-    });
-};
-
-// Product details function with enhanced features and QR code
+// Product details function
 export const GetProductDetails = async (productId: number) => {
     console.log(`🔄 GetProductDetails: Fetching product ${productId}`);
     
@@ -660,15 +530,21 @@ export const GetProductDetails = async (productId: number) => {
         const response = await axios.get(`${PRODUCTS_ENDPOINT}/${productId}`);
         console.log(`✅ GetProductDetails: Successfully fetched product ${productId}`);
         
-        // Enhance product data with QR code, seller info, and ensure all fields
+        // Enhance product data
         const enhancedProduct = {
             ...response.data,
-            qrCode: response.data.qrCode || `QR-${productId}`,
+            qrCode: `QR-${productId}`,
             thumbnail: response.data.thumbnail || response.data.images?.[0] || `https://via.placeholder.com/600x400?text=Product+${productId}`,
             images: response.data.images || [response.data.thumbnail] || [`https://via.placeholder.com/600x400?text=Product+${productId}`],
-            reviews: response.data.reviews || getMockReviews(productId),
-            sellerInfo: getSellerInfoForProduct(productId),
-            meta: response.data.meta || {
+            sellerId: 2, // Always seller 2
+            sellerInfo: {
+                id: 2,
+                name: "Luxury Elite Store",
+                rating: 4.8,
+                verified: true
+            },
+            reviews: getMockReviews(productId),
+            meta: {
                 materials: ["Premium Materials", "Fine Craftsmanship"],
                 origin: "Internationally Sourced",
                 shipping: "Worldwide Express Delivery",
@@ -681,55 +557,34 @@ export const GetProductDetails = async (productId: number) => {
     } catch (error) {
         console.error(`❌ GetProductDetails: Error fetching product ${productId}:`, error);
         
-        // Enhanced mock product data with QR code and seller info
-        const sellerInfo = getSellerInfoForProduct(productId);
-        
+        // Mock product data
         const mockProduct = {
             id: productId,
             title: `Premium Luxury Product #${productId}`,
-            description: "Experience unparalleled luxury and sophistication with this exclusive item. Crafted with meticulous attention to detail using only the finest materials available. Each piece is individually inspected to ensure the highest quality standards.",
+            description: "Experience unparalleled luxury and sophistication with this exclusive item.",
             price: 299.99 + (productId * 20),
             discountPercentage: productId % 4 === 0 ? 20 : productId % 3 === 0 ? 15 : 0,
             rating: 4.5 + (Math.random() * 0.5),
             stock: 25 + (productId % 30),
             category: "Luxury Goods",
-            tags: ["premium", "exclusive", "limited-edition", "handcrafted", "luxury"],
+            tags: ["premium", "exclusive", "limited-edition"],
             thumbnail: "https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=600&h=400&fit=crop",
             qrCode: `QR-${productId}`,
-            sellerInfo: sellerInfo,
-            sellerId: sellerInfo.id,
+            sellerId: 2,
+            sellerInfo: {
+                id: 2,
+                name: "Luxury Elite Store",
+                rating: 4.8,
+                verified: true
+            },
             images: [
                 "https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=600&h=400&fit=crop",
-                "https://images.unsplash.com/photo-1560769629-975ec94e6a86?w=600&h=400&fit=crop",
-                "https://images.unsplash.com/photo-1556656793-08538906a9f8?w=600&h=400&fit=crop",
-                "https://images.unsplash.com/photo-1545235617-9465d2a55698?w=600&h=400&fit=crop"
+                "https://images.unsplash.com/photo-1560769629-975ec94e6a86?w=600&h=400&fit=crop"
             ],
-            brand: "Luxury Elite",
-            sku: `LUX-${productId.toString().padStart(6, '0')}`,
-            weight: "1.2 kg",
-            dimensions: "30 × 20 × 15 cm",
-            warranty: "Lifetime Warranty",
-            reviews: getMockReviews(productId),
-            meta: {
-                materials: ["Premium Leather", "Stainless Steel", "Italian Craftsmanship", "Swiss Movement"],
-                origin: "Made in Italy",
-                shipping: "Worldwide Express Shipping",
-                careInstructions: "Dry clean only. Avoid direct sunlight.",
-                authenticity: "100% Authentic with Certificate",
-                sellerNote: `Sold by ${sellerInfo.name} - Verified Premium Seller`
-            },
-            specifications: {
-                material: "Premium Materials",
-                color: "Various Available",
-                size: "Standard/Medium",
-                feature1: "Water Resistant",
-                feature2: "Scratch Proof",
-                feature3: "Eco Friendly",
-                sellerGuarantee: "30-day money back guarantee"
-            }
+            reviews: getMockReviews(productId)
         };
         
-        console.log(`🔄 GetProductDetails: Returning enhanced mock product for ID ${productId}`);
+        console.log(`🔄 GetProductDetails: Returning mock product for ID ${productId}`);
         return mockProduct;
     }
 };
@@ -740,11 +595,7 @@ const getMockReviews = (productId: number) => {
         "Absolutely stunning! The quality is beyond expectations.",
         "Beautiful craftsmanship. Worth every penny.",
         "This exceeded all my expectations. Truly luxurious!",
-        "Perfect addition to my collection. Highly recommended.",
-        "The attention to detail is remarkable. Love it!",
-        "Best purchase I've made this year. Exceptional quality.",
-        "Worth the investment. Gets compliments everywhere.",
-        "Premium feel and flawless finish. 5 stars!"
+        "Perfect addition to my collection. Highly recommended."
     ];
     
     const reviews = [];
@@ -764,43 +615,3 @@ const getMockReviews = (productId: number) => {
     
     return reviews;
 };
-
-// Format category names properly
-const formatCategoryName = (category: string) => {
-    // First replace hyphens with spaces
-    const spaced = category.replace(/-/g, ' ');
-    
-    return spaced
-        .split(' ')
-        .map(word => {
-            const lowerWord = word.toLowerCase();
-            if (lowerWord === 'womens') return "Women's";
-            if (lowerWord === 'mens') return "Men's";
-            if (lowerWord === 'home-decoration') return "Home Decoration";
-            return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
-        })
-        .join(' ');
-};
-
-// Category icons and colors mapping - UPDATED WITH CORRECT CATEGORIES
-const categoryIcons = [
-    { name: 'smartphones', icon: '📱', color: '#F29F58' },
-    { name: 'laptops', icon: '💻', color: '#AB4459' },
-    { name: 'fragrances', icon: '🌸', color: '#441752' },
-    { name: 'beauty', icon: '✨', color: '#4ECDC4' },
-    { name: 'groceries', icon: '🛒', color: '#FF6B95' },
-    { name: 'home-decoration', icon: '🏠', color: '#7877C6' },
-    { name: 'furniture', icon: '🛋️', color: '#F29F58' },
-    { name: 'tops', icon: '👕', color: '#AB4459' },
-    { name: 'womens-dresses', icon: '👗', color: '#441752' },
-    { name: 'womens-shoes', icon: '👠', color: '#4ECDC4' },
-    { name: 'mens-shirts', icon: '👔', color: '#FF6B95' },
-    { name: 'mens-shoes', icon: '👞', color: '#7877C6' },
-    { name: 'mens-watches', icon: '⌚', color: '#F29F58' },
-    { name: 'womens-watches', icon: '⌚', color: '#AB4459' },
-    { name: 'womens-bags', icon: '👜', color: '#441752' },
-    { name: 'womens-jewellery', icon: '💎', color: '#4ECDC4' },
-    { name: 'sunglasses', icon: '🕶️', color: '#FF6B95' },
-    { name: 'vehicle', icon: '🚗', color: '#7877C6' },
-    { name: 'motorcycle', icon: '🏍️', color: '#F29F58' },
-];

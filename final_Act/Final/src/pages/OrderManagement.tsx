@@ -1,4 +1,4 @@
-
+// OrderManagement.tsx - Updated with Real Orders
 import React, { useState, useEffect } from 'react';
 import {
   Box,
@@ -45,42 +45,13 @@ import {
   Refresh as RefreshIcon,
   Home as HomeIcon,
   Notifications as NotificationsIcon,
+  ShoppingBag as ShoppingBagIcon,
 } from '@mui/icons-material';
-import { useUserStore } from '../store/userStore';
+import { useUserStore, type Order, type OrderItem } from '../store/userStore';
 import { useNavigate } from 'react-router-dom';
 
-// Define the interfaces locally if not exported from userStore
-interface OrderItem {
-  id: number;
-  productId: number;
-  productName: string;
-  quantity: number;
-  price: number;
-  thumbnail: string;
-}
-
-interface Order {
-  id: number;
-  userId: number;
-  customerName: string;
-  customerEmail: string;
-  customerPhone?: string;
-  items: OrderItem[];
-  subtotal: number;
-  shippingFee: number;
-  tax: number;
-  total: number;
-  status: 'pending' | 'approved' | 'shipped' | 'delivered' | 'cancelled';
-  shippingAddress: string;
-  paymentMethod: 'credit_card' | 'paypal' | 'gcash' | 'paymaya' | 'bank_transfer' | 'cash_on_delivery';
-  paymentStatus: 'pending' | 'paid' | 'failed' | 'refunded';
-  notes?: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
 const OrderManagement = () => {
-  const { orders, updateOrderStatus, getSellerOrders } = useUserStore();
+  const { getSellerOrders, updateOrderStatus, sendOrderNotification, currentUser } = useUserStore();
   const navigate = useNavigate();
   const [filteredOrders, setFilteredOrders] = useState<Order[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -103,51 +74,57 @@ const OrderManagement = () => {
       
       return matchesSearch && matchesStatus;
     });
-    setFilteredOrders(filtered as Order[]);
-  }, [orders, searchTerm, statusFilter, getSellerOrders]);
+    setFilteredOrders(filtered);
+  }, [getSellerOrders, searchTerm, statusFilter]);
 
   const handleApproveOrder = (orderId: number) => {
     updateOrderStatus(orderId, 'approved');
     
-    // Simulate sending notification to customer
-    const order = orders.find(o => o.id === orderId);
+    const order = filteredOrders.find(o => o.id === orderId);
     if (order) {
-      simulateOrderNotification(orderId, 'approved', order.customerName, order.customerEmail);
+      sendOrderNotification(orderId, 'approved', order.customerEmail);
+      showNotification(`Order #${orderId} has been approved. Customer notified.`);
+      
+      // Update local state
+      setFilteredOrders(prev => prev.map(o => 
+        o.id === orderId ? { ...o, status: 'approved' } : o
+      ));
     }
   };
 
   const handleShipOrder = (orderId: number) => {
     updateOrderStatus(orderId, 'shipped');
     
-    // Simulate sending notification to customer
-    const order = orders.find(o => o.id === orderId);
+    const order = filteredOrders.find(o => o.id === orderId);
     if (order) {
-      simulateOrderNotification(orderId, 'shipped', order.customerName, order.customerEmail);
+      sendOrderNotification(orderId, 'shipped', order.customerEmail);
+      showNotification(`Order #${orderId} marked as shipped. Customer notified.`);
+      
+      // Update local state
+      setFilteredOrders(prev => prev.map(o => 
+        o.id === orderId ? { ...o, status: 'shipped' } : o
+      ));
     }
   };
 
   const handleCancelOrder = (orderId: number) => {
     updateOrderStatus(orderId, 'cancelled');
     
-    // Simulate sending notification to customer
-    const order = orders.find(o => o.id === orderId);
+    const order = filteredOrders.find(o => o.id === orderId);
     if (order) {
-      simulateOrderNotification(orderId, 'cancelled', order.customerName, order.customerEmail);
+      sendOrderNotification(orderId, 'cancelled', order.customerEmail);
+      showNotification(`Order #${orderId} has been cancelled. Customer notified.`);
+      
+      // Update local state
+      setFilteredOrders(prev => prev.map(o => 
+        o.id === orderId ? { ...o, status: 'cancelled' } : o
+      ));
     }
   };
 
-  const simulateOrderNotification = (orderId: number, status: string, customerName: string, customerEmail: string) => {
-    console.log(`📢 ORDER NOTIFICATION:`);
-    console.log(`Order #${orderId} has been ${status}`);
-    console.log(`Customer: ${customerName} (${customerEmail})`);
-    console.log(`Notification sent: Order #${orderId} has been ${status} by the seller.`);
-    console.log('---');
-    
-    // In a real app, this would:
-    // 1. Send email to customer
-    // 2. Send in-app notification
-    // 3. Update notification in database
-    // 4. Possibly send SMS or push notification
+  const showNotification = (message: string) => {
+    console.log(`📢 ${message}`);
+    // In a real app, you would use a toast notification here
   };
 
   const handleViewOrder = (order: Order) => {
@@ -167,6 +144,12 @@ const OrderManagement = () => {
 
   const handleGoHome = () => {
     navigate('/');
+  };
+
+  const handleRefresh = () => {
+    const sellerOrders = getSellerOrders();
+    setFilteredOrders(sellerOrders);
+    showNotification('Orders refreshed');
   };
 
   const handleChangePage = (event: unknown, newPage: number) => {
@@ -267,7 +250,7 @@ const OrderManagement = () => {
               variant="outlined"
               startIcon={<RefreshIcon />}
               sx={{ borderColor: '#4ECDC4', color: '#4ECDC4' }}
-              onClick={() => setFilteredOrders([...filteredOrders])}
+              onClick={handleRefresh}
             >
               Refresh
             </Button>
@@ -491,7 +474,7 @@ const OrderManagement = () => {
                 <TableRow>
                   <TableCell colSpan={8} align="center" sx={{ py: 4, color: alpha('#ffffff', 0.5) }}>
                     <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-                      <ShoppingBag sx={{ fontSize: 48, color: alpha('#ffffff', 0.3) }} />
+                      <ShoppingBagIcon sx={{ fontSize: 48, color: alpha('#ffffff', 0.3) }} />
                       <Typography>No orders found</Typography>
                       {searchTerm && (
                         <Button 
@@ -776,7 +759,11 @@ const OrderManagement = () => {
                 Cancel Order
               </MenuItem>
               <Divider sx={{ borderColor: alpha('#ffffff', 0.1) }} />
-              <MenuItem onClick={handleActionMenuClose}>
+              <MenuItem onClick={() => {
+                sendOrderNotification(selectedOrder.id, 'status_update', selectedOrder.customerEmail);
+                showNotification(`Notification sent to ${selectedOrder.customerEmail}`);
+                handleActionMenuClose();
+              }}>
                 <NotificationsIcon fontSize="small" sx={{ mr: 1, color: '#F29F58' }} />
                 Send Custom Notification
               </MenuItem>

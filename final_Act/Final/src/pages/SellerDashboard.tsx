@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Box,
   Container,
@@ -39,6 +38,13 @@ import {
   OutlinedInput,
   CircularProgress,
   Tooltip,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  TablePagination,
 } from '@mui/material';
 import {
   Store as StoreIcon,
@@ -60,28 +66,23 @@ import {
   People as PeopleIcon,
   AttachMoney as MoneyIcon,
   BarChart as ChartIcon,
-  Inventory2 as StockIcon,
   ArrowBack as ArrowBackIcon,
   SwitchAccount as SwitchAccountIcon,
   Refresh as RefreshIcon,
   Visibility as VisibilityIcon,
   AddPhotoAlternate as ImageIcon,
   Category as CategoryIcon,
-  Description as DescriptionIcon,
   Home as HomeIcon,
+  ShoppingCart as ShoppingCartIcon,
+  AccountCircle as AccountCircleIcon,
+  LocationOn as LocationIcon,
+  Print as PrintIcon,
+  GridView as GridViewIcon,
+  FormatListBulleted as ListIcon,
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
-import { useUserStore } from '../store/userStore';
 import { useNavigate } from 'react-router-dom';
-import {
-  GetSellerProducts,
-  GetSellerStats,
-  UpdateSellerProductStock,
-  AddSellerProduct,
-  DeleteSellerProduct
-} from '../API/ProductsAPI';
 
-// Mock data types
 interface Product {
   id: number;
   title: string;
@@ -93,22 +94,17 @@ interface Product {
   thumbnail: string;
   rating: number;
   description?: string;
-  sellerId?: number;
-  createdAt?: string;
-  updatedAt?: string;
 }
 
 interface Order {
   id: number;
-  customer: string;
+  customerName: string;
+  customerEmail: string;
   date: string;
-  total: number;
-  status: 'pending' | 'approved' | 'shipped' | 'delivered' | 'cancelled';
   items: number;
-  paymentMethod: string;
-  address: string;
-  customerEmail?: string;
-  customerPhone?: string;
+  total: number;
+  status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+  payment: 'paid' | 'pending' | 'refunded';
 }
 
 interface StatCard {
@@ -119,236 +115,55 @@ interface StatCard {
   color: string;
 }
 
-interface SellerStats {
-  totalRevenue: number;
-  totalOrders: number;
-  totalProducts: number;
-  totalCustomers: number;
-  monthlyGrowth: number;
-  lowStockProducts: number;
-  outOfStockProducts: number;
-  popularCategories: Array<{ name: string; count: number }>;
-}
-
 const SellerDashboard = () => {
   const [activeTab, setActiveTab] = useState(0);
-  const [products, setProducts] = useState<Product[]>([]);
-  const [orders, setOrders] = useState<Order[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [notification, setNotification] = useState({ open: false, message: '', type: 'success' });
-  const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState<SellerStats | null>(null);
-  
-  // Add Product Dialog State
+  const [loading, setLoading] = useState(false);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
-  const [newProduct, setNewProduct] = useState({
-    title: '',
-    description: '',
-    price: '',
-    category: '',
-    stock: '',
-    imageUrl: ''
-  });
-  
-  // Edit Stock Dialog State
-  const [stockDialogOpen, setStockDialogOpen] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [newStock, setNewStock] = useState('');
+  const [orderDetailsOpen, setOrderDetailsOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
 
-  const { currentUser, isSeller, switchToUser, updateSellerProduct, deleteSellerProduct } = useUserStore();
   const navigate = useNavigate();
 
-  // Check if user is a seller
-  useEffect(() => {
-    if (!isSeller) {
-      setNotification({
-        open: true,
-        message: 'You need to switch to seller mode to access the dashboard.',
-        type: 'warning'
-      });
-    }
-  }, [isSeller]);
-
-  // Fetch seller data from API
-  useEffect(() => {
-    const fetchSellerData = async () => {
-      if (!isSeller) return;
-      
-      setLoading(true);
-      try {
-        const sellerId = currentUser?.id || 2;
-        
-        // Fetch seller products from API
-        const sellerProducts = await GetSellerProducts(sellerId);
-        const formattedProducts: Product[] = sellerProducts.map((product: any) => ({
-          id: product.id,
-          title: product.title,
-          category: product.category || 'uncategorized',
-          price: product.price,
-          stock: product.stock || 0,
-          sold: product.sold || 0,
-          status: product.status || (product.stock > 0 ? 'active' : 'out_of_stock'),
-          thumbnail: product.thumbnail || product.images?.[0] || 'https://via.placeholder.com/300x300?text=Product',
-          rating: product.rating || 4.0,
-          description: product.description,
-          sellerId: product.sellerId,
-          createdAt: product.createdAt,
-          updatedAt: product.updatedAt
-        }));
-        
-        setProducts(formattedProducts);
-        
-        // Fetch seller stats
-        const statsData = await GetSellerStats(sellerId);
-        setStats(statsData);
-        
-        // Mock orders (in real app, this would come from API)
-        const mockOrders: Order[] = [
-          { id: 1001, customer: 'John Doe', date: '2024-03-15', total: 999, status: 'pending', items: 2, paymentMethod: 'Credit Card', address: '123 Main St, New York', customerEmail: 'john@example.com', customerPhone: '+1234567890' },
-          { id: 1002, customer: 'Jane Smith', date: '2024-03-14', total: 2499, status: 'approved', items: 1, paymentMethod: 'PayPal', address: '456 Oak Ave, LA', customerEmail: 'jane@example.com', customerPhone: '+0987654321' },
-          { id: 1003, customer: 'Robert Brown', date: '2024-03-13', total: 1898, status: 'shipped', items: 3, paymentMethod: 'GCash', address: '789 Pine Rd, Chicago', customerEmail: 'robert@example.com', customerPhone: '+1122334455' },
-          { id: 1004, customer: 'Emily Davis', date: '2024-03-12', total: 299, status: 'delivered', items: 1, paymentMethod: 'Credit Card', address: '321 Elm St, Miami', customerEmail: 'emily@example.com', customerPhone: '+5566778899' },
-          { id: 1005, customer: 'Michael Wilson', date: '2024-03-11', total: 159, status: 'cancelled', items: 2, paymentMethod: 'PayMaya', address: '654 Birch Ln, Seattle', customerEmail: 'michael@example.com', customerPhone: '+9988776655' },
-          { id: 1006, customer: 'Sarah Johnson', date: '2024-03-10', total: 899, status: 'pending', items: 1, paymentMethod: 'Bank Transfer', address: '987 Cedar Blvd, Austin', customerEmail: 'sarah@example.com', customerPhone: '+5544332211' },
-        ];
-        
-        setOrders(mockOrders);
-        
-      } catch (error) {
-        console.error('Error fetching seller data:', error);
-        setNotification({
-          open: true,
-          message: 'Failed to load seller data. Using mock data instead.',
-          type: 'error'
-        });
-        
-        // Fallback to mock data
-        const mockProducts: Product[] = [
-          { id: 1, title: 'Premium Smartphone X', category: 'smartphones', price: 999, stock: 45, sold: 120, status: 'active', thumbnail: 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=150&h=150&fit=crop', rating: 4.5 },
-          { id: 2, title: 'Luxury Watch Pro', category: 'womens-watches', price: 2499, stock: 12, sold: 45, status: 'active', thumbnail: 'https://images.unsplash.com/photo-1523170335258-f5ed11844a49?w=150&h=150&fit=crop', rating: 4.8 },
-          { id: 3, title: 'Designer Handbag', category: 'womens-bags', price: 899, stock: 0, sold: 78, status: 'out_of_stock', thumbnail: 'https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=150&h=150&fit=crop', rating: 4.3 },
-          { id: 4, title: 'Wireless Headphones', category: 'electronics', price: 299, stock: 23, sold: 210, status: 'active', thumbnail: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=150&h=150&fit=crop', rating: 4.6 },
-          { id: 5, title: 'Fitness Tracker', category: 'accessories', price: 199, stock: 56, sold: 89, status: 'active', thumbnail: 'https://images.unsplash.com/photo-1576243345690-4e4b79b63288?w=150&h=150&fit=crop', rating: 4.2 },
-          { id: 6, title: 'Gaming Laptop', category: 'laptops', price: 1899, stock: 8, sold: 34, status: 'active', thumbnail: 'https://images.unsplash.com/photo-1593640408182-31c70c8268f5?w=150&h=150&fit=crop', rating: 4.7 },
-        ];
-        
-        setProducts(mockProducts);
-        setStats({
-          totalRevenue: 24580,
-          totalOrders: 156,
-          totalProducts: 42,
-          totalCustomers: 1245,
-          monthlyGrowth: 12.5,
-          lowStockProducts: 3,
-          outOfStockProducts: 2,
-          popularCategories: [
-            { name: 'smartphones', count: 120 },
-            { name: 'laptops', count: 85 },
-            { name: 'fragrances', count: 65 }
-          ]
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchSellerData();
-  }, [isSeller, currentUser]);
-
+  // Mock data - in real app, fetch from API/store
   const statCards: StatCard[] = [
-    { title: 'Total Revenue', value: `$${stats?.totalRevenue.toLocaleString() || '24,580'}`, change: `+${stats?.monthlyGrowth || 12.5}%`, icon: <MoneyIcon />, color: '#4ECDC4' },
-    { title: 'Total Orders', value: `${stats?.totalOrders || '156'}`, change: '+8.2%', icon: <OrderIcon />, color: '#FF6B95' },
-    { title: 'Products', value: `${stats?.totalProducts || '42'}`, change: '+3.4%', icon: <InventoryIcon />, color: '#7877C6' },
-    { title: 'Customers', value: `${stats?.totalCustomers?.toLocaleString() || '1,245'}`, change: '+5.1%', icon: <PeopleIcon />, color: '#F29F58' },
+    { title: 'Total Revenue', value: '$24,580', change: '+12.5%', icon: <MoneyIcon />, color: '#4ECDC4' },
+    { title: 'Total Orders', value: '1,248', change: '+8.2%', icon: <OrderIcon />, color: '#FF6B95' },
+    { title: 'Products', value: '342', change: '+3.4%', icon: <InventoryIcon />, color: '#7877C6' },
+    { title: 'Customers', value: '5,432', change: '+5.1%', icon: <PeopleIcon />, color: '#F29F58' },
   ];
+
+  const products: Product[] = [
+    { id: 1, title: 'Premium Smartphone X', category: 'smartphones', price: 999, stock: 45, sold: 120, status: 'active', thumbnail: '', rating: 4.5 },
+    { id: 2, title: 'Luxury Watch Pro', category: 'womens-watches', price: 2499, stock: 12, sold: 45, status: 'active', thumbnail: '', rating: 4.8 },
+    { id: 3, title: 'Designer Handbag', category: 'womens-bags', price: 899, stock: 0, sold: 78, status: 'out_of_stock', thumbnail: '', rating: 4.3 },
+    { id: 4, title: 'Wireless Headphones', category: 'electronics', price: 299, stock: 23, sold: 210, status: 'active', thumbnail: '', rating: 4.6 },
+    { id: 5, title: 'Fitness Tracker', category: 'accessories', price: 199, stock: 56, sold: 89, status: 'active', thumbnail: '', rating: 4.2 },
+    { id: 6, title: 'Gaming Laptop', category: 'laptops', price: 1899, stock: 8, sold: 34, status: 'active', thumbnail: '', rating: 4.7 },
+    { id: 7, title: 'Perfume Collection', category: 'fragrances', price: 129, stock: 42, sold: 156, status: 'active', thumbnail: '', rating: 4.4 },
+    { id: 8, title: 'Bluetooth Speaker', category: 'electronics', price: 89, stock: 67, sold: 231, status: 'active', thumbnail: '', rating: 4.1 },
+  ];
+
+  const orders: Order[] = [
+    { id: 1001, customerName: 'John Doe', customerEmail: 'john@example.com', date: '2024-01-15', items: 3, total: 249.99, status: 'pending', payment: 'paid' },
+    { id: 1002, customerName: 'Jane Smith', customerEmail: 'jane@example.com', date: '2024-01-14', items: 1, total: 89.50, status: 'processing', payment: 'pending' },
+    { id: 1003, customerName: 'Robert Johnson', customerEmail: 'robert@example.com', date: '2024-01-14', items: 5, total: 1299.00, status: 'shipped', payment: 'paid' },
+    { id: 1004, customerName: 'Emily Brown', customerEmail: 'emily@example.com', date: '2024-01-13', items: 2, total: 45.99, status: 'delivered', payment: 'paid' },
+    { id: 1005, customerName: 'Michael Wilson', customerEmail: 'michael@example.com', date: '2024-01-12', items: 1, total: 599.00, status: 'cancelled', payment: 'refunded' },
+    { id: 1006, customerName: 'Sarah Davis', customerEmail: 'sarah@example.com', date: '2024-01-11', items: 4, total: 329.99, status: 'pending', payment: 'paid' },
+    { id: 1007, customerName: 'David Miller', customerEmail: 'david@example.com', date: '2024-01-10', items: 2, total: 199.99, status: 'shipped', payment: 'paid' },
+    { id: 1008, customerName: 'Lisa Anderson', customerEmail: 'lisa@example.com', date: '2024-01-09', items: 1, total: 149.50, status: 'delivered', payment: 'paid' },
+  ];
+
+  const categories = ['smartphones', 'laptops', 'fragrances', 'beauty', 'groceries', 'home-decoration', 'furniture', 'womens-dresses', 'womens-shoes', 'mens-shirts'];
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setActiveTab(newValue);
-  };
-
-  const handleApproveOrder = async (orderId: number) => {
-    try {
-      // In a real app, you'd call an API here
-      setOrders(prev => prev.map(order => 
-        order.id === orderId ? { ...order, status: 'approved' } : order
-      ));
-      
-      const order = orders.find(o => o.id === orderId);
-      if (order) {
-        // Simulate sending notification to customer
-        simulateOrderNotification(orderId, 'approved', order.customer, order.customerEmail);
-        showNotification(`Order #${orderId} has been approved. Customer has been notified.`, 'success');
-      }
-      
-    } catch (error) {
-      console.error('Error approving order:', error);
-      showNotification('Failed to approve order', 'error');
-    }
-  };
-
-  const handleShipOrder = async (orderId: number) => {
-    try {
-      setOrders(prev => prev.map(order => 
-        order.id === orderId ? { ...order, status: 'shipped' } : order
-      ));
-      
-      const order = orders.find(o => o.id === orderId);
-      if (order) {
-        // Simulate sending notification to customer
-        simulateOrderNotification(orderId, 'shipped', order.customer, order.customerEmail);
-        showNotification(`Order #${orderId} marked as shipped. Customer has been notified.`, 'success');
-      }
-      
-    } catch (error) {
-      console.error('Error shipping order:', error);
-      showNotification('Failed to ship order', 'error');
-    }
-  };
-
-  const handleCancelOrder = async (orderId: number) => {
-    try {
-      setOrders(prev => prev.map(order => 
-        order.id === orderId ? { ...order, status: 'cancelled' } : order
-      ));
-      
-      const order = orders.find(o => o.id === orderId);
-      if (order) {
-        simulateOrderNotification(orderId, 'cancelled', order.customer, order.customerEmail);
-        showNotification(`Order #${orderId} has been cancelled.`, 'warning');
-      }
-      
-    } catch (error) {
-      console.error('Error cancelling order:', error);
-      showNotification('Failed to cancel order', 'error');
-    }
-  };
-
-  const simulateOrderNotification = (orderId: number, status: string, customerName: string, customerEmail?: string) => {
-    console.log(`📢 SENDING NOTIFICATION TO CUSTOMER:`);
-    console.log(`Order ID: #${orderId}`);
-    console.log(`Status: ${status.toUpperCase()}`);
-    console.log(`Customer: ${customerName}`);
-    console.log(`Email: ${customerEmail}`);
-    console.log(`Message: Your order #${orderId} has been ${status}.`);
-    console.log('---');
-    
-    // In a real app, this would be an API call to:
-    // 1. Send email notification
-    // 2. Send in-app notification
-    // 3. Update notification in database
-  };
-
-  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, order: Order) => {
-    setAnchorEl(event.currentTarget);
-    setSelectedOrder(order);
-  };
-
-  const handleMenuClose = () => {
-    setAnchorEl(null);
-    setSelectedOrder(null);
   };
 
   const showNotification = (message: string, type: 'success' | 'error' | 'info' | 'warning') => {
@@ -362,22 +177,11 @@ const SellerDashboard = () => {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'pending': return 'warning';
-      case 'approved': return 'info';
+      case 'processing': return 'info';
       case 'shipped': return 'primary';
       case 'delivered': return 'success';
       case 'cancelled': return 'error';
       default: return 'default';
-    }
-  };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'pending': return <PendingIcon />;
-      case 'approved': return <CheckIcon />;
-      case 'shipped': return <ShippingIcon />;
-      case 'delivered': return <CheckIcon />;
-      case 'cancelled': return <CancelIcon />;
-      default: return null;
     }
   };
 
@@ -391,164 +195,12 @@ const SellerDashboard = () => {
     }
   };
 
-  const handleUpdateStock = async () => {
-    if (!selectedProduct || !newStock) return;
-    
-    try {
-      const stockNumber = parseInt(newStock);
-      if (isNaN(stockNumber) || stockNumber < 0) {
-        showNotification('Please enter a valid stock number', 'error');
-        return;
-      }
-
-      const sellerId = currentUser?.id;
-      const result = await UpdateSellerProductStock(selectedProduct.id, stockNumber, sellerId);
-      
-      if (result.success) {
-        showNotification(`Stock updated to ${stockNumber}`, 'success');
-        
-        // Update local state
-        setProducts(prev => prev.map(product =>
-          product.id === selectedProduct.id 
-            ? { 
-                ...product, 
-                stock: stockNumber, 
-                status: stockNumber === 0 ? 'out_of_stock' : 'active',
-                updatedAt: new Date().toISOString()
-              }
-            : product
-        ));
-        
-        // Update store
-        updateSellerProduct(selectedProduct.id, { 
-          stock: stockNumber,
-          status: stockNumber === 0 ? 'out_of_stock' : 'active'
-        });
-        
-        setStockDialogOpen(false);
-        setSelectedProduct(null);
-        setNewStock('');
-      } else {
-        showNotification(result.message || 'Failed to update stock', 'error');
-      }
-    } catch (error) {
-      console.error('Error updating stock:', error);
-      showNotification('Failed to update stock', 'error');
-    }
-  };
-
-  const handleAddProduct = async () => {
-    try {
-      // Validate form
-      if (!newProduct.title.trim() || !newProduct.price || !newProduct.category) {
-        showNotification('Please fill in all required fields', 'error');
-        return;
-      }
-
-      const sellerId = currentUser?.id;
-      const productData = {
-        title: newProduct.title,
-        description: newProduct.description || 'Premium product from our store',
-        price: parseFloat(newProduct.price),
-        category: newProduct.category,
-        stock: parseInt(newProduct.stock) || 0,
-        images: newProduct.imageUrl ? [newProduct.imageUrl] : ['https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=600&h=400&fit=crop']
-      };
-      
-      const result = await AddSellerProduct(productData, sellerId);
-      
-      if (result.success) {
-        showNotification('Product added successfully', 'success');
-        
-        // Add new product to local state
-        if (result.product) {
-          setProducts(prev => [{
-            id: result.productId,
-            title: result.product.title,
-            category: result.product.category,
-            price: result.product.price,
-            stock: result.product.stock,
-            sold: 0,
-            status: 'active',
-            thumbnail: result.product.images?.[0] || 'https://via.placeholder.com/300x300?text=New+Product',
-            rating: 0,
-            description: result.product.description,
-            sellerId: sellerId,
-            createdAt: result.product.createdAt,
-            updatedAt: result.product.updatedAt
-          }, ...prev]);
-        }
-        
-        setAddDialogOpen(false);
-        setNewProduct({
-          title: '',
-          description: '',
-          price: '',
-          category: '',
-          stock: '',
-          imageUrl: ''
-        });
-      } else {
-        showNotification(result.message || 'Failed to add product', 'error');
-      }
-    } catch (error) {
-      console.error('Error adding product:', error);
-      showNotification('Failed to add product', 'error');
-    }
-  };
-
-  const handleDeleteProduct = async (productId: number) => {
-    try {
-      const sellerId = currentUser?.id;
-      const result = await DeleteSellerProduct(productId, sellerId);
-      
-      if (result.success) {
-        showNotification('Product deleted successfully', 'success');
-        
-        // Update local state
-        setProducts(prev => prev.filter(product => product.id !== productId));
-        
-        // Update store
-        deleteSellerProduct(productId);
-      } else {
-        showNotification(result.message || 'Failed to delete product', 'error');
-      }
-    } catch (error) {
-      console.error('Error deleting product:', error);
-      showNotification('Failed to delete product', 'error');
-    }
-  };
-
-  const handleRefreshData = async () => {
-    setLoading(true);
-    try {
-      const sellerId = currentUser?.id || 2;
-      const sellerProducts = await GetSellerProducts(sellerId);
-      const formattedProducts: Product[] = sellerProducts.map((product: any) => ({
-        id: product.id,
-        title: product.title,
-        category: product.category || 'uncategorized',
-        price: product.price,
-        stock: product.stock || 0,
-        sold: product.sold || 0,
-        status: product.status || (product.stock > 0 ? 'active' : 'out_of_stock'),
-        thumbnail: product.thumbnail || product.images?.[0] || 'https://via.placeholder.com/300x300?text=Product',
-        rating: product.rating || 4.0,
-        description: product.description,
-        sellerId: product.sellerId
-      }));
-      
-      setProducts(formattedProducts);
-      
-      const statsData = await GetSellerStats(sellerId);
-      setStats(statsData);
-      
-      showNotification('Data refreshed successfully', 'success');
-    } catch (error) {
-      console.error('Error refreshing data:', error);
-      showNotification('Failed to refresh data', 'error');
-    } finally {
-      setLoading(false);
+  const getPaymentColor = (status: string) => {
+    switch (status) {
+      case 'paid': return 'success';
+      case 'pending': return 'warning';
+      case 'refunded': return 'info';
+      default: return 'default';
     }
   };
 
@@ -557,97 +209,46 @@ const SellerDashboard = () => {
     return order.status === statusFilter;
   });
 
-  const filteredProducts = products.filter(product =>
-    product.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.description?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const handleSwitchToUserMode = () => {
-    switchToUser();
-    showNotification('Switched to user mode.', 'info');
-    navigate('/');
-  };
+  const filteredProducts = products.filter(product => {
+    const matchesSearch = product.title.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = categoryFilter === 'all' || product.category === categoryFilter;
+    return matchesSearch && matchesCategory;
+  });
 
   const handleGoHome = () => {
     navigate('/');
   };
 
-  const categories = [
-    'smartphones', 'laptops', 'fragrances', 'beauty', 'groceries',
-    'home-decoration', 'furniture', 'tops', 'womens-dresses', 'womens-shoes',
-    'mens-shirts', 'mens-shoes', 'mens-watches', 'womens-watches', 'womens-bags',
-    'womens-jewellery', 'sunglasses', 'vehicle', 'motorcycle'
-  ];
+  const handleSwitchToUserMode = () => {
+    showNotification('Switched to user mode', 'info');
+    navigate('/');
+  };
 
-  if (!isSeller) {
-    return (
-      <Box
-        sx={{
-          minHeight: '100vh',
-          background: `linear-gradient(135deg, #0A081F 0%, #1A173B 50%, #2A2660 100%)`,
-          fontFamily: '"Inter", "Roboto", sans-serif',
-          color: 'white',
-          py: 4,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        <Container maxWidth="md">
-          <Paper
-            sx={{
-              p: 6,
-              textAlign: 'center',
-              background: alpha('#0A081F', 0.7),
-              border: '1px solid rgba(120, 119, 198, 0.2)',
-              backdropFilter: 'blur(20px)',
-              borderRadius: 3,
-            }}
-          >
-            <StoreIcon sx={{ fontSize: 80, color: '#7877C6', mb: 3 }} />
-            <Typography variant="h4" fontWeight="bold" gutterBottom>
-              Seller Dashboard Access Required
-            </Typography>
-            <Typography variant="body1" sx={{ color: alpha('#ffffff', 0.7), mb: 4, maxWidth: 600, mx: 'auto' }}>
-              You need to be in seller mode to access the Seller Dashboard. Switch to seller mode from your account menu to manage your products and orders.
-            </Typography>
-            <Stack direction="row" spacing={2} justifyContent="center">
-              <Button
-                variant="contained"
-                startIcon={<ArrowBackIcon />}
-                onClick={handleGoHome}
-                sx={{
-                  background: 'linear-gradient(135deg, #7877C6 0%, #5A59A1 100%)',
-                }}
-              >
-                Back to Home
-              </Button>
-              <Button
-                variant="outlined"
-                startIcon={<SwitchAccountIcon />}
-                onClick={() => navigate('/account')}
-                sx={{
-                  borderColor: '#4ECDC4',
-                  color: '#4ECDC4',
-                  '&:hover': { borderColor: '#4ECDC4' },
-                }}
-              >
-                Go to Account
-              </Button>
-            </Stack>
-          </Paper>
-        </Container>
-      </Box>
-    );
-  }
+  const handleRefresh = () => {
+    setLoading(true);
+    setTimeout(() => {
+      setLoading(false);
+      showNotification('Data refreshed successfully', 'success');
+    }, 1000);
+  };
+
+  const handleChangePage = (event: unknown, newPage: number) => {
+    setPage(newPage);
+  };
+
+  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  };
+
+  const paginatedOrders = filteredOrders.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
 
   if (loading) {
     return (
       <Box
         sx={{
           minHeight: '100vh',
-          background: `linear-gradient(135deg, #0A081F 0%, #1A173B 50%, #2A2660 100%)`,
+          background: 'linear-gradient(135deg, #0A081F 0%, #1A173B 100%)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -662,7 +263,7 @@ const SellerDashboard = () => {
     <Box
       sx={{
         minHeight: '100vh',
-        background: `linear-gradient(135deg, #0A081F 0%, #1A173B 50%, #2A2660 100%)`,
+        background: 'linear-gradient(135deg, #0A081F 0%, #1A173B 100%)',
         fontFamily: '"Inter", "Roboto", sans-serif',
         color: 'white',
         py: 4,
@@ -689,7 +290,7 @@ const SellerDashboard = () => {
                   Seller Dashboard
                 </Typography>
                 <Typography variant="body2" sx={{ color: alpha('#ffffff', 0.7) }}>
-                  Welcome back, {currentUser?.name || 'Seller'}! Manage your store efficiently.
+                  Welcome back, Seller! Manage your store efficiently.
                 </Typography>
               </Box>
             </Stack>
@@ -697,7 +298,7 @@ const SellerDashboard = () => {
               <Button
                 variant="outlined"
                 startIcon={<RefreshIcon />}
-                onClick={handleRefreshData}
+                onClick={handleRefresh}
                 disabled={loading}
                 sx={{
                   borderColor: '#4ECDC4',
@@ -779,42 +380,6 @@ const SellerDashboard = () => {
           ))}
         </Grid>
 
-        {/* Stock Alerts */}
-        {stats && (stats.lowStockProducts > 0 || stats.outOfStockProducts > 0) && (
-          <Paper
-            sx={{
-              p: 3,
-              mb: 4,
-              background: alpha('#1A173B', 0.5),
-              border: '1px solid rgba(255, 107, 149, 0.3)',
-              borderRadius: 2,
-            }}
-          >
-            <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 2 }}>
-              <NotificationsIcon sx={{ color: '#FF6B95' }} />
-              <Typography variant="h6" fontWeight="bold">Stock Alerts</Typography>
-            </Stack>
-            <Stack direction="row" spacing={4}>
-              {stats.lowStockProducts > 0 && (
-                <Box>
-                  <Typography variant="body2" sx={{ color: alpha('#ffffff', 0.7) }}>Low Stock Products</Typography>
-                  <Typography variant="h5" color="warning.main" fontWeight="bold">
-                    {stats.lowStockProducts}
-                  </Typography>
-                </Box>
-              )}
-              {stats.outOfStockProducts > 0 && (
-                <Box>
-                  <Typography variant="body2" sx={{ color: alpha('#ffffff', 0.7) }}>Out of Stock</Typography>
-                  <Typography variant="h5" color="error.main" fontWeight="bold">
-                    {stats.outOfStockProducts}
-                  </Typography>
-                </Box>
-              )}
-            </Stack>
-          </Paper>
-        )}
-
         {/* Main Content with Tabs */}
         <Paper
           sx={{
@@ -841,32 +406,67 @@ const SellerDashboard = () => {
             <Tab icon={<DashboardIcon />} iconPosition="start" label="Overview" />
             <Tab icon={<InventoryIcon />} iconPosition="start" label={`Products (${products.length})`} />
             <Tab icon={<OrderIcon />} iconPosition="start" label={`Orders (${orders.length})`} />
-            <Tab icon={<ChartIcon />} iconPosition="start" label="Analytics" />
           </Tabs>
 
           {/* Overview Tab */}
           {activeTab === 0 && (
             <Grid container spacing={3}>
+              {/* Sales Chart */}
               <Grid item xs={12} md={8}>
-                <Paper sx={{ p: 3, background: alpha('#1A173B', 0.5), borderRadius: 2 }}>
-                  <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 3 }}>
-                    <Typography variant="h6">Recent Orders</Typography>
-                    <Button
-                      size="small"
-                      onClick={() => setActiveTab(2)}
-                      sx={{ color: '#7877C6' }}
-                    >
-                      View All
-                    </Button>
+                <Paper sx={{ 
+                  p: 3, 
+                  background: alpha('#1A173B', 0.5), 
+                  borderRadius: 2,
+                  height: '100%'
+                }}>
+                  <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
+                    <Typography variant="h6">Sales Overview</Typography>
+                    <Stack direction="row" spacing={1}>
+                      <Chip label="7 Days" size="small" sx={{ background: alpha('#7877C6', 0.2), color: '#7877C6' }} />
+                      <Chip label="30 Days" size="small" sx={{ background: alpha('#ffffff', 0.1), color: 'white' }} />
+                      <Chip label="90 Days" size="small" sx={{ background: alpha('#ffffff', 0.1), color: 'white' }} />
+                    </Stack>
                   </Stack>
+                  <Box sx={{ 
+                    height: 300, 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center',
+                    background: alpha('#ffffff', 0.03),
+                    borderRadius: 2
+                  }}>
+                    <Typography sx={{ color: alpha('#ffffff', 0.3) }}>
+                      Sales Chart Visualization
+                    </Typography>
+                  </Box>
+                </Paper>
+              </Grid>
+
+              {/* Recent Activity */}
+              <Grid item xs={12} md={4}>
+                <Paper sx={{ 
+                  p: 3, 
+                  background: alpha('#1A173B', 0.5), 
+                  borderRadius: 2,
+                  height: '100%'
+                }}>
+                  <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
+                    <Typography variant="h6">Recent Activity</Typography>
+                    <IconButton size="small" sx={{ color: alpha('#ffffff', 0.7) }}>
+                      <MoreIcon />
+                    </IconButton>
+                  </Stack>
+                  
                   <List>
                     {orders.slice(0, 5).map((order) => (
                       <ListItem
                         key={order.id}
                         sx={{
                           mb: 1,
+                          px: 2,
+                          py: 1.5,
                           background: alpha('#ffffff', 0.05),
-                          borderRadius: 1,
+                          borderRadius: 1.5,
                           '&:hover': { background: alpha('#ffffff', 0.1) },
                         }}
                       >
@@ -876,56 +476,94 @@ const SellerDashboard = () => {
                             variant="dot"
                             anchorOrigin={{ vertical: 'top', horizontal: 'left' }}
                           >
-                            <Avatar sx={{ bgcolor: alpha('#7877C6', 0.2) }}>
-                              {getStatusIcon(order.status)}
+                            <Avatar sx={{ bgcolor: alpha('#7877C6', 0.2), width: 32, height: 32 }}>
+                              <ShoppingCartIcon fontSize="small" />
                             </Avatar>
                           </Badge>
                         </ListItemAvatar>
                         <ListItemText
-                          primary={`Order #${order.id} - ${order.customer}`}
-                          secondary={`${order.date} • ${order.items} items • $${order.total}`}
-                          primaryTypographyProps={{ fontWeight: 'bold' }}
+                          primary={`Order #${order.id}`}
+                          secondary={`${order.customerName} • $${order.total.toFixed(2)}`}
+                          primaryTypographyProps={{ fontSize: '0.875rem', fontWeight: 'bold' }}
+                          secondaryTypographyProps={{ fontSize: '0.75rem', color: alpha('#ffffff', 0.5) }}
                         />
                         <Chip
-                          label={order.status.toUpperCase()}
+                          label={order.status}
                           size="small"
                           color={getStatusColor(order.status) as any}
+                          sx={{ fontSize: '0.65rem' }}
                         />
                       </ListItem>
                     ))}
                   </List>
+
+                  <Button
+                    fullWidth
+                    variant="text"
+                    sx={{ 
+                      mt: 2, 
+                      color: '#7877C6',
+                      '&:hover': { background: alpha('#7877C6', 0.1) }
+                    }}
+                    onClick={() => setActiveTab(2)}
+                  >
+                    View All Orders
+                  </Button>
                 </Paper>
               </Grid>
-              <Grid item xs={12} md={4}>
+
+              {/* Top Products */}
+              <Grid item xs={12}>
                 <Paper sx={{ p: 3, background: alpha('#1A173B', 0.5), borderRadius: 2 }}>
                   <Typography variant="h6" gutterBottom>Top Selling Products</Typography>
-                  {products
-                    .sort((a, b) => b.sold - a.sold)
-                    .slice(0, 3)
-                    .map(product => (
-                      <Box key={product.id} sx={{ mb: 2, p: 2, background: alpha('#7877C6', 0.1), borderRadius: 1 }}>
-                        <Stack direction="row" alignItems="center" spacing={2}>
-                          <Avatar
-                            src={product.thumbnail}
-                            variant="rounded"
-                            sx={{ width: 40, height: 40 }}
-                          />
-                          <Box sx={{ flex: 1 }}>
-                            <Typography variant="body2" fontWeight="bold" noWrap>
-                              {product.title}
-                            </Typography>
-                            <Typography variant="caption" sx={{ color: alpha('#ffffff', 0.7) }}>
-                              Sold: {product.sold} • Stock: {product.stock}
-                            </Typography>
-                          </Box>
-                          <Chip
-                            label={`$${product.price}`}
-                            size="small"
-                            sx={{ background: alpha('#4ECDC4', 0.2), color: '#4ECDC4' }}
-                          />
-                        </Stack>
-                      </Box>
-                    ))}
+                  <Grid container spacing={2}>
+                    {products
+                      .sort((a, b) => b.sold - a.sold)
+                      .slice(0, 4)
+                      .map(product => (
+                        <Grid item xs={12} sm={6} md={3} key={product.id}>
+                          <Paper sx={{ 
+                            p: 2, 
+                            background: alpha('#ffffff', 0.05),
+                            borderRadius: 1.5,
+                            height: '100%'
+                          }}>
+                            <Stack direction="row" alignItems="center" spacing={2}>
+                              <Avatar
+                                variant="rounded"
+                                sx={{ 
+                                  width: 48, 
+                                  height: 48, 
+                                  bgcolor: alpha('#7877C6', 0.2),
+                                  color: '#7877C6'
+                                }}
+                              >
+                                <InventoryIcon />
+                              </Avatar>
+                              <Box sx={{ flex: 1 }}>
+                                <Typography variant="body2" fontWeight="bold" noWrap>
+                                  {product.title}
+                                </Typography>
+                                <Typography variant="caption" sx={{ color: alpha('#ffffff', 0.5) }}>
+                                  Sold: {product.sold} • Stock: {product.stock}
+                                </Typography>
+                                <LinearProgress
+                                  variant="determinate"
+                                  value={Math.min((product.sold / 300) * 100, 100)}
+                                  color="primary"
+                                  sx={{ mt: 1, height: 4, borderRadius: 2 }}
+                                />
+                              </Box>
+                              <Chip
+                                label={`$${product.price}`}
+                                size="small"
+                                sx={{ background: alpha('#4ECDC4', 0.2), color: '#4ECDC4' }}
+                              />
+                            </Stack>
+                          </Paper>
+                        </Grid>
+                      ))}
+                  </Grid>
                 </Paper>
               </Grid>
             </Grid>
@@ -934,41 +572,95 @@ const SellerDashboard = () => {
           {/* Products Tab */}
           {activeTab === 1 && (
             <Box>
+              {/* Filters and Actions */}
               <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
-                <TextField
-                  placeholder="Search products..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  size="small"
-                  sx={{
-                    width: 300,
-                    '& .MuiOutlinedInput-root': {
-                      background: alpha('#ffffff', 0.05),
-                      color: 'white',
-                    },
-                  }}
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <SearchIcon sx={{ color: alpha('#ffffff', 0.5) }} />
-                      </InputAdornment>
-                    ),
-                  }}
-                />
-                <Button
-                  variant="contained"
-                  startIcon={<AddIcon />}
-                  onClick={() => setAddDialogOpen(true)}
-                  sx={{
-                    background: 'linear-gradient(135deg, #7877C6 0%, #5A59A1 100%)',
-                  }}
-                >
-                  Add Product
-                </Button>
+                <Stack direction="row" spacing={2} alignItems="center">
+                  <TextField
+                    placeholder="Search products..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    size="small"
+                    sx={{
+                      width: 300,
+                      '& .MuiOutlinedInput-root': {
+                        background: alpha('#ffffff', 0.05),
+                        color: 'white',
+                      },
+                    }}
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <SearchIcon sx={{ color: alpha('#ffffff', 0.5) }} />
+                        </InputAdornment>
+                      ),
+                    }}
+                  />
+                  <FormControl size="small" sx={{ minWidth: 150 }}>
+                    <InputLabel sx={{ color: alpha('#ffffff', 0.7) }}>Category</InputLabel>
+                    <Select
+                      value={categoryFilter}
+                      label="Category"
+                      onChange={(e) => setCategoryFilter(e.target.value)}
+                      sx={{
+                        background: alpha('#ffffff', 0.05),
+                        color: 'white',
+                        '& .MuiSelect-icon': { color: alpha('#ffffff', 0.5) },
+                      }}
+                    >
+                      <MenuItem value="all">All Categories</MenuItem>
+                      {categories.map(category => (
+                        <MenuItem key={category} value={category}>
+                          {category.charAt(0).toUpperCase() + category.slice(1)}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Stack>
+
+                <Stack direction="row" spacing={2}>
+                  <Stack direction="row" spacing={1}>
+                    <IconButton 
+                      size="small" 
+                      onClick={() => setViewMode('grid')}
+                      sx={{ 
+                        color: viewMode === 'grid' ? '#7877C6' : alpha('#ffffff', 0.5),
+                        background: viewMode === 'grid' ? alpha('#7877C6', 0.1) : 'transparent'
+                      }}
+                    >
+                      <GridViewIcon />
+                    </IconButton>
+                    <IconButton 
+                      size="small" 
+                      onClick={() => setViewMode('list')}
+                      sx={{ 
+                        color: viewMode === 'list' ? '#7877C6' : alpha('#ffffff', 0.5),
+                        background: viewMode === 'list' ? alpha('#7877C6', 0.1) : 'transparent'
+                      }}
+                    >
+                      <ListIcon />
+                    </IconButton>
+                  </Stack>
+                  <Button
+                    variant="contained"
+                    startIcon={<AddIcon />}
+                    onClick={() => setAddDialogOpen(true)}
+                    sx={{
+                      background: 'linear-gradient(135deg, #7877C6 0%, #5A59A1 100%)',
+                    }}
+                  >
+                    Add Product
+                  </Button>
+                </Stack>
               </Stack>
 
+              {/* Products Grid/List */}
               {filteredProducts.length === 0 ? (
-                <Paper sx={{ p: 8, textAlign: 'center', background: alpha('#1A173B', 0.5), borderRadius: 2 }}>
+                <Paper sx={{ 
+                  p: 8, 
+                  textAlign: 'center', 
+                  background: alpha('#1A173B', 0.5), 
+                  borderRadius: 2 
+                }}>
                   <InventoryIcon sx={{ fontSize: 60, color: alpha('#ffffff', 0.3), mb: 2 }} />
                   <Typography variant="h6" gutterBottom>No products found</Typography>
                   <Typography variant="body2" sx={{ color: alpha('#ffffff', 0.7), mb: 3 }}>
@@ -985,123 +677,202 @@ const SellerDashboard = () => {
                     Add Product
                   </Button>
                 </Paper>
-              ) : (
+              ) : viewMode === 'grid' ? (
                 <Grid container spacing={3}>
                   {filteredProducts.map((product) => (
                     <Grid item xs={12} sm={6} md={4} lg={3} key={product.id}>
                       <Paper
+                        className="product-card"
                         sx={{
                           p: 2,
+                          height: '100%',
+                          display: 'flex',
+                          flexDirection: 'column',
                           background: alpha('#1A173B', 0.5),
                           borderRadius: 2,
                           transition: 'transform 0.3s ease',
                           '&:hover': { transform: 'translateY(-4px)' },
                         }}
                       >
-                        <Box sx={{ position: 'relative' }}>
-                          <Box
-                            component="img"
-                            src={product.thumbnail}
-                            alt={product.title}
-                            sx={{
-                              width: '100%',
-                              height: 120,
-                              objectFit: 'cover',
-                              borderRadius: 1,
-                              mb: 2,
-                            }}
-                          />
+                        {/* Product Image */}
+                        <Box
+                          className="product-image-container"
+                          sx={{
+                            height: 140,
+                            background: `linear-gradient(45deg, ${alpha('#7877C6', 0.3)} 0%, ${alpha('#4ECDC4', 0.3)} 100%)`,
+                            borderRadius: 1.5,
+                            mb: 2,
+                            position: 'relative',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                          }}
+                        >
+                          <InventoryIcon sx={{ fontSize: 48, color: alpha('#ffffff', 0.3) }} />
                           <Chip
                             label={product.status === 'out_of_stock' ? 'Out of Stock' : 'In Stock'}
                             size="small"
                             color={getProductStatusColor(product.status) as any}
                             sx={{ position: 'absolute', top: 8, right: 8 }}
                           />
-                          {product.sold > 0 && (
-                            <Chip
-                              label={`${product.sold} sold`}
-                              size="small"
-                              sx={{
-                                position: 'absolute',
-                                top: 8,
-                                left: 8,
-                                background: alpha('#4ECDC4', 0.2),
-                                color: '#4ECDC4',
-                              }}
-                            />
-                          )}
                         </Box>
-                        <Typography variant="subtitle1" fontWeight="bold" gutterBottom noWrap>
-                          {product.title}
-                        </Typography>
-                        <Typography variant="body2" sx={{ color: alpha('#ffffff', 0.7), mb: 2 }} noWrap>
-                          {product.category} • ${product.price}
-                        </Typography>
-                        <Stack direction="row" justifyContent="space-between" alignItems="center">
-                          <Box>
-                            <Typography variant="caption" sx={{ color: alpha('#ffffff', 0.5) }}>
-                              Stock: {product.stock}
-                            </Typography>
-                            <LinearProgress
-                              variant="determinate"
-                              value={Math.min((product.stock / 100) * 100, 100)}
-                              color={product.stock < 10 ? 'warning' : 'success'}
-                              sx={{ width: 80, height: 4, borderRadius: 2, mt: 0.5 }}
-                            />
-                          </Box>
-                          <Typography variant="caption" sx={{ color: '#4ECDC4' }}>
-                            ${(product.price * product.sold).toLocaleString()} revenue
+
+                        {/* Product Info */}
+                        <Box sx={{ flex: 1 }}>
+                          <Typography variant="subtitle1" fontWeight="bold" gutterBottom noWrap>
+                            {product.title}
                           </Typography>
-                        </Stack>
-                        <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
-                          <Tooltip title="View Details">
-                            <IconButton
+                          <Typography variant="body2" sx={{ color: alpha('#ffffff', 0.7), mb: 2 }} noWrap>
+                            {product.category} • ${product.price.toFixed(2)}
+                          </Typography>
+                          
+                          <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
+                            <Box>
+                              <Typography variant="caption" sx={{ color: alpha('#ffffff', 0.5) }}>
+                                Stock: {product.stock}
+                              </Typography>
+                              <LinearProgress
+                                variant="determinate"
+                                value={Math.min((product.stock / 100) * 100, 100)}
+                                color={product.stock < 10 ? 'warning' : 'success'}
+                                sx={{ width: 80, height: 4, borderRadius: 2, mt: 0.5 }}
+                              />
+                            </Box>
+                            <Typography variant="caption" sx={{ color: '#4ECDC4' }}>
+                              ${(product.price * product.sold).toLocaleString()} revenue
+                            </Typography>
+                          </Stack>
+                        </Box>
+
+                        {/* Actions */}
+                        <Stack direction="row" spacing={1} className="product-actions-stack">
+                          <Tooltip title="Edit Product">
+                            <Button
                               size="small"
-                              onClick={() => navigate(`/product/${product.id}`)}
+                              startIcon={<EditIcon />}
+                              fullWidth
                               sx={{
-                                flex: 1,
-                                background: alpha('#7877C6', 0.2),
-                                color: '#7877C6',
-                              }}
-                            >
-                              <VisibilityIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
-                          <Tooltip title="Edit Stock">
-                            <IconButton
-                              size="small"
-                              onClick={() => {
-                                setSelectedProduct(product);
-                                setNewStock(product.stock.toString());
-                                setStockDialogOpen(true);
-                              }}
-                              sx={{
-                                flex: 1,
-                                background: alpha('#4ECDC4', 0.2),
+                                background: alpha('#4ECDC4', 0.1),
                                 color: '#4ECDC4',
+                                '&:hover': { background: alpha('#4ECDC4', 0.2) }
                               }}
                             >
-                              <EditIcon fontSize="small" />
-                            </IconButton>
+                              Edit
+                            </Button>
                           </Tooltip>
                           <Tooltip title="Delete Product">
-                            <IconButton
+                            <Button
                               size="small"
-                              onClick={() => handleDeleteProduct(product.id)}
+                              startIcon={<DeleteIcon />}
+                              fullWidth
                               sx={{
-                                flex: 1,
-                                background: alpha('#FF6B95', 0.2),
+                                background: alpha('#FF6B95', 0.1),
                                 color: '#FF6B95',
+                                '&:hover': { background: alpha('#FF6B95', 0.2) }
                               }}
                             >
-                              <DeleteIcon fontSize="small" />
-                            </IconButton>
+                              Delete
+                            </Button>
                           </Tooltip>
                         </Stack>
                       </Paper>
                     </Grid>
                   ))}
                 </Grid>
+              ) : (
+                /* Products List View */
+                <TableContainer component={Paper} sx={{ 
+                  background: alpha('#1A173B', 0.5),
+                  border: '1px solid rgba(120, 119, 198, 0.2)',
+                  borderRadius: 2,
+                }}>
+                  <Table>
+                    <TableHead>
+                      <TableRow sx={{ background: alpha('#7877C6', 0.1) }}>
+                        <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Product</TableCell>
+                        <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Category</TableCell>
+                        <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Price</TableCell>
+                        <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Stock</TableCell>
+                        <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Sold</TableCell>
+                        <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Status</TableCell>
+                        <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Actions</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {filteredProducts.map((product) => (
+                        <TableRow 
+                          key={product.id}
+                          hover
+                          sx={{ '&:hover': { background: alpha('#ffffff', 0.05) } }}
+                        >
+                          <TableCell>
+                            <Stack direction="row" alignItems="center" spacing={2}>
+                              <Avatar
+                                variant="rounded"
+                                sx={{ 
+                                  width: 40, 
+                                  height: 40, 
+                                  bgcolor: alpha('#7877C6', 0.2),
+                                  color: '#7877C6'
+                                }}
+                              >
+                                <InventoryIcon />
+                              </Avatar>
+                              <Box>
+                                <Typography variant="body2" fontWeight="bold">
+                                  {product.title}
+                                </Typography>
+                                <Typography variant="caption" sx={{ color: alpha('#ffffff', 0.5) }}>
+                                  ID: {product.id}
+                                </Typography>
+                              </Box>
+                            </Stack>
+                          </TableCell>
+                          <TableCell>
+                            <Chip 
+                              label={product.category} 
+                              size="small" 
+                              sx={{ background: alpha('#7877C6', 0.2), color: '#7877C6' }} 
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="body2" fontWeight="bold">
+                              ${product.price.toFixed(2)}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Stack direction="row" alignItems="center" spacing={1}>
+                              <Typography variant="body2">{product.stock}</Typography>
+                              {product.stock < 10 && product.stock > 0 && (
+                                <Chip label="Low" size="small" color="warning" />
+                              )}
+                            </Stack>
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="body2">{product.sold}</Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Chip
+                              label={product.status.toUpperCase()}
+                              size="small"
+                              color={getProductStatusColor(product.status) as any}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Stack direction="row" spacing={1}>
+                              <IconButton size="small" sx={{ color: '#7877C6' }}>
+                                <EditIcon fontSize="small" />
+                              </IconButton>
+                              <IconButton size="small" sx={{ color: '#FF6B95' }}>
+                                <DeleteIcon fontSize="small" />
+                              </IconButton>
+                            </Stack>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
               )}
             </Box>
           )}
@@ -1109,410 +880,404 @@ const SellerDashboard = () => {
           {/* Orders Tab */}
           {activeTab === 2 && (
             <Box>
-              <Stack direction="row" spacing={2} sx={{ mb: 3 }}>
+              {/* Filters */}
+              <Stack direction="row" spacing={2} sx={{ mb: 3 }} flexWrap="wrap" gap={1}>
                 <Chip
                   label="All Orders"
                   onClick={() => setStatusFilter('all')}
                   color={statusFilter === 'all' ? 'primary' : 'default'}
-                  sx={{ color: statusFilter === 'all' ? 'white' : 'inherit' }}
+                  sx={{ 
+                    color: statusFilter === 'all' ? 'white' : 'inherit',
+                    backgroundColor: statusFilter === 'all' ? '#7877C6' : alpha('#ffffff', 0.1)
+                  }}
                 />
                 <Chip
                   label="Pending"
                   onClick={() => setStatusFilter('pending')}
                   color={statusFilter === 'pending' ? 'warning' : 'default'}
+                  sx={{ backgroundColor: statusFilter === 'pending' ? alpha('#F29F58', 0.2) : alpha('#ffffff', 0.1) }}
                 />
                 <Chip
-                  label="Approved"
-                  onClick={() => setStatusFilter('approved')}
-                  color={statusFilter === 'approved' ? 'info' : 'default'}
+                  label="Processing"
+                  onClick={() => setStatusFilter('processing')}
+                  color={statusFilter === 'processing' ? 'info' : 'default'}
+                  sx={{ backgroundColor: statusFilter === 'processing' ? alpha('#4ECDC4', 0.2) : alpha('#ffffff', 0.1) }}
                 />
                 <Chip
                   label="Shipped"
                   onClick={() => setStatusFilter('shipped')}
                   color={statusFilter === 'shipped' ? 'primary' : 'default'}
+                  sx={{ backgroundColor: statusFilter === 'shipped' ? alpha('#7877C6', 0.2) : alpha('#ffffff', 0.1) }}
+                />
+                <Chip
+                  label="Delivered"
+                  onClick={() => setStatusFilter('delivered')}
+                  color={statusFilter === 'delivered' ? 'success' : 'default'}
+                  sx={{ backgroundColor: statusFilter === 'delivered' ? alpha('#4ECDC4', 0.2) : alpha('#ffffff', 0.1) }}
+                />
+                <Chip
+                  label="Cancelled"
+                  onClick={() => setStatusFilter('cancelled')}
+                  color={statusFilter === 'cancelled' ? 'error' : 'default'}
+                  sx={{ backgroundColor: statusFilter === 'cancelled' ? alpha('#FF6B95', 0.2) : alpha('#ffffff', 0.1) }}
                 />
               </Stack>
 
-              {filteredOrders.map((order) => (
-                <Paper
-                  key={order.id}
-                  sx={{
-                    p: 3,
-                    mb: 2,
-                    background: alpha('#1A173B', 0.5),
-                    borderRadius: 2,
-                  }}
-                >
-                  <Stack direction="row" justifyContent="space-between" alignItems="start">
-                    <Box sx={{ flex: 1 }}>
-                      <Typography variant="h6" gutterBottom>
-                        Order #{order.id} - {order.customer}
-                      </Typography>
-                      <Typography variant="body2" sx={{ color: alpha('#ffffff', 0.7), mb: 1 }}>
-                        Date: {order.date} • Items: {order.items} • Total: ${order.total}
-                      </Typography>
-                      <Typography variant="body2" sx={{ color: alpha('#ffffff', 0.7) }}>
-                        Payment: {order.paymentMethod} • Address: {order.address}
-                      </Typography>
-                      {order.customerEmail && (
-                        <Typography variant="body2" sx={{ color: alpha('#ffffff', 0.7), mt: 1 }}>
-                          Email: {order.customerEmail} • Phone: {order.customerPhone}
-                        </Typography>
-                      )}
-                    </Box>
-                    <Box sx={{ textAlign: 'right' }}>
-                      <Chip
-                        icon={getStatusIcon(order.status)}
-                        label={order.status.toUpperCase()}
-                        color={getStatusColor(order.status) as any}
-                        sx={{ mb: 2 }}
-                      />
-                      <Stack direction="row" spacing={1} justifyContent="flex-end">
-                        {order.status === 'pending' && (
-                          <>
-                            <Button
-                              variant="contained"
-                              size="small"
-                              startIcon={<CheckIcon />}
-                              onClick={() => handleApproveOrder(order.id)}
-                              sx={{
-                                background: 'linear-gradient(135deg, #4ECDC4 0%, #36A398 100%)',
-                              }}
-                            >
-                              Approve
-                            </Button>
-                            <Button
-                              variant="outlined"
-                              size="small"
-                              startIcon={<CancelIcon />}
-                              onClick={() => handleCancelOrder(order.id)}
-                              sx={{
-                                borderColor: '#FF6B95',
-                                color: '#FF6B95',
-                                '&:hover': { borderColor: '#FF6B95' },
-                              }}
-                            >
-                              Cancel
-                            </Button>
-                          </>
-                        )}
-                        {order.status === 'approved' && (
-                          <Button
-                            variant="contained"
-                            size="small"
-                            startIcon={<ShippingIcon />}
-                            onClick={() => handleShipOrder(order.id)}
-                            sx={{
-                              background: 'linear-gradient(135deg, #7877C6 0%, #5A59A1 100%)',
-                            }}
-                          >
-                            Mark as Shipped
-                          </Button>
-                        )}
-                        <IconButton
-                          size="small"
-                          onClick={(e) => handleMenuOpen(e, order)}
-                          sx={{ color: alpha('#ffffff', 0.7) }}
-                        >
-                          <MoreIcon />
-                        </IconButton>
-                      </Stack>
-                    </Box>
-                  </Stack>
-                </Paper>
-              ))}
-            </Box>
-          )}
-
-          {/* Analytics Tab */}
-          {activeTab === 3 && (
-            <Box>
-              <Typography variant="h6" gutterBottom>Sales Analytics</Typography>
-              <Grid container spacing={3}>
-                <Grid item xs={12} md={6}>
-                  <Paper sx={{ p: 3, background: alpha('#1A173B', 0.5), borderRadius: 2, height: 300 }}>
-                    <Typography variant="subtitle1" gutterBottom>Revenue Trend (Last 7 Days)</Typography>
-                    <Box sx={{ display: 'flex', alignItems: 'flex-end', height: 200, mt: 2, px: 2 }}>
-                      {[60, 80, 45, 90, 70, 85, 95].map((height, index) => (
-                        <Box
-                          key={index}
-                          sx={{
-                            flex: 1,
-                            height: `${height}%`,
-                            background: 'linear-gradient(to top, #7877C6, #4ECDC4)',
-                            mx: 0.5,
-                            borderRadius: 1,
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'center',
-                            justifyContent: 'flex-end',
-                          }}
-                        >
-                          <Typography variant="caption" sx={{ color: alpha('#ffffff', 0.7), mb: 0.5 }}>
-                            ${[1200, 1600, 900, 1800, 1400, 1700, 1900][index]}
-                          </Typography>
-                        </Box>
-                      ))}
-                    </Box>
-                  </Paper>
-                </Grid>
-                <Grid item xs={12} md={6}>
-                  <Paper sx={{ p: 3, background: alpha('#1A173B', 0.5), borderRadius: 2, height: 300 }}>
-                    <Typography variant="subtitle1" gutterBottom>Top Selling Categories</Typography>
-                    {stats?.popularCategories?.slice(0, 5).map((category, index) => (
-                      <Stack
-                        key={category.name}
-                        direction="row"
-                        alignItems="center"
-                        justifyContent="space-between"
-                        sx={{ mb: 2, p: 1, '&:hover': { background: alpha('#ffffff', 0.05) } }}
+              {/* Orders Table */}
+              <TableContainer component={Paper} sx={{ 
+                background: alpha('#ffffff', 0.05),
+                border: '1px solid rgba(120, 119, 198, 0.2)',
+                borderRadius: 2,
+              }}>
+                <Table>
+                  <TableHead>
+                    <TableRow sx={{ background: alpha('#7877C6', 0.1) }}>
+                      <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Order ID</TableCell>
+                      <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Customer</TableCell>
+                      <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Date</TableCell>
+                      <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Items</TableCell>
+                      <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Total</TableCell>
+                      <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Status</TableCell>
+                      <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Payment</TableCell>
+                      <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Actions</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {paginatedOrders.map((order) => (
+                      <TableRow 
+                        key={order.id}
+                        hover
+                        sx={{ 
+                          '&:hover': { background: alpha('#ffffff', 0.05) },
+                          cursor: 'pointer'
+                        }}
+                        onClick={() => setOrderDetailsOpen(true)}
                       >
-                        <Stack direction="row" alignItems="center" spacing={1}>
-                          <CategoryIcon sx={{ color: '#7877C6', fontSize: 20 }} />
-                          <Typography variant="body2">
-                            {category.name.charAt(0).toUpperCase() + category.name.slice(1)}
+                        <TableCell sx={{ color: 'white' }}>
+                          <Typography fontWeight="bold">#{order.id}</Typography>
+                        </TableCell>
+                        <TableCell sx={{ color: 'white' }}>
+                          <Box>
+                            <Typography variant="body2" fontWeight="bold">
+                              {order.customerName}
+                            </Typography>
+                            <Typography variant="caption" sx={{ color: alpha('#ffffff', 0.5) }}>
+                              {order.customerEmail}
+                            </Typography>
+                          </Box>
+                        </TableCell>
+                        <TableCell sx={{ color: alpha('#ffffff', 0.8) }}>
+                          {order.date}
+                        </TableCell>
+                        <TableCell sx={{ color: 'white' }}>
+                          {order.items} items
+                        </TableCell>
+                        <TableCell sx={{ color: 'white' }}>
+                          <Typography fontWeight="bold">
+                            ${order.total.toFixed(2)}
                           </Typography>
-                        </Stack>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                          <Typography variant="body2" sx={{ color: '#4ECDC4' }}>
-                            {category.count} sold
-                          </Typography>
-                          <Chip 
-                            label={`$${(category.count * 100).toLocaleString()}`}
+                        </TableCell>
+                        <TableCell>
+                          <Chip
+                            label={order.status.toUpperCase()}
                             size="small"
-                            sx={{ background: alpha('#7877C6', 0.2), color: '#7877C6' }}
+                            color={getStatusColor(order.status) as any}
+                            sx={{ fontWeight: 'bold', fontSize: '0.7rem' }}
                           />
-                        </Box>
-                      </Stack>
+                        </TableCell>
+                        <TableCell>
+                          <Chip
+                            label={order.payment.toUpperCase()}
+                            size="small"
+                            color={getPaymentColor(order.payment) as any}
+                            sx={{ fontSize: '0.7rem' }}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Stack direction="row" spacing={1}>
+                            <IconButton 
+                              size="small" 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                showNotification(`Order #${order.id} approved`, 'success');
+                              }}
+                              sx={{ color: '#4ECDC4' }}
+                            >
+                              <CheckIcon fontSize="small" />
+                            </IconButton>
+                            <IconButton 
+                              size="small" 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                showNotification(`Order #${order.id} shipped`, 'info');
+                              }}
+                              sx={{ color: '#7877C6' }}
+                            >
+                              <ShippingIcon fontSize="small" />
+                            </IconButton>
+                            <IconButton 
+                              size="small" 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                showNotification(`Order #${order.id} cancelled`, 'warning');
+                              }}
+                              sx={{ color: '#FF6B95' }}
+                            >
+                              <CancelIcon fontSize="small" />
+                            </IconButton>
+                          </Stack>
+                        </TableCell>
+                      </TableRow>
                     ))}
-                  </Paper>
-                </Grid>
-              </Grid>
+                  </TableBody>
+                </Table>
+                <TablePagination
+                  rowsPerPageOptions={[5, 10, 25]}
+                  component="div"
+                  count={filteredOrders.length}
+                  rowsPerPage={rowsPerPage}
+                  page={page}
+                  onPageChange={handleChangePage}
+                  onRowsPerPageChange={handleChangeRowsPerPage}
+                  sx={{ 
+                    color: 'white',
+                    '& .MuiTablePagination-selectIcon': {
+                      color: 'white',
+                    },
+                    '& .MuiTablePagination-actions button': {
+                      color: 'white',
+                    }
+                  }}
+                />
+              </TableContainer>
             </Box>
           )}
         </Paper>
 
-        {/* Action Menu */}
-        <Menu
-          anchorEl={anchorEl}
-          open={Boolean(anchorEl)}
-          onClose={handleMenuClose}
+        {/* Add Product Dialog */}
+        <Dialog 
+          open={addDialogOpen} 
+          onClose={() => setAddDialogOpen(false)}
+          maxWidth="sm"
+          fullWidth
         >
-          {selectedOrder && (
-            <>
-              <MenuItem onClick={() => {
-                handleApproveOrder(selectedOrder.id);
-                handleMenuClose();
-              }}>
-                <CheckIcon fontSize="small" sx={{ mr: 1 }} />
-                Approve Order
-              </MenuItem>
-              <MenuItem onClick={() => {
-                handleShipOrder(selectedOrder.id);
-                handleMenuClose();
-              }}>
-                <ShippingIcon fontSize="small" sx={{ mr: 1 }} />
-                Mark as Shipped
-              </MenuItem>
-              <MenuItem onClick={() => {
-                handleCancelOrder(selectedOrder.id);
-                handleMenuClose();
-              }}>
-                <CancelIcon fontSize="small" sx={{ mr: 1 }} />
-                Cancel Order
-              </MenuItem>
-              <Divider />
-              <MenuItem onClick={handleMenuClose}>
-                <NotificationsIcon fontSize="small" sx={{ mr: 1 }} />
-                Notify Customer
-              </MenuItem>
-            </>
-          )}
-        </Menu>
-      </Container>
-
-      {/* Add Product Dialog */}
-      <Dialog 
-        open={addDialogOpen} 
-        onClose={() => setAddDialogOpen(false)}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle sx={{ background: '#0A081F', color: 'white' }}>
-          <Stack direction="row" alignItems="center" spacing={1}>
-            <AddIcon />
-            <Typography variant="h6">Add New Product</Typography>
-          </Stack>
-        </DialogTitle>
-        <DialogContent sx={{ background: '#1A173B', color: 'white', pt: 3 }}>
-          <Stack spacing={3}>
-            <TextField
-              label="Product Title"
-              fullWidth
-              value={newProduct.title}
-              onChange={(e) => setNewProduct({...newProduct, title: e.target.value})}
-              InputLabelProps={{ sx: { color: alpha('#ffffff', 0.7) } }}
-              InputProps={{ sx: { color: 'white' } }}
-            />
-            <TextField
-              label="Description"
-              fullWidth
-              multiline
-              rows={3}
-              value={newProduct.description}
-              onChange={(e) => setNewProduct({...newProduct, description: e.target.value})}
-              InputLabelProps={{ sx: { color: alpha('#ffffff', 0.7) } }}
-              InputProps={{ sx: { color: 'white' } }}
-            />
-            <Stack direction="row" spacing={2}>
-              <TextField
-                label="Price ($)"
-                fullWidth
-                type="number"
-                value={newProduct.price}
-                onChange={(e) => setNewProduct({...newProduct, price: e.target.value})}
-                InputLabelProps={{ sx: { color: alpha('#ffffff', 0.7) } }}
-                InputProps={{ sx: { color: 'white' } }}
-              />
-              <TextField
-                label="Stock"
-                fullWidth
-                type="number"
-                value={newProduct.stock}
-                onChange={(e) => setNewProduct({...newProduct, stock: e.target.value})}
-                InputLabelProps={{ sx: { color: alpha('#ffffff', 0.7) } }}
-                InputProps={{ sx: { color: 'white' } }}
-              />
+          <DialogTitle sx={{ background: '#0A081F', color: 'white' }}>
+            <Stack direction="row" alignItems="center" spacing={1}>
+              <AddIcon />
+              <Typography variant="h6">Add New Product</Typography>
             </Stack>
-            <FormControl fullWidth>
-              <InputLabel sx={{ color: alpha('#ffffff', 0.7) }}>Category</InputLabel>
-              <Select
-                value={newProduct.category}
-                onChange={(e) => setNewProduct({...newProduct, category: e.target.value})}
-                input={<OutlinedInput label="Category" sx={{ color: 'white' }} />}
-              >
-                {categories.map((category) => (
-                  <MenuItem key={category} value={category}>
-                    {category.charAt(0).toUpperCase() + category.slice(1)}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-            <TextField
-              label="Image URL (Optional)"
-              fullWidth
-              value={newProduct.imageUrl}
-              onChange={(e) => setNewProduct({...newProduct, imageUrl: e.target.value})}
-              InputLabelProps={{ sx: { color: alpha('#ffffff', 0.7) } }}
-              InputProps={{ 
-                sx: { color: 'white' },
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <ImageIcon sx={{ color: alpha('#ffffff', 0.5) }} />
-                  </InputAdornment>
-                )
-              }}
-            />
-          </Stack>
-        </DialogContent>
-        <DialogActions sx={{ background: '#0A081F', color: 'white' }}>
-          <Button onClick={() => setAddDialogOpen(false)} sx={{ color: '#FF6B95' }}>
-            Cancel
-          </Button>
-          <Button 
-            onClick={handleAddProduct}
-            variant="contained"
-            sx={{
-              background: 'linear-gradient(135deg, #7877C6 0%, #5A59A1 100%)',
-            }}
-          >
-            Add Product
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Update Stock Dialog */}
-      <Dialog 
-        open={stockDialogOpen} 
-        onClose={() => {
-          setStockDialogOpen(false);
-          setSelectedProduct(null);
-          setNewStock('');
-        }}
-        maxWidth="xs"
-        fullWidth
-      >
-        <DialogTitle sx={{ background: '#0A081F', color: 'white' }}>
-          <Stack direction="row" alignItems="center" spacing={1}>
-            <EditIcon />
-            <Typography variant="h6">Update Stock</Typography>
-          </Stack>
-        </DialogTitle>
-        <DialogContent sx={{ background: '#1A173B', color: 'white', pt: 3 }}>
-          {selectedProduct && (
+          </DialogTitle>
+          <DialogContent sx={{ background: '#1A173B', color: 'white', pt: 3 }}>
             <Stack spacing={3}>
-              <Typography variant="body1">
-                Update stock for: <strong>{selectedProduct.title}</strong>
-              </Typography>
-              <Typography variant="body2" sx={{ color: alpha('#ffffff', 0.7) }}>
-                Current Stock: {selectedProduct.stock} units
-              </Typography>
               <TextField
-                label="New Stock Quantity"
+                label="Product Title"
                 fullWidth
-                type="number"
-                value={newStock}
-                onChange={(e) => setNewStock(e.target.value)}
                 InputLabelProps={{ sx: { color: alpha('#ffffff', 0.7) } }}
                 InputProps={{ sx: { color: 'white' } }}
               />
+              <TextField
+                label="Description"
+                fullWidth
+                multiline
+                rows={3}
+                InputLabelProps={{ sx: { color: alpha('#ffffff', 0.7) } }}
+                InputProps={{ sx: { color: 'white' } }}
+              />
+              <Stack direction="row" spacing={2}>
+                <TextField
+                  label="Price ($)"
+                  fullWidth
+                  type="number"
+                  InputLabelProps={{ sx: { color: alpha('#ffffff', 0.7) } }}
+                  InputProps={{ sx: { color: 'white' } }}
+                />
+                <TextField
+                  label="Stock"
+                  fullWidth
+                  type="number"
+                  InputLabelProps={{ sx: { color: alpha('#ffffff', 0.7) } }}
+                  InputProps={{ sx: { color: 'white' } }}
+                />
+              </Stack>
+              <FormControl fullWidth>
+                <InputLabel sx={{ color: alpha('#ffffff', 0.7) }}>Category</InputLabel>
+                <Select
+                  label="Category"
+                  input={<OutlinedInput label="Category" sx={{ color: 'white' }} />}
+                >
+                  {categories.map((category) => (
+                    <MenuItem key={category} value={category}>
+                      {category.charAt(0).toUpperCase() + category.slice(1)}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
             </Stack>
-          )}
-        </DialogContent>
-        <DialogActions sx={{ background: '#0A081F', color: 'white' }}>
-          <Button 
-            onClick={() => {
-              setStockDialogOpen(false);
-              setSelectedProduct(null);
-              setNewStock('');
-            }}
-            sx={{ color: '#FF6B95' }}
-          >
-            Cancel
-          </Button>
-          <Button 
-            onClick={handleUpdateStock}
-            variant="contained"
-            sx={{
-              background: 'linear-gradient(135deg, #4ECDC4 0%, #36A398 100%)',
-            }}
-          >
-            Update Stock
-          </Button>
-        </DialogActions>
-      </Dialog>
+          </DialogContent>
+          <DialogActions sx={{ background: '#0A081F', color: 'white' }}>
+            <Button onClick={() => setAddDialogOpen(false)} sx={{ color: '#FF6B95' }}>
+              Cancel
+            </Button>
+            <Button 
+              variant="contained"
+              onClick={() => {
+                showNotification('Product added successfully', 'success');
+                setAddDialogOpen(false);
+              }}
+              sx={{
+                background: 'linear-gradient(135deg, #7877C6 0%, #5A59A1 100%)',
+              }}
+            >
+              Add Product
+            </Button>
+          </DialogActions>
+        </Dialog>
 
-      {/* Notification Snackbar */}
-      <Snackbar
-        open={notification.open}
-        autoHideDuration={6000}
-        onClose={handleCloseNotification}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-      >
-        <Alert
-          onClose={handleCloseNotification}
-          severity={notification.type as any}
-          sx={{ 
-            width: '100%',
-            background: notification.type === 'success' ? '#4ECDC4' : 
-                       notification.type === 'error' ? '#FF6B95' : 
-                       notification.type === 'warning' ? '#F29F58' : '#7877C6',
-            color: 'white',
-          }}
+        {/* Order Details Dialog */}
+        <Dialog 
+          open={orderDetailsOpen} 
+          onClose={() => setOrderDetailsOpen(false)}
+          maxWidth="md"
+          fullWidth
         >
-          {notification.message}
-        </Alert>
-      </Snackbar>
+          <DialogTitle sx={{ 
+            background: 'linear-gradient(135deg, #1A173B 0%, #2A2660 100%)',
+            color: 'white',
+          }}>
+            <Stack direction="row" justifyContent="space-between" alignItems="center">
+              <Typography variant="h6">Order #1001 Details</Typography>
+              <Chip
+                label="PENDING"
+                color="warning"
+                sx={{ fontWeight: 'bold' }}
+              />
+            </Stack>
+          </DialogTitle>
+          <DialogContent sx={{ background: '#1A173B', color: 'white', pt: 3 }}>
+            <Grid container spacing={3}>
+              {/* Customer Information */}
+              <Grid item xs={12} md={6}>
+                <Typography variant="h6" gutterBottom sx={{ color: '#4ECDC4' }}>Customer Information</Typography>
+                <Paper sx={{ p: 2, background: alpha('#ffffff', 0.05) }}>
+                  <Stack spacing={1.5}>
+                    <Box>
+                      <Typography variant="caption" sx={{ color: alpha('#ffffff', 0.5) }}>Name</Typography>
+                      <Typography>John Doe</Typography>
+                    </Box>
+                    <Box>
+                      <Typography variant="caption" sx={{ color: alpha('#ffffff', 0.5) }}>Email</Typography>
+                      <Typography>john@example.com</Typography>
+                    </Box>
+                    <Box>
+                      <Typography variant="caption" sx={{ color: alpha('#ffffff', 0.5) }}>Phone</Typography>
+                      <Typography>+1 (555) 123-4567</Typography>
+                    </Box>
+                    <Box>
+                      <Typography variant="caption" sx={{ color: alpha('#ffffff', 0.5) }}>Shipping Address</Typography>
+                      <Typography>123 Main St, New York, NY 10001</Typography>
+                    </Box>
+                  </Stack>
+                </Paper>
+              </Grid>
+
+              {/* Order Summary */}
+              <Grid item xs={12} md={6}>
+                <Typography variant="h6" gutterBottom sx={{ color: '#4ECDC4' }}>Order Summary</Typography>
+                <Paper sx={{ p: 2, background: alpha('#ffffff', 0.05) }}>
+                  <Stack spacing={1.5}>
+                    <Stack direction="row" justifyContent="space-between">
+                      <Typography>Subtotal</Typography>
+                      <Typography>$379.96</Typography>
+                    </Stack>
+                    <Stack direction="row" justifyContent="space-between">
+                      <Typography>Shipping Fee</Typography>
+                      <Typography>$9.99</Typography>
+                    </Stack>
+                    <Stack direction="row" justifyContent="space-between">
+                      <Typography>Tax (9%)</Typography>
+                      <Typography>$34.20</Typography>
+                    </Stack>
+                    <Divider sx={{ borderColor: alpha('#ffffff', 0.1), my: 1 }} />
+                    <Stack direction="row" justifyContent="space-between">
+                      <Typography variant="h6">Total</Typography>
+                      <Typography variant="h6">$424.15</Typography>
+                    </Stack>
+                  </Stack>
+                </Paper>
+              </Grid>
+            </Grid>
+          </DialogContent>
+          <DialogActions sx={{ 
+            background: '#1A173B', 
+            borderTop: '1px solid rgba(120, 119, 198, 0.2)',
+            p: 3 
+          }}>
+            <Stack direction="row" spacing={2} sx={{ width: '100%' }}>
+              <Button
+                onClick={() => setOrderDetailsOpen(false)}
+                sx={{ 
+                  color: '#FF6B95',
+                  flex: 1
+                }}
+              >
+                Close
+              </Button>
+              <Button
+                variant="contained"
+                startIcon={<CheckIcon />}
+                onClick={() => {
+                  showNotification('Order #1001 approved', 'success');
+                  setOrderDetailsOpen(false);
+                }}
+                sx={{
+                  background: 'linear-gradient(135deg, #4ECDC4 0%, #36A398 100%)',
+                  color: 'white',
+                  flex: 1
+                }}
+              >
+                Approve Order
+              </Button>
+              <Button
+                variant="contained"
+                startIcon={<ShippingIcon />}
+                onClick={() => {
+                  showNotification('Order #1001 marked as shipped', 'info');
+                  setOrderDetailsOpen(false);
+                }}
+                sx={{
+                  background: 'linear-gradient(135deg, #7877C6 0%, #5A59A1 100%)',
+                  color: 'white',
+                  flex: 1
+                }}
+              >
+                Mark as Shipped
+              </Button>
+            </Stack>
+          </DialogActions>
+        </Dialog>
+
+        {/* Notification Snackbar */}
+        <Snackbar
+          open={notification.open}
+          autoHideDuration={6000}
+          onClose={handleCloseNotification}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        >
+          <Alert
+            onClose={handleCloseNotification}
+            severity={notification.type as any}
+            sx={{ 
+              width: '100%',
+              background: notification.type === 'success' ? '#4ECDC4' : 
+                        notification.type === 'error' ? '#FF6B95' : 
+                        notification.type === 'warning' ? '#F29F58' : '#7877C6',
+              color: 'white',
+            }}
+          >
+            {notification.message}
+          </Alert>
+        </Snackbar>
+      </Container>
     </Box>
   );
 };

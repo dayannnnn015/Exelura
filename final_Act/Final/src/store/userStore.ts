@@ -1,4 +1,4 @@
-// userStore.ts - FINAL VERSION WITH SELLER FUNCTIONALITY
+// userStore.ts - FINAL VERSION WITH SINGLE SELLER INTEGRATION
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 
@@ -23,6 +23,7 @@ export interface CartItem {
   originalPrice?: number;
   category?: string;
   isSelected: boolean;
+  sellerId?: number; // Always 2 for single seller
 }
 
 export interface Product {
@@ -38,6 +39,7 @@ export interface Product {
   category?: string;
   qrCode?: string;
   reviews?: any[];
+  sellerId?: number; // Always 2 for single seller
   [key: string]: any;
 }
 
@@ -50,6 +52,7 @@ export interface ProductInput {
   stock?: number;
   category?: string;
   qrCode?: string;
+  sellerId?: number; // Always 2
   [key: string]: any;
 }
 
@@ -67,6 +70,7 @@ export interface SellerProduct {
   status: 'active' | 'inactive' | 'out_of_stock';
   createdAt: string;
   updatedAt: string;
+  sellerId: number; // Always 2
 }
 
 export interface OrderItem {
@@ -76,6 +80,7 @@ export interface OrderItem {
   quantity: number;
   price: number;
   thumbnail: string;
+  sellerId: number; // Always 2
 }
 
 export interface Order {
@@ -96,6 +101,7 @@ export interface Order {
   notes?: string;
   createdAt: string;
   updatedAt: string;
+  sellerId?: number; // Always 2 for single seller
 }
 
 export interface SellerStats {
@@ -104,10 +110,11 @@ export interface SellerStats {
   totalProducts: number;
   totalCustomers: number;
   monthlyGrowth: number;
+  lowStockProducts: number;
+  outOfStockProducts: number;
   popularCategories: Array<{ name: string; count: number }>;
 }
 
-// Notification and Message Interfaces
 export interface Notification {
   id: number;
   userId: number;
@@ -134,7 +141,7 @@ interface UserStore {
   isLoggedIn: boolean;
   isSeller: boolean;
   
-  // Notification and Message state
+  // Notification state
   notifications: Notification[];
   unreadNotificationCount: number;
   messages: Message[];
@@ -145,7 +152,7 @@ interface UserStore {
   cartTotal: number;
   cartCount: number;
   
-  // Products state (cached)
+  // Products state (from API)
   products: Product[];
   
   // Seller Dashboard State
@@ -159,7 +166,7 @@ interface UserStore {
   register: (user: User) => void;
   updateProfile: (userData: Partial<User>) => void;
   
-  // Notification and Message actions
+  // Notification actions
   addNotification: (notification: Notification) => void;
   markNotificationAsRead: (id: number) => void;
   addMessage: (message: Message) => void;
@@ -181,11 +188,16 @@ interface UserStore {
   checkoutSelectedItems: () => void;
   
   // Order actions
-  createOrder: (orderData: Partial<Order>) => Order;
+  createOrder: (orderData: {
+    shippingAddress: string;
+    paymentMethod: Order['paymentMethod'];
+    notes?: string;
+  }) => Order[];
   updateOrderStatus: (orderId: number, status: Order['status']) => void;
+  sendOrderNotification: (orderId: number, status: Order['status'] | 'status_update', customerEmail: string) => void;
   cancelOrder: (orderId: number) => void;
   getCustomerOrders: () => Order[];
-  getSellerOrders: () => Order[];
+  getSellerOrders: (sellerId?: number) => Order[];
   
   // Seller Product Management
   addSellerProduct: (product: Partial<SellerProduct>) => void;
@@ -195,10 +207,11 @@ interface UserStore {
   updateProductStock: (productId: number, newStock: number) => void;
   
   // Seller Stats
-  updateSellerStats: () => void;
+  updateSellerStats: (sellerId?: number) => void;
   
   // Products actions
   setProducts: (products: Product[]) => void;
+  syncProductsWithAPI: () => Promise<void>;
   
   // Helper functions
   getDiscountedPrice: (price: number, discountPercentage?: number) => number;
@@ -208,7 +221,6 @@ interface UserStore {
   initialize: () => void;
 }
 
-// Dummy users for initial state
 const DUMMY_USERS: User[] = [
   {
     id: 1,
@@ -227,15 +239,6 @@ const DUMMY_USERS: User[] = [
     address: '456 Oak Avenue, Los Angeles, CA',
     createdAt: new Date().toISOString(),
     role: 'seller'
-  },
-  {
-    id: 3,
-    name: 'Seller User',
-    email: 'seller@xelura.com',
-    phone: '+1234567890',
-    address: '456 Seller Street, Los Angeles, CA',
-    createdAt: new Date().toISOString(),
-    role: 'seller'
   }
 ];
 
@@ -249,7 +252,6 @@ const defaultUser: User = {
   role: 'user'
 };
 
-// Initial Notifications
 const initialNotifications: Notification[] = [
   {
     id: 1,
@@ -262,36 +264,18 @@ const initialNotifications: Notification[] = [
   },
   {
     id: 2,
-    userId: 1,
-    type: 'promotion',
-    title: 'Special Offer',
-    message: 'Get 20% off on all electronics this weekend',
-    read: true,
-    createdAt: new Date().toISOString()
-  }
-];
-
-// Initial Messages
-const initialMessages: Message[] = [
-  {
-    id: 1,
-    senderId: 2,
-    receiverId: 1,
-    content: 'Hello, I have a question about your product',
+    userId: 2,
+    type: 'order',
+    title: 'New Order Received',
+    message: 'You have a new order #1001 from John Doe',
     read: false,
     createdAt: new Date().toISOString()
-  },
-  {
-    id: 2,
-    senderId: 1,
-    receiverId: 2,
-    content: 'Thanks for your message! How can I help?',
-    read: true,
-    createdAt: new Date().toISOString()
   }
 ];
 
-// Initial Seller Products
+const initialMessages: Message[] = [];
+
+// Initial Seller Products - ALL belong to seller ID 2
 const initialSellerProducts: SellerProduct[] = [
   {
     id: 1,
@@ -306,6 +290,7 @@ const initialSellerProducts: SellerProduct[] = [
     status: 'active',
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
+    sellerId: 2
   },
   {
     id: 2,
@@ -320,10 +305,26 @@ const initialSellerProducts: SellerProduct[] = [
     status: 'active',
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
+    sellerId: 2
+  },
+  {
+    id: 3,
+    title: 'Wireless Headphones',
+    description: 'Noise-cancelling wireless headphones',
+    price: 299,
+    category: 'electronics',
+    stock: 25,
+    sold: 80,
+    rating: 4.3,
+    images: ['https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600&h=400&fit=crop'],
+    status: 'active',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    sellerId: 2
   }
 ];
 
-// Initial Orders
+// Initial Orders - ALL belong to seller ID 2
 const initialOrders: Order[] = [
   {
     id: 1001,
@@ -338,7 +339,8 @@ const initialOrders: Order[] = [
         productName: 'Premium Smartphone X',
         quantity: 1,
         price: 999,
-        thumbnail: 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=150&h=150&fit=crop'
+        thumbnail: 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=150&h=150&fit=crop',
+        sellerId: 2
       }
     ],
     subtotal: 999,
@@ -351,13 +353,14 @@ const initialOrders: Order[] = [
     paymentStatus: 'paid',
     createdAt: new Date('2024-03-15').toISOString(),
     updatedAt: new Date('2024-03-15').toISOString(),
+    sellerId: 2
   },
   {
     id: 1002,
-    userId: 2,
-    customerName: 'Jane Smith',
-    customerEmail: 'jane@xelura.com',
-    customerPhone: '+0987654321',
+    userId: 1,
+    customerName: 'John Doe',
+    customerEmail: 'john@xelura.com',
+    customerPhone: '+1234567890',
     items: [
       {
         id: 2,
@@ -365,7 +368,8 @@ const initialOrders: Order[] = [
         productName: 'Luxury Watch Pro',
         quantity: 1,
         price: 2499,
-        thumbnail: 'https://images.unsplash.com/photo-1523170335258-f5ed11844a49?w=150&h=150&fit=crop'
+        thumbnail: 'https://images.unsplash.com/photo-1523170335258-f5ed11844a49?w=150&h=150&fit=crop',
+        sellerId: 2
       }
     ],
     subtotal: 2499,
@@ -373,11 +377,12 @@ const initialOrders: Order[] = [
     tax: 224.91,
     total: 2748.91,
     status: 'approved',
-    shippingAddress: '456 Oak Avenue, Los Angeles, CA',
+    shippingAddress: '123 Main Street, New York, NY',
     paymentMethod: 'paypal',
     paymentStatus: 'paid',
     createdAt: new Date('2024-03-14').toISOString(),
     updatedAt: new Date('2024-03-14').toISOString(),
+    sellerId: 2
   }
 ];
 
@@ -389,30 +394,30 @@ export const useUserStore = create<UserStore>()(
       isLoggedIn: false,
       isSeller: false,
       
-      // Notification and Message state
       notifications: initialNotifications,
       unreadNotificationCount: 0,
       messages: initialMessages,
       unreadMessageCount: 0,
       
-      // Cart state
       cart: [],
       cartTotal: 0,
       cartCount: 0,
       products: [],
       
-      // Seller state
       sellerProducts: initialSellerProducts,
       orders: initialOrders,
       sellerStats: {
         totalRevenue: 3852.82,
         totalOrders: 2,
-        totalProducts: 2,
-        totalCustomers: 2,
+        totalProducts: 3,
+        totalCustomers: 1,
         monthlyGrowth: 12.5,
+        lowStockProducts: 1,
+        outOfStockProducts: 0,
         popularCategories: [
           { name: 'smartphones', count: 120 },
-          { name: 'womens-watches', count: 45 }
+          { name: 'womens-watches', count: 45 },
+          { name: 'electronics', count: 80 }
         ]
       },
       
@@ -426,7 +431,7 @@ export const useUserStore = create<UserStore>()(
             isLoggedIn: true,
             isSeller: false,
             unreadNotificationCount: initialNotifications.filter(n => !n.read && n.userId === 1).length,
-            unreadMessageCount: initialMessages.filter(m => !m.read && m.receiverId === 1).length,
+            unreadMessageCount: 0,
           });
         }
       },
@@ -437,7 +442,7 @@ export const useUserStore = create<UserStore>()(
         isLoggedIn: true,
         isSeller: user.role === 'seller',
         unreadNotificationCount: get().notifications.filter(n => !n.read && n.userId === user.id).length,
-        unreadMessageCount: get().messages.filter(m => !m.read && m.receiverId === user.id).length,
+        unreadMessageCount: 0,
       }),
       
       logout: () => set({ 
@@ -510,7 +515,7 @@ export const useUserStore = create<UserStore>()(
         });
       },
       
-      // Message actions
+      // Message actions (simplified for single seller)
       addMessage: (message) => {
         set((state) => {
           const newMessages = [...state.messages, message];
@@ -548,7 +553,6 @@ export const useUserStore = create<UserStore>()(
       switchToSeller: () => {
         const state = get();
         if (state.currentUser) {
-          // Switch existing user to seller mode
           const updatedUser = {
             ...state.currentUser,
             role: 'seller'
@@ -564,7 +568,6 @@ export const useUserStore = create<UserStore>()(
       switchToUser: () => {
         const state = get();
         if (state.currentUser) {
-          // Switch existing user to regular user mode
           const updatedUser = {
             ...state.currentUser,
             role: 'user'
@@ -590,6 +593,7 @@ export const useUserStore = create<UserStore>()(
         const productName = product.title || product.name || 'Unnamed Product';
         const thumbnail = product.thumbnail || product.image || product.images?.[0] || '';
         const category = product.category || '';
+        const sellerId = 2; // Always seller ID 2
         
         let newCart: CartItem[];
         
@@ -603,6 +607,7 @@ export const useUserStore = create<UserStore>()(
                   productName: productName,
                   thumbnail: thumbnail,
                   category: category,
+                  sellerId: sellerId,
                   isSelected: item.isSelected
                 }
               : item
@@ -620,6 +625,7 @@ export const useUserStore = create<UserStore>()(
               thumbnail: thumbnail,
               discountPercentage: discountPercentage,
               category: category,
+              sellerId: sellerId,
               isSelected: true,
             }
           ];
@@ -684,7 +690,7 @@ export const useUserStore = create<UserStore>()(
         console.log('✅ Checkout complete, removed selected items:', newCart.length, 'items remaining');
       },
       
-      // Order Management
+      // Order Management - Single Seller
       createOrder: (orderData) => {
         const state = get();
         const selectedItems = state.cart.filter(item => item.isSelected);
@@ -693,13 +699,15 @@ export const useUserStore = create<UserStore>()(
           throw new Error('No items selected for checkout');
         }
         
+        const sellerId = 2; // Always seller ID 2
+        
         const subtotal = selectedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
         const shippingFee = 15;
         const tax = subtotal * 0.09;
         const total = subtotal + shippingFee + tax;
         
         const newOrder: Order = {
-          id: Date.now(),
+          id: Date.now() + Math.floor(Math.random() * 1000),
           userId: state.currentUser?.id || 0,
           customerName: state.currentUser?.name || 'Guest',
           customerEmail: state.currentUser?.email || '',
@@ -710,7 +718,8 @@ export const useUserStore = create<UserStore>()(
             productName: item.productName,
             quantity: item.quantity,
             price: item.price,
-            thumbnail: item.thumbnail
+            thumbnail: item.thumbnail,
+            sellerId: sellerId
           })),
           subtotal,
           shippingFee,
@@ -718,11 +727,12 @@ export const useUserStore = create<UserStore>()(
           total,
           status: 'pending',
           shippingAddress: orderData.shippingAddress || state.currentUser?.address || '',
-          paymentMethod: orderData.paymentMethod || 'credit_card',
-          paymentStatus: 'pending',
+          paymentMethod: orderData.paymentMethod,
+          paymentStatus: orderData.paymentMethod === 'cash_on_delivery' ? 'pending' : 'paid',
+          notes: orderData.notes,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
-          ...orderData
+          sellerId: sellerId
         };
         
         // Update sold count for products
@@ -731,14 +741,28 @@ export const useUserStore = create<UserStore>()(
           if (product) {
             state.updateSellerProduct(item.productId, {
               sold: product.sold + item.quantity,
-              stock: product.stock - item.quantity
+              stock: Math.max(0, product.stock - item.quantity),
+              status: product.stock - item.quantity <= 0 ? 'out_of_stock' : product.status
             });
           }
         });
         
-        // Create notification for order
-        const orderNotification: Notification = {
+        // Create notification for seller (ID 2)
+        const sellerNotification: Notification = {
           id: Date.now(),
+          userId: 2,
+          type: 'order',
+          title: 'New Order Received',
+          message: `You have a new order #${newOrder.id} from ${state.currentUser?.name || 'Customer'}`,
+          data: { orderId: newOrder.id, customerName: state.currentUser?.name },
+          read: false,
+          createdAt: new Date().toISOString()
+        };
+        state.addNotification(sellerNotification);
+        
+        // Create notification for customer
+        const customerNotification: Notification = {
+          id: Date.now() + 1,
           userId: state.currentUser?.id || 0,
           type: 'order',
           title: 'Order Created',
@@ -748,19 +772,20 @@ export const useUserStore = create<UserStore>()(
           createdAt: new Date().toISOString()
         };
         
+        // Add order to store
         set((state) => ({
           orders: [...state.orders, newOrder],
           cart: state.cart.filter(item => !item.isSelected)
         }));
         
-        // Add notification
-        state.addNotification(orderNotification);
+        // Add notifications
+        state.addNotification(customerNotification);
         
-        // Update stats
-        state.updateSellerStats();
+        // Update stats for seller 2
+        state.updateSellerStats(2);
         
-        console.log('✅ Order created:', newOrder);
-        return newOrder;
+        console.log('✅ Order created for seller 2:', newOrder);
+        return [newOrder];
       },
       
       updateOrderStatus: (orderId, status) => {
@@ -771,13 +796,12 @@ export const useUserStore = create<UserStore>()(
                 ...order, 
                 status, 
                 updatedAt: new Date().toISOString(),
-                // If shipping, update payment status to paid
                 paymentStatus: status === 'shipped' ? 'paid' : order.paymentStatus
               }
             : order
         );
         
-        // Create notification for status update
+        // Create notification for customer
         const order = state.orders.find(o => o.id === orderId);
         if (order && order.userId) {
           const statusNotification: Notification = {
@@ -794,9 +818,32 @@ export const useUserStore = create<UserStore>()(
         }
         
         set({ orders: updatedOrders });
-        state.updateSellerStats();
+        state.updateSellerStats(2);
         
         console.log(`📢 Order #${orderId} status updated to ${status}`);
+      },
+      
+      sendOrderNotification: (orderId, status, customerEmail) => {
+        console.log(`📧 Sending ${status} notification for order #${orderId} to ${customerEmail}`);
+        
+        const state = get();
+        const order = state.orders.find(o => o.id === orderId);
+        
+        if (order) {
+          const notification: Notification = {
+            id: Date.now(),
+            userId: order.userId,
+            type: 'order',
+            title: 'Order Notification',
+            message: `Your order #${orderId} has been ${status}`,
+            data: { orderId, status },
+            read: false,
+            createdAt: new Date().toISOString()
+          };
+          
+          state.addNotification(notification);
+          console.log(`✅ Notification sent to user ${order.userId}`);
+        }
       },
       
       cancelOrder: (orderId) => {
@@ -820,7 +867,8 @@ export const useUserStore = create<UserStore>()(
             if (product) {
               state.updateSellerProduct(item.productId, {
                 sold: product.sold - item.quantity,
-                stock: product.stock + item.quantity
+                stock: product.stock + item.quantity,
+                status: product.stock + item.quantity > 0 ? 'active' : product.status
               });
             }
           });
@@ -842,7 +890,7 @@ export const useUserStore = create<UserStore>()(
         }
         
         set({ orders: updatedOrders });
-        state.updateSellerStats();
+        state.updateSellerStats(2);
       },
       
       getCustomerOrders: () => {
@@ -851,16 +899,19 @@ export const useUserStore = create<UserStore>()(
         return state.orders.filter(order => order.userId === userId);
       },
       
-      getSellerOrders: () => {
-        // In a real app, this would filter by seller
-        // For now, return all orders
+      getSellerOrders: (sellerId?: number) => {
         const state = get();
-        return state.orders;
+        const targetSellerId = sellerId || 2; // Always seller 2
+        
+        // Return orders for seller 2
+        return state.orders.filter(order => order.sellerId === targetSellerId);
       },
       
       // Seller Product Management
       addSellerProduct: (productData) => {
         const state = get();
+        const sellerId = 2; // Always seller ID 2
+        
         const newProduct: SellerProduct = {
           id: Date.now(),
           title: productData.title || 'New Product',
@@ -870,10 +921,11 @@ export const useUserStore = create<UserStore>()(
           stock: productData.stock || 0,
           sold: 0,
           rating: 0,
-          images: productData.images || [],
+          images: productData.images || ['https://via.placeholder.com/300x300?text=New+Product'],
           status: 'active',
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
+          sellerId: sellerId,
           ...productData
         };
         
@@ -881,7 +933,7 @@ export const useUserStore = create<UserStore>()(
           sellerProducts: [...state.sellerProducts, newProduct]
         }));
         
-        state.updateSellerStats();
+        state.updateSellerStats(sellerId);
       },
       
       updateSellerProduct: (productId, updates) => {
@@ -893,7 +945,7 @@ export const useUserStore = create<UserStore>()(
         );
         
         set({ sellerProducts: updatedProducts });
-        state.updateSellerStats();
+        state.updateSellerStats(2);
       },
       
       deleteSellerProduct: (productId) => {
@@ -901,12 +953,13 @@ export const useUserStore = create<UserStore>()(
         set({
           sellerProducts: state.sellerProducts.filter(product => product.id !== productId)
         });
-        state.updateSellerStats();
+        
+        state.updateSellerStats(2);
       },
       
       getSellerProducts: () => {
         const state = get();
-        return state.sellerProducts;
+        return state.sellerProducts.filter(product => product.sellerId === 2);
       },
       
       updateProductStock: (productId, newStock) => {
@@ -917,18 +970,23 @@ export const useUserStore = create<UserStore>()(
         });
       },
       
-      // Seller Stats
-      updateSellerStats: () => {
+      // Seller Stats - Single Seller
+      updateSellerStats: (sellerId?: number) => {
         const state = get();
-        const orders = state.orders;
-        const products = state.sellerProducts;
+        const targetSellerId = 2; // Always seller 2
         
-        const totalRevenue = orders.reduce((sum, order) => sum + order.total, 0);
-        const totalOrders = orders.length;
-        const totalProducts = products.length;
-        const totalCustomers = [...new Set(orders.map(order => order.userId))].length;
+        // Filter orders for seller 2
+        const sellerOrders = state.orders.filter(order => order.sellerId === targetSellerId);
         
-        const popularCategories = products.reduce((acc, product) => {
+        // Filter products for seller 2
+        const sellerProducts = state.sellerProducts.filter(product => product.sellerId === targetSellerId);
+        
+        const totalRevenue = sellerOrders.reduce((sum, order) => sum + order.total, 0);
+        const totalOrders = sellerOrders.length;
+        const totalProducts = sellerProducts.length;
+        const totalCustomers = [...new Set(sellerOrders.map(order => order.userId))].length;
+        
+        const popularCategories = sellerProducts.reduce((acc, product) => {
           const existing = acc.find(cat => cat.name === product.category);
           if (existing) {
             existing.count += product.sold;
@@ -944,7 +1002,9 @@ export const useUserStore = create<UserStore>()(
             totalOrders,
             totalProducts,
             totalCustomers,
-            monthlyGrowth: state.sellerStats.monthlyGrowth, // Keep existing growth for now
+            monthlyGrowth: 12.5,
+            lowStockProducts: sellerProducts.filter(p => p.stock < 10 && p.stock > 0).length,
+            outOfStockProducts: sellerProducts.filter(p => p.stock === 0).length,
             popularCategories: popularCategories.sort((a, b) => b.count - a.count)
           }
         });
@@ -952,6 +1012,31 @@ export const useUserStore = create<UserStore>()(
       
       // Products actions
       setProducts: (products) => set({ products }),
+      
+      // Sync products from API
+      syncProductsWithAPI: async () => {
+        try {
+          const PRODUCTS_ENDPOINT = 'https://dummyjson.com/products';
+          const response = await fetch(`${PRODUCTS_ENDPOINT}?limit=20`);
+          const data = await response.json();
+          
+          const enhancedProducts = data.products.map((product: any) => ({
+            ...product,
+            sellerId: 2, // Always seller 2
+            sellerInfo: {
+              id: 2,
+              name: "Luxury Elite Store",
+              rating: 4.8,
+              verified: true
+            }
+          }));
+          
+          set({ products: enhancedProducts });
+          console.log('✅ Synced products from API');
+        } catch (error) {
+          console.error('❌ Error syncing products:', error);
+        }
+      },
       
       // Helper functions
       getDiscountedPrice: (price, discountPercentage = 0) => {
@@ -991,33 +1076,29 @@ export const useUserStore = create<UserStore>()(
       onRehydrateStorage: () => (state) => {
         if (state) {
           state.calculateCartTotal();
-          state.updateSellerStats();
           
           // Update unread counts after rehydration
           if (state.currentUser) {
             const unreadNotificationCount = state.notifications.filter(
               n => !n.read && n.userId === state.currentUser?.id
             ).length;
-            const unreadMessageCount = state.messages.filter(
-              m => !m.read && m.receiverId === state.currentUser?.id
-            ).length;
             
             state.unreadNotificationCount = unreadNotificationCount;
-            state.unreadMessageCount = unreadMessageCount;
           }
+          
+          // Update seller stats
+          state.updateSellerStats(2);
         }
       }
     }
   )
 );
 
-// Initialize with dummy users (simulating database)
 export const initializeStore = () => {
   const store = useUserStore.getState();
   store.initialize();
 };
 
-// Export a helper function for debugging
 export const logStoreState = () => {
   const state = useUserStore.getState();
   console.log('📦 Store State:', {
@@ -1029,8 +1110,6 @@ export const logStoreState = () => {
     cartCount: state.cartCount,
     notifications: state.notifications.length,
     unreadNotifications: state.unreadNotificationCount,
-    messages: state.messages.length,
-    unreadMessages: state.unreadMessageCount,
     sellerProducts: state.sellerProducts.length,
     orders: state.orders.length,
     sellerStats: state.sellerStats
