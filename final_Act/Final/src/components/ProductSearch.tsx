@@ -340,7 +340,7 @@ const ProductSearch = ({
                     onClick={(e) => handleProductClick(product.id, e)}
                     sx={{
                         width: '100%',
-                        // Removed height: '100%' here to resolve grid size inconsistency due to flex/height conflict
+                        height: '100%',
                         minHeight: cardHeight,
                         display: 'flex',
                         flexDirection: 'column',
@@ -504,7 +504,7 @@ const ProductSearch = ({
                             fontWeight={600}
                             sx={{
                                 color: 'white',
-                                height: 40, // Consistent height for ALL products
+                                height: 40,
                                 overflow: 'hidden',
                                 display: '-webkit-box',
                                 WebkitLineClamp: 2,
@@ -570,17 +570,23 @@ const ProductSearch = ({
                             />
                         </Box>
 
-                        {/* Price */}
-                        <Box sx={{ mt: 'auto', pt: 0.75 }}>
+                        {/* Price - Fixed to prevent wrapping */}
+                        <Box sx={{ 
+                            mt: 'auto', 
+                            pt: 0.75,
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                        }}>
                             {product.discountPercentage > 0 ? (
-                                <>
+                                <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.75, flexWrap: 'nowrap' }}>
                                     <Typography
                                         variant="h6"
                                         fontWeight={700}
                                         sx={{ 
                                             color: '#FF6B95', 
                                             fontSize: isMobile ? '0.85rem' : '0.95rem',
-                                            mb: 0.1,
+                                            lineHeight: 1,
+                                            whiteSpace: 'nowrap',
                                         }}
                                     >
                                         {usdFormatted.format(discountPrice)}
@@ -591,11 +597,13 @@ const ProductSearch = ({
                                             textDecoration: 'line-through', 
                                             color: alpha('#FFFFFF', 0.5),
                                             fontSize: isMobile ? '0.65rem' : '0.7rem',
+                                            lineHeight: 1,
+                                            whiteSpace: 'nowrap',
                                         }}
                                     >
                                         {usdFormatted.format(product.price)}
                                     </Typography>
-                                </>
+                                </Box>
                             ) : (
                                 <Typography
                                     variant="h6"
@@ -603,6 +611,8 @@ const ProductSearch = ({
                                     sx={{ 
                                         color: 'white', 
                                         fontSize: isMobile ? '0.85rem' : '0.95rem',
+                                        lineHeight: 1,
+                                        whiteSpace: 'nowrap',
                                     }}
                                 >
                                     {usdFormatted.format(product.price)}
@@ -610,8 +620,9 @@ const ProductSearch = ({
                             )}
                         </Box>
 
-                        {/* Action Buttons - Mobile optimized */}
+                        {/* Action Buttons - Glassmorphic Cyberpunk Design */}
                         <Stack direction="row" spacing={0.75} sx={{ mt: 1 }}>
+                            {/* Add to Cart Button */}
                             <Button
                                 variant="contained"
                                 size={isMobile ? "small" : "small"}
@@ -622,20 +633,80 @@ const ProductSearch = ({
                                     fontSize: isMobile ? '0.6rem' : '0.65rem',
                                     py: isMobile ? 0.3 : 0.35,
                                     px: isMobile ? 0.25 : 0.5,
-                                    background: 'linear-gradient(135deg, #7877C6 0%, #5A59A1 100%)',
+                                    
+                                    // Glassmorphic Cyberpunk Styling
+                                    background: `linear-gradient(135deg, #7877C6 0%, #5A59A1 100%)`,
+                                    backdropFilter: 'blur(20px)',
+                                    WebkitBackdropFilter: 'blur(20px)',
+                                    borderRadius: 1.5,
+                                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                                    boxShadow: `
+                                        0 3px 8px rgba(0, 0, 0, 0.3),
+                                        0 1px 2px rgba(120, 119, 198, 0.4),
+                                        inset 0 1px 0 rgba(255, 255, 255, 0.1)
+                                    `,
+                                    
+                                    // Text styling
+                                    color: 'white',
+                                    fontWeight: 700,
                                     textTransform: 'none',
-                                    borderRadius: 0.75,
-                                    fontWeight: 600,
-                                    boxShadow: '0 1px 4px rgba(120, 119, 198, 0.3)',
-                                    minWidth: 0,
+                                    letterSpacing: '0.02em',
+                                    
+                                    // Animation
+                                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                                    transform: 'translateY(0)',
+                                    
+                                    // Hover state
                                     '&:hover': {
-                                        background: 'linear-gradient(135deg, #5A59A1 0%, #7877C6 100%)',
-                                        boxShadow: '0 2px 8px rgba(120, 119, 198, 0.4)',
-                                    }
+                                        background: `linear-gradient(45deg, #5A59A1 0%, #7877C6 100%)`,
+                                        transform: 'translateY(-1px) scale(1.02)',
+                                        boxShadow: `
+                                            0 6px 16px rgba(120, 119, 198, 0.5),
+                                            0 2px 4px rgba(120, 119, 198, 0.3),
+                                            inset 0 1px 0 rgba(255, 255, 255, 0.15)
+                                        `,
+                                        border: '1px solid rgba(255, 255, 255, 0.3)',
+                                    },
+                                    
+                                    // Active state
+                                    '&:active': {
+                                        transform: 'translateY(0) scale(0.98)',
+                                        boxShadow: `
+                                            0 2px 4px rgba(0, 0, 0, 0.4),
+                                            inset 0 1px 0 rgba(255, 255, 255, 0.05)
+                                        `,
+                                        transition: 'all 0.1s ease',
+                                    },
+                                    
+                                    // Cyberpunk glow effect
+                                    position: 'relative',
+                                    overflow: 'hidden',
+                                    '&::before': {
+                                        content: '""',
+                                        position: 'absolute',
+                                        top: 0,
+                                        left: '-100%',
+                                        width: '100%',
+                                        height: '100%',
+                                        background: `linear-gradient(
+                                            90deg,
+                                            transparent,
+                                            rgba(255, 255, 255, 0.12),
+                                            transparent
+                                        )`,
+                                        transition: 'left 0.7s ease',
+                                    },
+                                    '&:hover::before': {
+                                        left: '100%',
+                                    },
+                                    
+                                    minWidth: 0,
                                 }}
                             >
                                 {isMobile ? 'Add' : 'Add to Cart'}
                             </Button>
+
+                            {/* Buy Now Button */}
                             <Button
                                 variant="contained"
                                 size={isMobile ? "small" : "small"}
@@ -646,16 +717,74 @@ const ProductSearch = ({
                                     fontSize: isMobile ? '0.6rem' : '0.65rem',
                                     py: isMobile ? 0.3 : 0.35,
                                     px: isMobile ? 0.25 : 0.5,
-                                    background: 'linear-gradient(135deg, #FF6B95 0%, #FF5252 100%)',
+                                    
+                                    // Glassmorphic Cyberpunk Styling - Red variant
+                                    background: `linear-gradient(135deg, #FF6B95 0%, #FF5252 100%)`,
+                                    backdropFilter: 'blur(20px)',
+                                    WebkitBackdropFilter: 'blur(20px)',
+                                    borderRadius: 1.5,
+                                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                                    boxShadow: `
+                                        0 3px 8px rgba(0, 0, 0, 0.3),
+                                        0 1px 2px rgba(255, 107, 149, 0.4),
+                                        inset 0 1px 0 rgba(255, 255, 255, 0.1)
+                                    `,
+                                    
+                                    // Text styling
+                                    color: 'white',
+                                    fontWeight: 700,
                                     textTransform: 'none',
-                                    borderRadius: 0.75,
-                                    fontWeight: 600,
-                                    boxShadow: '0 1px 4px rgba(255, 107, 149, 0.3)',
-                                    minWidth: 0,
+                                    letterSpacing: '0.02em',
+                                    
+                                    // Animation
+                                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                                    transform: 'translateY(0)',
+                                    
+                                    // Hover state
                                     '&:hover': {
-                                        background: 'linear-gradient(135deg, #FF5252 0%, #FF6B95 100%)',
-                                        boxShadow: '0 2px 8px rgba(255, 107, 149, 0.4)',
-                                    }
+                                        background: `linear-gradient(45deg, #FF5252 0%, #FF6B95 100%)`,
+                                        transform: 'translateY(-1px) scale(1.02)',
+                                        boxShadow: `
+                                            0 6px 16px rgba(255, 107, 149, 0.5),
+                                            0 2px 4px rgba(255, 107, 149, 0.3),
+                                            inset 0 1px 0 rgba(255, 255, 255, 0.15)
+                                        `,
+                                        border: '1px solid rgba(255, 255, 255, 0.3)',
+                                    },
+                                    
+                                    // Active state
+                                    '&:active': {
+                                        transform: 'translateY(0) scale(0.98)',
+                                        boxShadow: `
+                                            0 2px 4px rgba(0, 0, 0, 0.4),
+                                            inset 0 1px 0 rgba(255, 255, 255, 0.05)
+                                        `,
+                                        transition: 'all 0.1s ease',
+                                    },
+                                    
+                                    // Cyberpunk glow effect
+                                    position: 'relative',
+                                    overflow: 'hidden',
+                                    '&::before': {
+                                        content: '""',
+                                        position: 'absolute',
+                                        top: 0,
+                                        left: '-100%',
+                                        width: '100%',
+                                        height: '100%',
+                                        background: `linear-gradient(
+                                            90deg,
+                                            transparent,
+                                            rgba(255, 255, 255, 0.12),
+                                            transparent
+                                        )`,
+                                        transition: 'left 0.7s ease',
+                                    },
+                                    '&:hover::before': {
+                                        left: '100%',
+                                    },
+                                    
+                                    minWidth: 0,
                                 }}
                             >
                                 {isMobile ? 'Buy' : 'Buy Now'}
@@ -882,13 +1011,18 @@ const ProductSearch = ({
                             />
                         </Box>
 
-                        <Box sx={{ mt: 'auto' }}>
+                        {/* Price - Fixed for Mobile */}
+                        <Box sx={{ 
+                            mt: 'auto',
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                        }}>
                             {product.discountPercentage > 0 ? (
-                                <>
+                                <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5, flexWrap: 'nowrap' }}>
                                     <Typography
                                         variant="subtitle2"
                                         fontWeight={700}
-                                        sx={{ color: '#FF6B95', fontSize: '0.8rem' }}
+                                        sx={{ color: '#FF6B95', fontSize: '0.8rem', whiteSpace: 'nowrap' }}
                                     >
                                         {usdFormatted.format(discountPrice)}
                                     </Typography>
@@ -898,16 +1032,17 @@ const ProductSearch = ({
                                             textDecoration: 'line-through', 
                                             color: alpha('#FFFFFF', 0.5),
                                             fontSize: '0.6rem',
+                                            whiteSpace: 'nowrap',
                                         }}
                                     >
                                         {usdFormatted.format(product.price)}
                                     </Typography>
-                                </>
+                                </Box>
                             ) : (
                                 <Typography
                                     variant="subtitle2"
                                     fontWeight={700}
-                                    sx={{ color: 'white', fontSize: '0.8rem' }}
+                                    sx={{ color: 'white', fontSize: '0.8rem', whiteSpace: 'nowrap' }}
                                 >
                                     {usdFormatted.format(product.price)}
                                 </Typography>
@@ -1131,8 +1266,12 @@ const ProductSearch = ({
                                         sm={4}
                                         md={4}
                                         lg={3}
-                                        xl={2.4}
+                                        xl={2}
                                         key={index}
+                                        sx={{ 
+                                            ...(isExtraLarge && { flexBasis: '20%', maxWidth: '20%' }),
+                                            minWidth: 0,
+                                        }}
                                     >
                                         <Skeleton
                                             variant="rectangular"
@@ -1181,11 +1320,15 @@ const ProductSearch = ({
                                                 sm={4}
                                                 md={4}
                                                 lg={3}
-                                                xl={2.4}
+                                                xl={2}
                                                 key={product.id}
                                                 sx={{
                                                     display: 'flex',
                                                     minHeight: getCardHeight(),
+                                                    [theme.breakpoints.up('xl')]: {
+                                                        flexBasis: '20%',
+                                                        maxWidth: '20%',
+                                                    },
                                                 }}
                                             >
                                                 {renderProductCard(product)}
@@ -1330,7 +1473,7 @@ const ProductSearch = ({
                                                     </Box>
                                                 </Box>
 
-                                                {/* Price and Actions */}
+                                                {/* Price and Actions - Fixed for List View */}
                                                 <Box
                                                     sx={{
                                                         width: 180,
@@ -1341,13 +1484,17 @@ const ProductSearch = ({
                                                         gap: 1,
                                                     }}
                                                 >
-                                                    <Box sx={{ textAlign: 'right' }}>
+                                                    <Box sx={{ 
+                                                        textAlign: 'right',
+                                                        whiteSpace: 'nowrap',
+                                                        overflow: 'hidden',
+                                                    }}>
                                                         {product.discountPercentage > 0 ? (
-                                                            <>
+                                                            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
                                                                 <Typography
                                                                     variant="h6"
                                                                     fontWeight={700}
-                                                                    sx={{ color: '#FF6B95', fontSize: '1rem' }}
+                                                                    sx={{ color: '#FF6B95', fontSize: '1rem', whiteSpace: 'nowrap' }}
                                                                 >
                                                                     {usdFormatted.format(product.price * (1 - product.discountPercentage / 100))}
                                                                 </Typography>
@@ -1357,22 +1504,24 @@ const ProductSearch = ({
                                                                         textDecoration: 'line-through',
                                                                         color: alpha('#FFFFFF', 0.5),
                                                                         fontSize: '0.75rem',
+                                                                        whiteSpace: 'nowrap',
                                                                     }}
                                                                 >
                                                                     {usdFormatted.format(product.price)}
                                                                 </Typography>
-                                                            </>
+                                                            </Box>
                                                         ) : (
                                                             <Typography
                                                                 variant="h6"
                                                                 fontWeight={700}
-                                                                sx={{ color: 'white', fontSize: '1rem' }}
+                                                                sx={{ color: 'white', fontSize: '1rem', whiteSpace: 'nowrap' }}
                                                             >
                                                                 {usdFormatted.format(product.price)}
                                                             </Typography>
                                                         )}
                                                     </Box>
 
+                                                    {/* List View Buttons */}
                                                     <Stack direction="row" spacing={0.75}>
                                                         <Button
                                                             variant="contained"
@@ -1384,9 +1533,18 @@ const ProductSearch = ({
                                                                 py: 0.4,
                                                                 px: 1,
                                                                 background: 'linear-gradient(135deg, #7877C6 0%, #5A59A1 100%)',
+                                                                backdropFilter: 'blur(10px)',
+                                                                border: '1px solid rgba(255, 255, 255, 0.15)',
+                                                                borderRadius: 1,
                                                                 textTransform: 'none',
                                                                 whiteSpace: 'nowrap',
                                                                 minWidth: 0,
+                                                                fontWeight: 600,
+                                                                '&:hover': {
+                                                                    background: 'linear-gradient(45deg, #5A59A1 0%, #7877C6 100%)',
+                                                                    transform: 'translateY(-1px)',
+                                                                    boxShadow: '0 4px 12px rgba(120, 119, 198, 0.3)',
+                                                                }
                                                             }}
                                                         >
                                                             Add
@@ -1401,9 +1559,18 @@ const ProductSearch = ({
                                                                 py: 0.4,
                                                                 px: 1,
                                                                 background: 'linear-gradient(135deg, #FF6B95 0%, #FF5252 100%)',
+                                                                backdropFilter: 'blur(10px)',
+                                                                border: '1px solid rgba(255, 255, 255, 0.15)',
+                                                                borderRadius: 1,
                                                                 textTransform: 'none',
                                                                 whiteSpace: 'nowrap',
                                                                 minWidth: 0,
+                                                                fontWeight: 600,
+                                                                '&:hover': {
+                                                                    background: 'linear-gradient(45deg, #FF5252 0%, #FF6B95 100%)',
+                                                                    transform: 'translateY(-1px)',
+                                                                    boxShadow: '0 4px 12px rgba(255, 107, 149, 0.3)',
+                                                                }
                                                             }}
                                                         >
                                                             Buy
@@ -1476,16 +1643,19 @@ const ProductSearch = ({
                                     }}
                                     sx={{
                                         background: 'linear-gradient(135deg, #7877C6 0%, #5A59A1 100%)',
+                                        backdropFilter: 'blur(20px)',
                                         color: 'white',
                                         fontWeight: 600,
                                         px: 3,
                                         py: 1,
                                         borderRadius: 1.5,
                                         fontSize: '0.875rem',
+                                        border: '1px solid rgba(255, 255, 255, 0.15)',
                                         boxShadow: '0 4px 20px rgba(120, 119, 198, 0.3)',
                                         '&:hover': {
-                                            background: 'linear-gradient(135deg, #5A59A1 0%, #7877C6 100%)',
+                                            background: 'linear-gradient(45deg, #5A59A1 0%, #7877C6 100%)',
                                             boxShadow: '0 6px 24px rgba(120, 119, 198, 0.4)',
+                                            transform: 'translateY(-2px)',
                                         }
                                     }}
                                 >

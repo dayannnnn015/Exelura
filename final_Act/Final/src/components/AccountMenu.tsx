@@ -27,6 +27,9 @@ import CloseIcon from '@mui/icons-material/Close';
 import { alpha } from '@mui/material/styles';
 import ShoppingBagIcon from '@mui/icons-material/ShoppingBag';
 import MyPurchaseDialog from "../components/MyPurchaseDialog";
+import StorefrontIcon from '@mui/icons-material/Storefront';
+import SwitchAccountIcon from '@mui/icons-material/SwitchAccount';
+import Button from '@mui/material/Button'; // Add this import
 
 interface AccountMenuProps {
   onSearch: (searchTerm: string) => void;
@@ -48,11 +51,12 @@ export default function AccountMenu({ onSearch, scrolled }: AccountMenuProps) {
   const [snackbarMessage, setSnackbarMessage] = React.useState("");
   const [isSearchExpanded, setIsSearchExpanded] = React.useState(false);
   const [purchaseDialogOpen, setPurchaseDialogOpen] = React.useState(false);
+  const [sellerModePromptOpen, setSellerModePromptOpen] = React.useState(false); // Add state for seller prompt
 
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
-  const { currentUser, isLoggedIn, login, logout } = useUserStore();
+  const { currentUser, isLoggedIn, login, logout, isSeller, switchToSeller, switchToUser } = useUserStore();
   const open = Boolean(anchorEl);
 
   const handleClick = (event: React.MouseEvent<HTMLElement>) => setAnchorEl(event.currentTarget);
@@ -107,6 +111,41 @@ export default function AccountMenu({ onSearch, scrolled }: AccountMenuProps) {
   );
 
   const handleLogout = () => handleSimulatedAction('Logged out successfully', logout);
+
+  const handleLoginAsSeller = () => {
+    handleSimulatedAction('Logged in as seller successfully!', () => {
+      // Simulate seller login
+      login({
+        id: 2,
+        name: 'Seller User',
+        email: 'seller@xelura.com',
+        phone: '+1234567890',
+        address: '456 Seller Street, Los Angeles, CA',
+        createdAt: new Date().toISOString(),
+        isSeller: true
+      });
+      switchToSeller();
+    });
+  };
+
+  const handleSwitchToSeller = () => {
+    handleSimulatedAction('Switched to seller account!', switchToSeller);
+    handleClose();
+  };
+
+  const handleSwitchToUser = () => {
+    handleSimulatedAction('Switched to user account!', switchToUser);
+    handleClose();
+  };
+
+  const handleGoToSellerDashboard = () => {
+    if (!isSeller) {
+      setSellerModePromptOpen(true);
+    } else {
+      navigate("/seller-dashboard");
+      handleClose();
+    }
+  };
 
   const showBrandSection = !isMobile || !isSearchExpanded;
   const showRightButtons = !isMobile || !isSearchExpanded;
@@ -180,9 +219,21 @@ export default function AccountMenu({ onSearch, scrolled }: AccountMenuProps) {
             </Tooltip>
           )}
           {isLoggedIn && !isMobile && <Tooltip title="Premium Member"><WorkspacePremiumIcon sx={{ color: CSS_VARS.primaryOrange, fontSize: 28 }} /></Tooltip>}
-          <Tooltip title={isLoggedIn ? "Account" : "Login"}>
+          <Tooltip title={isLoggedIn ? (isSeller ? "Seller Account" : "User Account") : "Login"}>
             <IconButton onClick={handleClick} sx={{ backgroundColor: alpha(CSS_VARS.primaryPurple, 0.4), border: `1px solid ${alpha(CSS_VARS.primaryOrange, 0.3)}`, '&:hover': { backgroundColor: alpha(CSS_VARS.primaryPurple, 0.6) }, width: { xs: 40, sm: 48 }, height: { xs: 40, sm: 48 } }}>
-              {isLoggedIn ? <Avatar sx={{ bgcolor: CSS_VARS.primaryPink, width: { xs: 28, sm: 32 }, height: { xs: 28, sm: 32 } }}>{currentUser?.name?.charAt(0).toUpperCase()}</Avatar> : <Avatar sx={{ bgcolor: CSS_VARS.primaryPurple, width: { xs: 28, sm: 32 }, height: { xs: 28, sm: 32 } }}><LoginIcon sx={{ fontSize: { xs: 18, sm: 20 } }} /></Avatar>}
+              {isLoggedIn ? (
+                <Avatar sx={{ 
+                  bgcolor: isSeller ? CSS_VARS.primaryOrange : CSS_VARS.primaryPink, 
+                  width: { xs: 28, sm: 32 }, 
+                  height: { xs: 28, sm: 32 } 
+                }}>
+                  {isSeller ? <StorefrontIcon sx={{ fontSize: { xs: 16, sm: 18 } }} /> : currentUser?.name?.charAt(0).toUpperCase()}
+                </Avatar>
+              ) : (
+                <Avatar sx={{ bgcolor: CSS_VARS.primaryPurple, width: { xs: 28, sm: 32 }, height: { xs: 28, sm: 32 } }}>
+                  <LoginIcon sx={{ fontSize: { xs: 18, sm: 20 } }} />
+                </Avatar>
+              )}
             </IconButton>
           </Tooltip>
         </Box>
@@ -193,30 +244,74 @@ export default function AccountMenu({ onSearch, scrolled }: AccountMenuProps) {
         {isLoggedIn ? (
           <>
             <MenuItem sx={{ '&:hover': { backgroundColor: CSS_VARS.primaryPurple }, py: 1.5 }} onClick={(e) => e.stopPropagation()}>
-              <ListItemIcon><Avatar sx={{ width: 32, height: 32, bgcolor: CSS_VARS.primaryPink, mr: 1 }}>{currentUser?.name?.charAt(0).toUpperCase()}</Avatar></ListItemIcon>
+              <ListItemIcon>
+                <Avatar sx={{ 
+                  width: 32, 
+                  height: 32, 
+                  bgcolor: isSeller ? CSS_VARS.primaryOrange : CSS_VARS.primaryPink, 
+                  mr: 1 
+                }}>
+                  {isSeller ? <StorefrontIcon sx={{ fontSize: 16 }} /> : currentUser?.name?.charAt(0).toUpperCase()}
+                </Avatar>
+              </ListItemIcon>
               <Box sx={{ minWidth: 0 }}>
                 <Typography variant="body1" fontWeight={600}>{currentUser?.name}</Typography>
-                <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.7)', display: 'flex', alignItems: 'center', gap: 0.5 }}><WorkspacePremiumIcon sx={{ fontSize: 14, color: CSS_VARS.primaryOrange }} />Premium Member</Typography>
+                <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.7)', display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                  {isSeller ? (
+                    <>
+                      <StorefrontIcon sx={{ fontSize: 14, color: CSS_VARS.primaryOrange }} />
+                      Seller Account
+                    </>
+                  ) : (
+                    <>
+                      <WorkspacePremiumIcon sx={{ fontSize: 14, color: CSS_VARS.primaryOrange }} />
+                      Premium Member
+                    </>
+                  )}
+                </Typography>
               </Box>
             </MenuItem>
 
             <Box sx={{ borderTop: `1px solid rgba(255, 255, 255, 0.1)`, my: 0.5 }} />
 
-            <MenuItem onClick={() => { navigate("/profile-setting"); handleClose(); }}>
-  <ListItemIcon><Settings fontSize="small" sx={{ color: CSS_VARS.primaryOrange }} /></ListItemIcon>
-  Profile Setting
-</MenuItem>
+            {!isSeller ? (
+              <>
+                <MenuItem onClick={() => { navigate("/profile-setting"); handleClose(); }}>
+                  <ListItemIcon><Settings fontSize="small" sx={{ color: CSS_VARS.primaryOrange }} /></ListItemIcon>
+                  Profile Setting
+                </MenuItem>
 
+                <MenuItem onClick={() => { setPurchaseDialogOpen(true); handleClose(); }} sx={{ '&:hover': { backgroundColor: CSS_VARS.primaryPurple } }}>
+                  <ListItemIcon><ShoppingBagIcon fontSize="small" sx={{ color: CSS_VARS.primaryOrange }} /></ListItemIcon>My Purchases
+                </MenuItem>
 
-            <MenuItem onClick={() => { setPurchaseDialogOpen(true); handleClose(); }} sx={{ '&:hover': { backgroundColor: CSS_VARS.primaryPurple } }}>
-              <ListItemIcon><ShoppingBagIcon fontSize="small" sx={{ color: CSS_VARS.primaryOrange }} /></ListItemIcon>My Purchases
-            </MenuItem>
+                <MenuItem onClick={() => { navigate("/my-profile"); handleClose(); }} sx={{ '&:hover': { backgroundColor: CSS_VARS.primaryPurple } }}>
+                  <ListItemIcon><Settings fontSize="small" sx={{ color: CSS_VARS.primaryOrange }} /></ListItemIcon>My Profile
+                </MenuItem>
 
-            <MenuItem onClick={() => { navigate("/my-profile"); handleClose(); }} sx={{ '&:hover': { backgroundColor: CSS_VARS.primaryPurple } }}>
-              <ListItemIcon><Settings fontSize="small" sx={{ color: CSS_VARS.primaryOrange }} /></ListItemIcon>My Profile
-            </MenuItem>
+                <MenuItem onClick={handleGoToSellerDashboard} sx={{ '&:hover': { backgroundColor: CSS_VARS.primaryPurple } }}>
+                  <ListItemIcon><StorefrontIcon fontSize="small" sx={{ color: CSS_VARS.primaryOrange }} /></ListItemIcon>
+                  Seller Dashboard
+                </MenuItem>
 
+                <MenuItem onClick={handleSwitchToSeller} sx={{ '&:hover': { backgroundColor: CSS_VARS.primaryPurple } }}>
+                  <ListItemIcon><SwitchAccountIcon fontSize="small" sx={{ color: CSS_VARS.primaryOrange }} /></ListItemIcon>
+                  Switch to Seller
+                </MenuItem>
+              </>
+            ) : (
+              <>
+                <MenuItem onClick={() => { navigate("/seller-dashboard"); handleClose(); }} sx={{ '&:hover': { backgroundColor: CSS_VARS.primaryPurple } }}>
+                  <ListItemIcon><StorefrontIcon fontSize="small" sx={{ color: CSS_VARS.primaryOrange }} /></ListItemIcon>
+                  Seller Dashboard
+                </MenuItem>
 
+                <MenuItem onClick={handleSwitchToUser} sx={{ '&:hover': { backgroundColor: CSS_VARS.primaryPurple } }}>
+                  <ListItemIcon><SwitchAccountIcon fontSize="small" sx={{ color: CSS_VARS.primaryOrange }} /></ListItemIcon>
+                  Switch to User
+                </MenuItem>
+              </>
+            )}
 
             <MenuItem onClick={handleLogout} sx={{ '&:hover': { backgroundColor: CSS_VARS.primaryPurple } }}>
               <ListItemIcon><Logout fontSize="small" sx={{ color: CSS_VARS.primaryOrange }} /></ListItemIcon>Logout
@@ -224,11 +319,89 @@ export default function AccountMenu({ onSearch, scrolled }: AccountMenuProps) {
           </>
         ) : (
           <>
-            <MenuItem onClick={handleLogin} sx={{ '&:hover': { backgroundColor: CSS_VARS.primaryPurple } }}><ListItemIcon><LoginIcon fontSize="small" sx={{ color: CSS_VARS.primaryOrange }} /></ListItemIcon>Login</MenuItem>
-            <MenuItem onClick={handleRegister} sx={{ '&:hover': { backgroundColor: CSS_VARS.primaryPurple } }}><ListItemIcon><PersonAdd fontSize="small" sx={{ color: CSS_VARS.primaryOrange }} /></ListItemIcon>Register</MenuItem>
+            <MenuItem onClick={handleLogin} sx={{ '&:hover': { backgroundColor: CSS_VARS.primaryPurple } }}>
+              <ListItemIcon><LoginIcon fontSize="small" sx={{ color: CSS_VARS.primaryOrange }} /></ListItemIcon>Login as User
+            </MenuItem>
+            <MenuItem onClick={handleLoginAsSeller} sx={{ '&:hover': { backgroundColor: CSS_VARS.primaryPurple } }}>
+              <ListItemIcon><StorefrontIcon fontSize="small" sx={{ color: CSS_VARS.primaryOrange }} /></ListItemIcon>Login as Seller
+            </MenuItem>
+            <MenuItem onClick={handleRegister} sx={{ '&:hover': { backgroundColor: CSS_VARS.primaryPurple } }}>
+              <ListItemIcon><PersonAdd fontSize="small" sx={{ color: CSS_VARS.primaryOrange }} /></ListItemIcon>Register
+            </MenuItem>
           </>
         )}
       </Menu>
+
+      {/* Seller Mode Prompt Dialog */}
+      {sellerModePromptOpen && (
+        <Box
+          sx={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            backdropFilter: 'blur(10px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 2000,
+            px: 2,
+          }}
+        >
+          <Paper
+            sx={{
+              p: 4,
+              maxWidth: 500,
+              width: '100%',
+              background: `linear-gradient(135deg, ${CSS_VARS.primaryDark} 0%, ${alpha(CSS_VARS.primaryPurple, 0.8)} 100%)`,
+              border: `1px solid ${alpha(CSS_VARS.primaryOrange, 0.3)}`,
+              borderRadius: 3,
+              boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
+            }}
+          >
+            <Box sx={{ textAlign: 'center', mb: 3 }}>
+              <StorefrontIcon sx={{ fontSize: 60, color: CSS_VARS.primaryOrange, mb: 2 }} />
+              <Typography variant="h5" fontWeight="bold" gutterBottom>
+                Switch to Seller Mode
+              </Typography>
+              <Typography variant="body2" sx={{ color: alpha('#ffffff', 0.7), mb: 3 }}>
+                You need to switch to seller mode to access the Seller Dashboard. This will change your account view to seller mode.
+              </Typography>
+            </Box>
+            <Stack direction="row" spacing={2} justifyContent="center">
+              <Button
+                variant="outlined"
+                onClick={() => setSellerModePromptOpen(false)}
+                sx={{
+                  borderColor: CSS_VARS.primaryPink,
+                  color: CSS_VARS.primaryPink,
+                  '&:hover': { borderColor: CSS_VARS.primaryPink },
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="contained"
+                onClick={() => {
+                  handleSwitchToSeller();
+                  setSellerModePromptOpen(false);
+                  navigate("/seller-dashboard");
+                }}
+                sx={{
+                  background: `linear-gradient(135deg, ${CSS_VARS.primaryOrange} 0%, ${CSS_VARS.primaryPink} 100%)`,
+                  '&:hover': {
+                    background: `linear-gradient(135deg, ${CSS_VARS.primaryPink} 0%, ${CSS_VARS.primaryPurple} 100%)`,
+                  },
+                }}
+              >
+                Switch to Seller Mode
+              </Button>
+            </Stack>
+          </Paper>
+        </Box>
+      )}
 
       {/* PURCHASE DIALOG */}
       <MyPurchaseDialog open={purchaseDialogOpen} onClose={() => setPurchaseDialogOpen(false)} />

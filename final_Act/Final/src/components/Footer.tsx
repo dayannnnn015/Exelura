@@ -12,18 +12,9 @@ import {
   Divider
 } from '@mui/material';
 import {
-  Facebook,
-  Twitter,
-  Instagram,
-  Pinterest,
-  YouTube,
-  Email,
-  Phone,
-  LocationOn,
   Security,
   LocalShipping,
   VerifiedUser,
-  SupportAgent
 } from '@mui/icons-material';
 
 const Footer = () => {
@@ -33,13 +24,13 @@ const Footer = () => {
       sx={{
         backgroundColor: '#1B1833',
         color: 'white',
-        py: 8,
+        py: 4, // REDUCED from 8
         borderTop: '1px solid rgba(242, 159, 88, 0.3)',
         mt: 'auto'
       }}
     >
       <Container maxWidth="xl">
-        <Grid container spacing={6}>
+        <Grid container spacing={3}> {/* REDUCED from 6 */}
           {/* Brand Column (Kept) */}
           <Grid item xs={12} md={4}>
             <Box sx={{ mb: 3 }}>
@@ -51,13 +42,13 @@ const Footer = () => {
               }}>
                 XELURA
               </Typography>
-              <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)', mb: 3 }}>
+              <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)', mb: 2 }}> {/* REDUCED from 3 */}
                 Curating luxury experiences since 2010. We bring you the finest collections from around the world.
               </Typography>
             </Box>
 
             {/* Trust Badges (Kept) */}
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mb: 3 }}>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mb: 2 }}> {/* REDUCED mb from 3 */}
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <Security sx={{ color: '#F29F58', fontSize: 20 }} />
                 <Typography variant="caption">SSL Secure</Typography>
@@ -77,7 +68,7 @@ const Footer = () => {
           
         </Grid>
 
-        <Divider sx={{ my: 6, borderColor: 'rgba(242, 159, 88, 0.2)' }} />
+        <Divider sx={{ my: 3, borderColor: 'rgba(242, 159, 88, 0.2)' }} /> {/* REDUCED from 6 */}
 
         {/* Bottom Bar (Kept, includes Contact Details) */}
         <Box sx={{ 

@@ -169,7 +169,7 @@ html {
   .MuiTypography-body2 { font-size: 0.8rem !important; }
 }
 
-/* MOBILE — INSTAGRAM-STYLE SQUARE CARDS WITH HORIZONTAL SCROLL */
+/* Mobile Optimizations */
 @media (max-width: 767px) {
   html {
     font-size: 14px;
@@ -184,212 +184,32 @@ html {
     min-height: 400px !important;
   }
   
-  /* Force 2 columns for normal grid */
-  .MuiGrid-item {
-    width: 50% !important;
-    flex-basis: 50% !important;
-    max-width: 50% !important;
-  }
-
-  /* Perfect square container */
   .product-card {
-    aspect-ratio: 1 / 1 !important;
-    width: 100% !important;
-    height: auto !important;
-    min-height: auto !important;
-    max-height: none !important;
-    animation: mobile-scale-in 0.35s ease both;
+    min-height: 380px !important;
+    max-height: 420px !important;
   }
-
-  /* Square images */
-  .product-card .MuiCardMedia-root {
-    aspect-ratio: 1 / 1 !important;
-    width: 100% !important;
-    height: auto !important;
-    object-fit: cover !important;
+  
+  .product-image-container {
+    height: 150px !important;
+    min-height: 150px !important;
+    max-height: 150px !important;
   }
-
-  /* Prevent content from overflowing */
-  .product-card .MuiCardContent-root {
-    padding: 8px !important;
-  }
-
-  /* Horizontal scroll container for products */
-  .mobile-horizontal-scroll {
-    display: flex !important;
-    flex-wrap: nowrap !important;
-    overflow-x: auto !important;
-    overflow-y: hidden !important;
-    scroll-snap-type: x mandatory !important;
-    -webkit-overflow-scrolling: touch !important;
-    scrollbar-width: none !important; /* Firefox */
-    margin-left: -16px !important;
-    margin-right: -16px !important;
-    padding-left: 16px !important;
-    padding-right: 16px !important;
-    width: calc(100% + 32px) !important;
-    padding-bottom: 16px !important;
-  }
-
-  .mobile-horizontal-scroll::-webkit-scrollbar {
-    display: none !important; /* Chrome, Safari, Edge */
-  }
-
-  /* Individual scrollable items */
-  .mobile-scroll-item {
-    flex: 0 0 auto !important;
-    width: calc(50vw - 24px) !important; /* Half viewport minus padding */
-    scroll-snap-align: start !important;
-    margin-right: 16px !important;
-    min-width: 0 !important;
-  }
-
-  .mobile-scroll-item:last-child {
-    margin-right: 16px !important;
-    padding-right: 16px !important;
-  }
-
-  /* Perfect square cards */
-  .product-card.mobile-square {
-    aspect-ratio: 1 / 1 !important;
-    width: 100% !important;
-    height: auto !important;
-    min-height: auto !important;
-    max-height: none !important;
-    animation: mobile-scale-in 0.35s ease both;
-    position: relative;
-  }
-
-  /* Square images */
-  .product-card.mobile-square .MuiCardMedia-root {
-    aspect-ratio: 1 / 1 !important;
-    width: 100% !important;
-    height: auto !important;
-    object-fit: cover !important;
-  }
-
-  /* Glassmorphism hover effect */
-  .product-card.mobile-square:hover {
-    transform: scale(1.02) !important;
-    box-shadow: 
-      0 10px 30px rgba(0, 0, 0, 0.3),
-      inset 0 0 0 1px rgba(255, 255, 255, 0.1),
-      0 0 30px rgba(120, 119, 198, 0.3) !important;
-    backdrop-filter: blur(20px) !important;
-    border-color: rgba(120, 119, 198, 0.4) !important;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-  }
-
-  /* Compact content for mobile */
-  .product-card.mobile-square .MuiCardContent-root {
+  
+  .product-content {
+    min-height: 230px !important;
     padding: 12px !important;
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
   }
-
-  /* Smaller text for mobile */
-  .product-card.mobile-square .MuiTypography-subtitle2 {
-    font-size: 0.8rem !important;
-    line-height: 1.2 !important;
-    height: 38px !important;
-    margin-bottom: 8px !important;
-  }
-
-  /* Price styling */
-  .product-card.mobile-square .MuiTypography-h6 {
-    font-size: 1rem !important;
-    margin-bottom: 8px !important;
-  }
-
-  /* Action buttons - stacked on mobile */
-  .product-card.mobile-square .product-actions-stack {
-    flex-direction: column !important;
-    gap: 8px !important;
-  }
-
-  .product-card.mobile-square .MuiButton-root {
-    width: 100% !important;
-    height: 32px !important;
-    font-size: 0.75rem !important;
-    border-radius: 8px !important;
-  }
-
-  /* Hide some elements on mobile for cleaner look */
-  .product-card.mobile-square .MuiChip-root.inventory-chip {
-    display: none !important;
-  }
-
-  /* Rating compact */
-  .product-card.mobile-square .MuiRating-root {
-    font-size: 0.9rem !important;
-  }
-
-  /* Gradient border effect */
-  .product-card.mobile-square::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    border-radius: 12px;
-    padding: 1px;
-    background: linear-gradient(
-      135deg,
-      rgba(120, 119, 198, 0.3),
-      rgba(255, 107, 149, 0.3),
-      rgba(78, 205, 196, 0.3)
-    );
-    -webkit-mask: 
-      linear-gradient(#fff 0 0) content-box, 
-      linear-gradient(#fff 0 0);
-    mask: 
-      linear-gradient(#fff 0 0) content-box, 
-      linear-gradient(#fff 0 0);
-    -webkit-mask-composite: xor;
-    mask-composite: exclude;
-    pointer-events: none;
-  }
-
-  /* Hover glow effect */
-  @keyframes mobile-glow {
-    0%, 100% {
-      box-shadow: 
-        0 5px 15px rgba(120, 119, 198, 0.2),
-        inset 0 0 0 1px rgba(255, 255, 255, 0.05);
-    }
-    50% {
-      box-shadow: 
-        0 8px 25px rgba(120, 119, 198, 0.3),
-        inset 0 0 0 1px rgba(255, 255, 255, 0.1),
-        0 0 20px rgba(255, 107, 149, 0.2);
-    }
-  }
-
-  .product-card.mobile-square:hover {
-    animation: mobile-glow 2s infinite ease-in-out !important;
-  }
-
-  /* Active tap effect */
-  .product-card.mobile-square:active {
-    transform: scale(0.98) !important;
-    transition: transform 0.1s !important;
-  }
-
-  /* SCALE-IN ANIMATION */
-  @keyframes mobile-scale-in {
-    0% {
-      opacity: 0;
-      transform: scale(0.85);
-    }
-    100% {
-      opacity: 1;
-      transform: scale(1);
-    }
-  }
-
+  
+  /* Much smaller typography for mobile */
+  .MuiTypography-h1 { font-size: 1.8rem !important; }
+  .MuiTypography-h2 { font-size: 1.5rem !important; }
+  .MuiTypography-h3 { font-size: 1.3rem !important; }
+  .MuiTypography-h4 { font-size: 1.1rem !important; }
+  .MuiTypography-h5 { font-size: 1rem !important; }
+  .MuiTypography-h6 { font-size: 0.9rem !important; }
+  .MuiTypography-body1 { font-size: 0.8rem !important; }
+  .MuiTypography-body2 { font-size: 0.7rem !important; }
+  
   /* Smaller buttons */
   .MuiButton-root {
     font-size: 0.7rem !important;
@@ -416,106 +236,6 @@ html {
   .MuiChip-root {
     font-size: 0.6rem !important;
     height: 20px !important;
-  }
-
-  /* SCROLL INDICATORS FOR HORIZONTAL SCROLL */
-  .mobile-horizontal-scroll-container {
-    position: relative !important;
-  }
-
-  .mobile-scroll-indicator {
-    position: absolute !important;
-    top: 50% !important;
-    transform: translateY(-50%) !important;
-    width: 30px !important;
-    height: 30px !important;
-    border-radius: 50% !important;
-    background: rgba(255, 255, 255, 0.1) !important;
-    backdrop-filter: blur(10px) !important;
-    border: 1px solid rgba(255, 255, 255, 0.2) !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    color: white !important;
-    z-index: 10 !important;
-    cursor: pointer !important;
-    opacity: 0.8 !important;
-    transition: all 0.3s !important;
-  }
-
-  .mobile-scroll-indicator:hover {
-    opacity: 1 !important;
-    background: rgba(120, 119, 198, 0.2) !important;
-  }
-
-  .mobile-scroll-indicator.left {
-    left: 8px !important;
-  }
-
-  .mobile-scroll-indicator.right {
-    right: 8px !important;
-  }
-
-  .mobile-scroll-indicator .MuiSvgIcon-root {
-    font-size: 20px !important;
-  }
-
-  /* Hide indicators on touch devices when not needed */
-  @media (hover: none) and (pointer: coarse) {
-    .mobile-scroll-indicator {
-      display: none !important;
-    }
-  }
-
-  /* SCROLLBAR STYLING (when visible) */
-  .mobile-horizontal-scroll::-webkit-scrollbar {
-    height: 4px !important;
-    display: block !important;
-  }
-
-  .mobile-horizontal-scroll::-webkit-scrollbar-track {
-    background: rgba(255, 255, 255, 0.05) !important;
-    border-radius: 2px !important;
-  }
-
-  .mobile-horizontal-scroll::-webkit-scrollbar-thumb {
-    background: linear-gradient(90deg, #FF6B95, #7877C6) !important;
-    border-radius: 2px !important;
-  }
-}
-
-/* EXTRA SMALL DEVICES (≤ 360px) */
-@media (max-width: 360px) {
-  .mobile-scroll-item {
-    width: calc(55vw - 24px) !important;
-  }
-
-  .product-card.mobile-square {
-    transform: scale(0.95) !important;
-    transform-origin: center !important;
-  }
-
-  .product-card.mobile-square .MuiCardContent-root {
-    padding: 8px !important;
-  }
-
-  .product-card.mobile-square .MuiTypography-subtitle2 {
-    font-size: 0.75rem !important;
-    height: 34px !important;
-  }
-
-  .product-card.mobile-square .MuiTypography-h6 {
-    font-size: 0.9rem !important;
-  }
-
-  .product-card.mobile-square .MuiButton-root {
-    height: 28px !important;
-    font-size: 0.7rem !important;
-  }
-
-  /* Even smaller action buttons */
-  .product-card.mobile-square .product-actions-stack {
-    gap: 6px !important;
   }
 }
 
@@ -1022,5 +742,112 @@ img {
     font-size: 0.6rem !important;
     height: 24px !important;
     min-height: 24px !important;
+  }
+}
+
+/* MOBILE — FIX PRODUCT GRID TO 2 PER ROW + SQUARE CARDS */
+@media (max-width: 767px) {
+  /* Force 2 columns */
+  .MuiGrid-item {
+    width: 50% !important;
+    flex-basis: 50% !important;
+    max-width: 50% !important;
+  }
+
+  /* Make product card a square */
+  .product-card {
+    aspect-ratio: 1 / 1 !important;  /* Perfect square */
+    min-height: auto !important;
+    max-height: none !important;
+    height: auto !important;
+  }
+
+  /* Make image also square */
+  .product-card .MuiCardMedia-root {
+    aspect-ratio: 1 / 1 !important;
+    width: 100% !important;
+    height: auto !important;
+    object-fit: cover !important;
+  }
+
+  /* Fix padding so content still fits */
+  .product-card .MuiCardContent-root {
+    padding: 8px !important;
+  }
+}
+
+/* ==============================================
+   MOBILE: PERFECT INSTAGRAM-STYLE SQUARE CARDS
+   ============================================== */
+@media (max-width: 767px) {
+  /* Force 2 columns */
+  .MuiGrid-item {
+    width: 50% !important;
+    flex-basis: 50% !important;
+    max-width: 50% !important;
+  }
+
+  /* Perfect square container */
+  .product-card {
+    aspect-ratio: 1 / 1 !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: auto !important;
+    max-height: none !important;
+
+    /* Smooth scale-in effect */
+    animation: mobile-scale-in 0.35s ease both;
+  }
+
+  /* Square images */
+  .product-card .MuiCardMedia-root {
+    aspect-ratio: 1 / 1 !important;
+    width: 100% !important;
+    height: auto !important;
+    object-fit: cover !important;
+  }
+
+  /* Prevent content from overflowing */
+  .product-card .MuiCardContent-root {
+    padding: 8px !important;
+  }
+}
+
+/* ==============================================
+   EXTRA SMALL DEVICES (≤ 360px)
+   Auto-shrink card + reduce spacing
+   ============================================== */
+@media (max-width: 360px) {
+  .MuiGrid-item {
+    padding: 4px !important;         /* tighter gaps */
+  }
+
+  .product-card {
+    aspect-ratio: 1 / 1 !important;
+    transform: scale(0.92);          /* shrink for small phones */
+    transform-origin: center;
+  }
+
+  .product-card .MuiCardContent-root {
+    padding: 6px !important;         /* smaller content padding */
+  }
+
+  .product-card .MuiButton-root {
+    font-size: 0.6rem !important;
+    padding: 2px 4px !important;
+  }
+}
+
+/* ==============================================
+   SCALE-IN ANIMATION FOR MOBILE GRID
+   ============================================== */
+@keyframes mobile-scale-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
   }
 }

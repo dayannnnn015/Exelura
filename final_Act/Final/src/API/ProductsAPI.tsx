@@ -1,12 +1,14 @@
+
 import axios from "axios";
 import {
     DEFAULT_PAGE,
     DEFAULT_PER_PAGE,
     PRODUCTS_ENDPOINT
 } from "../configs/constants";
+import { useUserStore } from "../store/userStore";
 
 // Enhanced search with better error handling and logging
-const SearchProducts = async ({
+export const SearchProducts = async ({
     searchKey,
     category = '',
     page = DEFAULT_PAGE,
@@ -25,18 +27,18 @@ const SearchProducts = async ({
         
         // Determine the endpoint based on parameters
         if (category) {
-            // Filter by category
-            url += `/category/${encodeURIComponent(category)}`;
+            // Filter by category - CORRECT ENDPOINT FOR DUMMYJSON
+            url = `${PRODUCTS_ENDPOINT}/category/${encodeURIComponent(category)}`;
             console.log(`📁 Category endpoint: ${url}`);
             isSearchEndpoint = false;
         } else if (searchKey && searchKey.trim() !== '') {
             // Search by keyword
-            url += `/search?q=${encodeURIComponent(searchKey.trim())}`;
+            url = `${PRODUCTS_ENDPOINT}/search?q=${encodeURIComponent(searchKey.trim())}`;
             console.log(`🔎 Search endpoint: ${url}`);
             isSearchEndpoint = true;
         } else {
             // Get all products
-            url += '?';
+            url = `${PRODUCTS_ENDPOINT}?`;
             console.log(`📦 All products endpoint: ${url}`);
             isSearchEndpoint = false;
         }
@@ -50,7 +52,7 @@ const SearchProducts = async ({
             console.log(`✅ Category response:`, response.data);
             
             let products = response.data.products || [];
-            const total = products.length;
+            const total = response.data.total || products.length;
             
             // Manual pagination for category endpoint
             const startIndex = (page - 1) * perPage;
@@ -61,7 +63,9 @@ const SearchProducts = async ({
             const enhancedProducts = paginatedProducts.map((product: any, index: number) => ({
                 ...product,
                 qrCode: product.qrCode || `QR-${product.id || `CAT-${category}-${index + 1}`}`,
-                thumbnail: product.thumbnail || product.images?.[0] || `https://via.placeholder.com/300x300?text=${encodeURIComponent(product.title || 'Product')}`
+                thumbnail: product.thumbnail || product.images?.[0] || `https://via.placeholder.com/300x300?text=${encodeURIComponent(product.title || 'Product')}`,
+                // Add seller info
+                sellerInfo: getSellerInfoForProduct(product.id || index)
             }));
             
             return { 
@@ -87,11 +91,13 @@ const SearchProducts = async ({
                 total = response.data.total || products.length;
             }
 
-            // Add QR codes to products
+            // Add QR codes and seller info to products
             const enhancedProducts = products.map((product: any) => ({
                 ...product,
                 qrCode: product.qrCode || `QR-${product.id}`,
-                thumbnail: product.thumbnail || product.images?.[0] || `https://via.placeholder.com/300x300?text=${encodeURIComponent(product.title || 'Product')}`
+                thumbnail: product.thumbnail || product.images?.[0] || `https://via.placeholder.com/300x300?text=${encodeURIComponent(product.title || 'Product')}`,
+                // Add seller info
+                sellerInfo: getSellerInfoForProduct(product.id)
             }));
 
             return { 
@@ -104,12 +110,308 @@ const SearchProducts = async ({
         }
     } catch (error) {
         console.error('❌ Error fetching products:', error);
-        // Return enhanced mock data on error
+        // Return enhanced mock data on error with seller info
         return getMockProducts(searchKey, category, page, perPage);
     }
 }
 
-// Mock data generator for fallback
+// Get seller products (for seller dashboard)
+export const GetSellerProducts = async (sellerId?: number) => {
+    console.log(`🛍️ GetSellerProducts called for seller:`, sellerId);
+    
+    try {
+        // In a real app, this would be a separate endpoint for seller products
+        // For now, we'll use the store or filter from the main API
+        
+        // Get all products
+        const response = await axios.get(`${PRODUCTS_ENDPOINT}?limit=100`);
+        let products = response.data.products || [];
+        
+        // Filter products that belong to this seller
+        // Since dummyjson doesn't have seller info, we'll simulate it
+        const sellerProducts = products
+            .filter((product: any) => {
+                // Simulate: products with IDs divisible by seller's ID (if provided) or by 3
+                if (sellerId) {
+                    return product.id % sellerId === 0 || product.id % 3 === 0;
+                }
+                return product.id % 3 === 0; // Default seller products
+            })
+            .map((product: any) => ({
+                ...product,
+                sellerId: sellerId || 2, // Default to seller ID 2
+                status: product.stock > 0 ? 'active' : 'out_of_stock',
+                sold: Math.floor(Math.random() * 50) + 10,
+                createdAt: new Date(Date.now() - Math.random() * 31536000000).toISOString(), // Random date within last year
+                updatedAt: new Date().toISOString(),
+                sellerInfo: getSellerInfoForProduct(product.id, sellerId)
+            }));
+        
+        console.log(`✅ Found ${sellerProducts.length} products for seller ${sellerId}`);
+        return sellerProducts;
+        
+    } catch (error) {
+        console.error('❌ Error fetching seller products:', error);
+        // Return mock seller products
+        return getMockSellerProducts(sellerId);
+    }
+}
+
+// Get seller-specific product details
+export const GetSellerProductDetails = async (productId: number, sellerId?: number) => {
+    console.log(`🛍️ GetSellerProductDetails: ${productId} for seller ${sellerId}`);
+    
+    try {
+        const response = await axios.get(`${PRODUCTS_ENDPOINT}/${productId}`);
+        
+        // Enhance with seller-specific data
+        const sellerProduct = {
+            ...response.data,
+            sellerId: sellerId || 2,
+            sellerInfo: getSellerInfoForProduct(productId, sellerId),
+            stock: response.data.stock || 50,
+            sold: Math.floor(Math.random() * 100) + 20,
+            status: response.data.stock > 0 ? 'active' : 'out_of_stock',
+            views: Math.floor(Math.random() * 500) + 100,
+            revenue: (response.data.price || 0) * (Math.floor(Math.random() * 50) + 10),
+            createdAt: new Date(Date.now() - Math.random() * 31536000000).toISOString(),
+            updatedAt: new Date().toISOString(),
+            // Add seller management fields
+            canEdit: true,
+            canDelete: true,
+            isFeatured: productId % 5 === 0,
+            tags: response.data.tags || ['premium', 'featured', 'bestseller']
+        };
+        
+        return sellerProduct;
+        
+    } catch (error) {
+        console.error('❌ Error fetching seller product details:', error);
+        return getMockSellerProductDetails(productId, sellerId);
+    }
+}
+
+// Update seller product stock
+export const UpdateSellerProductStock = async (productId: number, newStock: number, sellerId?: number) => {
+    console.log(`📦 UpdateSellerProductStock: ${productId} to ${newStock} for seller ${sellerId}`);
+    
+    // In a real app, this would be a PUT/PATCH request
+    // For now, simulate API call and update store
+    try {
+        // Simulate API delay
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Update in store (in a real app, this would come from API response)
+        const { updateSellerProduct } = useUserStore.getState();
+        updateSellerProduct(productId, { 
+            stock: newStock,
+            status: newStock === 0 ? 'out_of_stock' : 'active'
+        });
+        
+        return {
+            success: true,
+            message: `Stock updated to ${newStock}`,
+            productId,
+            newStock,
+            sellerId
+        };
+        
+    } catch (error) {
+        console.error('❌ Error updating stock:', error);
+        return {
+            success: false,
+            message: 'Failed to update stock',
+            productId,
+            newStock,
+            sellerId
+        };
+    }
+}
+
+// Add new product (seller)
+export const AddSellerProduct = async (productData: any, sellerId?: number) => {
+    console.log(`➕ AddSellerProduct for seller ${sellerId}:`, productData);
+    
+    try {
+        // In a real app, this would be a POST request
+        // For now, simulate API call and update store
+        
+        // Generate a unique ID (in real app, this would come from server)
+        const newProductId = Date.now();
+        
+        // Simulate API delay
+        await new Promise(resolve => setTimeout(resolve, 800));
+        
+        // Create the new product
+        const newProduct = {
+            id: newProductId,
+            title: productData.title || 'New Product',
+            description: productData.description || 'Premium product description',
+            price: productData.price || 0,
+            category: productData.category || 'uncategorized',
+            stock: productData.stock || 0,
+            sold: 0,
+            rating: 0,
+            images: productData.images || [
+                'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=600&h=400&fit=crop'
+            ],
+            status: 'active',
+            sellerId: sellerId || 2,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            sellerInfo: getSellerInfoForProduct(newProductId, sellerId)
+        };
+        
+        // Add to store (in a real app, this would come from API response)
+        const { addSellerProduct } = useUserStore.getState();
+        addSellerProduct(newProduct);
+        
+        return {
+            success: true,
+            message: 'Product added successfully',
+            product: newProduct,
+            productId: newProductId
+        };
+        
+    } catch (error) {
+        console.error('❌ Error adding product:', error);
+        return {
+            success: false,
+            message: 'Failed to add product',
+            productData
+        };
+    }
+}
+
+// Delete seller product
+export const DeleteSellerProduct = async (productId: number, sellerId?: number) => {
+    console.log(`🗑️ DeleteSellerProduct: ${productId} for seller ${sellerId}`);
+    
+    try {
+        // Simulate API delay
+        await new Promise(resolve => setTimeout(resolve, 600));
+        
+        // Delete from store (in a real app, this would be a DELETE request)
+        const { deleteSellerProduct } = useUserStore.getState();
+        deleteSellerProduct(productId);
+        
+        return {
+            success: true,
+            message: 'Product deleted successfully',
+            productId,
+            sellerId
+        };
+        
+    } catch (error) {
+        console.error('❌ Error deleting product:', error);
+        return {
+            success: false,
+            message: 'Failed to delete product',
+            productId,
+            sellerId
+        };
+    }
+}
+
+// Get seller statistics
+export const GetSellerStats = async (sellerId?: number) => {
+    console.log(`📊 GetSellerStats for seller:`, sellerId);
+    
+    try {
+        // Get seller products
+        const sellerProducts = await GetSellerProducts(sellerId);
+        
+        // Calculate statistics
+        const totalProducts = sellerProducts.length;
+        const totalRevenue = sellerProducts.reduce((sum: number, product: any) => 
+            sum + (product.price * (product.sold || 0)), 0);
+        const totalOrders = Math.floor(totalRevenue / 100); // Simplified calculation
+        
+        // Get low stock products
+        const lowStockProducts = sellerProducts.filter((product: any) => 
+            product.stock < 10 && product.stock > 0);
+        
+        // Get out of stock products
+        const outOfStockProducts = sellerProducts.filter((product: any) => 
+            product.stock === 0);
+        
+        // Calculate popular categories
+        const categoryCounts: { [key: string]: number } = {};
+        sellerProducts.forEach((product: any) => {
+            const category = product.category || 'uncategorized';
+            categoryCounts[category] = (categoryCounts[category] || 0) + 1;
+        });
+        
+        const popularCategories = Object.entries(categoryCounts)
+            .map(([name, count]) => ({ name, count }))
+            .sort((a, b) => b.count - a.count)
+            .slice(0, 5);
+        
+        return {
+            sellerId: sellerId || 2,
+            totalRevenue: Math.round(totalRevenue),
+            totalOrders,
+            totalProducts,
+            totalCustomers: Math.floor(totalOrders * 0.7), // Estimated
+            monthlyGrowth: 12.5, // Static for now
+            lowStockProducts: lowStockProducts.length,
+            outOfStockProducts: outOfStockProducts.length,
+            popularCategories,
+            lastUpdated: new Date().toISOString()
+        };
+        
+    } catch (error) {
+        console.error('❌ Error fetching seller stats:', error);
+        return getMockSellerStats(sellerId);
+    }
+}
+
+// Helper function to get seller info for a product
+const getSellerInfoForProduct = (productId: number, sellerId?: number) => {
+    const sellerIdToUse = sellerId || 2; // Default seller ID
+    
+    const sellers = [
+        {
+            id: 2,
+            name: "Luxury Elite Store",
+            rating: 4.8,
+            totalProducts: 42,
+            joined: "2023-01-15",
+            verified: true,
+            responseRate: 98,
+            shippingTime: "1-2 days"
+        },
+        {
+            id: 3,
+            name: "Premium Collections",
+            rating: 4.9,
+            totalProducts: 28,
+            joined: "2023-03-20",
+            verified: true,
+            responseRate: 99,
+            shippingTime: "2-3 days"
+        },
+        {
+            id: 4,
+            name: "Designer Hub",
+            rating: 4.7,
+            totalProducts: 35,
+            joined: "2023-02-10",
+            verified: true,
+            responseRate: 95,
+            shippingTime: "3-5 days"
+        }
+    ];
+    
+    // Pick seller based on product ID or provided sellerId
+    const sellerIndex = sellerIdToUse ? 
+        sellers.findIndex(s => s.id === sellerIdToUse) : 
+        productId % sellers.length;
+    
+    return sellers[sellerIndex] || sellers[0];
+}
+
+// Mock data generator for fallback with seller info
 const getMockProducts = (searchKey: string, category: string, page: number, perPage: number) => {
     const mockProducts = [];
     const total = 45;
@@ -117,6 +419,8 @@ const getMockProducts = (searchKey: string, category: string, page: number, perP
     
     for (let i = 0; i < Math.min(perPage, 10); i++) {
         const id = startIndex + i + 1;
+        const sellerInfo = getSellerInfoForProduct(id);
+        
         const product = {
             id: id,
             title: `${category ? category.charAt(0).toUpperCase() + category.slice(1) : 'Premium'} Product ${searchKey ? `"${searchKey}"` : ''} #${id}`,
@@ -135,6 +439,8 @@ const getMockProducts = (searchKey: string, category: string, page: number, perP
             ],
             brand: "Luxury Elite",
             qrCode: `QR-${id}`,
+            sellerInfo: sellerInfo,
+            sellerId: sellerInfo.id,
             reviews: [
                 {
                     id: 1,
@@ -158,6 +464,91 @@ const getMockProducts = (searchKey: string, category: string, page: number, perP
         total, 
         page, 
         lastPage: Math.ceil(total / perPage) 
+    };
+};
+
+// Mock seller products
+const getMockSellerProducts = (sellerId?: number) => {
+    const products = [];
+    const productCount = 12;
+    const sellerIdToUse = sellerId || 2;
+    
+    for (let i = 1; i <= productCount; i++) {
+        const id = sellerIdToUse * 100 + i;
+        products.push({
+            id: id,
+            title: `Seller Product ${i}`,
+            description: `Premium product from seller ${sellerIdToUse}`,
+            price: 49.99 + (i * 25),
+            stock: Math.floor(Math.random() * 50) + 10,
+            sold: Math.floor(Math.random() * 100) + 20,
+            category: ['smartphones', 'laptops', 'fragrances', 'beauty'][i % 4],
+            status: i % 5 === 0 ? 'out_of_stock' : 'active',
+            rating: 4 + (Math.random() * 1),
+            images: [`https://images.unsplash.com/photo-${1546868871 + id}?w=300&h=300&fit=crop`],
+            thumbnail: `https://images.unsplash.com/photo-${1546868871 + id}?w=300&h=300&fit=crop`,
+            sellerId: sellerIdToUse,
+            createdAt: new Date(Date.now() - Math.random() * 31536000000).toISOString(),
+            updatedAt: new Date().toISOString()
+        });
+    }
+    
+    return products;
+};
+
+// Mock seller product details
+const getMockSellerProductDetails = (productId: number, sellerId?: number) => {
+    const sellerIdToUse = sellerId || 2;
+    
+    return {
+        id: productId,
+        title: `Seller Exclusive Product #${productId}`,
+        description: "Premium seller-exclusive product with enhanced features.",
+        price: 199.99 + (productId * 10),
+        stock: 25 + (productId % 30),
+        sold: Math.floor(Math.random() * 100) + 30,
+        category: "luxury",
+        status: productId % 5 === 0 ? 'out_of_stock' : 'active',
+        rating: 4.5 + (Math.random() * 0.5),
+        images: [
+            "https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=600&h=400&fit=crop",
+            "https://images.unsplash.com/photo-1560769629-975ec94e6a86?w=600&h=400&fit=crop"
+        ],
+        thumbnail: "https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=600&h=400&fit=crop",
+        sellerId: sellerIdToUse,
+        sellerInfo: getSellerInfoForProduct(productId, sellerIdToUse),
+        views: 350 + (productId * 10),
+        revenue: (199.99 + (productId * 10)) * (Math.floor(Math.random() * 50) + 30),
+        createdAt: new Date(Date.now() - Math.random() * 31536000000).toISOString(),
+        updatedAt: new Date().toISOString(),
+        canEdit: true,
+        canDelete: true,
+        isFeatured: productId % 3 === 0,
+        tags: ['premium', 'seller-exclusive', 'featured']
+    };
+};
+
+// Mock seller stats
+const getMockSellerStats = (sellerId?: number) => {
+    const sellerIdToUse = sellerId || 2;
+    
+    return {
+        sellerId: sellerIdToUse,
+        totalRevenue: 24580 + (sellerIdToUse * 1000),
+        totalOrders: 156 + (sellerIdToUse * 10),
+        totalProducts: 42 + (sellerIdToUse * 2),
+        totalCustomers: 1245 + (sellerIdToUse * 50),
+        monthlyGrowth: 12.5 + (sellerIdToUse * 0.5),
+        lowStockProducts: 3,
+        outOfStockProducts: 2,
+        popularCategories: [
+            { name: 'smartphones', count: 120 },
+            { name: 'laptops', count: 85 },
+            { name: 'fragrances', count: 65 },
+            { name: 'beauty', count: 45 },
+            { name: 'womens-watches', count: 32 }
+        ],
+        lastUpdated: new Date().toISOString()
     };
 };
 
@@ -196,9 +587,9 @@ export const GetCategoriesWithCounts = async () => {
       };
       
       // Determine if category is popular or new
-      const isPopular = ['smartphones', 'laptops', 'fragrances']
+      const isPopular = ['smartphones', 'laptops', 'fragrances', 'beauty', 'womens-dresses', 'mens-shirts']
         .includes(category.toLowerCase());
-      const isNew = ['motorcycle']
+      const isNew = ['motorcycle', 'vehicle']
         .includes(category.toLowerCase());
       
       // Get product count for this category
@@ -221,6 +612,8 @@ export const GetCategoriesWithCounts = async () => {
     const sortedCategories = enhancedCategories.sort((a, b) => {
       if (a.isPopular && !b.isPopular) return -1;
       if (!a.isPopular && b.isPopular) return 1;
+      if (a.isNew && !b.isNew) return -1;
+      if (!a.isNew && b.isNew) return 1;
       return b.productCount - a.productCount;
     });
     
@@ -241,10 +634,11 @@ const getMockCategoriesWithCounts = () => {
       name: cat.name,
       slug: cat.name.toLowerCase(),
       displayName: formatCategoryName(cat.name),
-      isPopular: ['smartphones', 'laptops', 'fragrances', 'skincare']
+      isPopular: ['smartphones', 'laptops', 'fragrances', 'beauty', 'womens-dresses', 'mens-shirts']
         .includes(cat.name.toLowerCase()),
-      isNew: ['motorcycle']
+      isNew: ['motorcycle', 'vehicle']
         .includes(cat.name.toLowerCase()),
+      productCount: Math.floor(Math.random() * 30) + 5,
       hasProducts: true,
       icon: cat.icon,
       color: cat.color
@@ -252,11 +646,11 @@ const getMockCategoriesWithCounts = () => {
     .sort((a, b) => {
       if (a.isPopular && !b.isPopular) return -1;
       if (!a.isPopular && b.isPopular) return 1;
-      return 0;
+      if (a.isNew && !b.isNew) return -1;
+      if (!a.isNew && b.isNew) return 1;
+      return b.productCount - a.productCount;
     });
 };
-  
-
 
 // Product details function with enhanced features and QR code
 export const GetProductDetails = async (productId: number) => {
@@ -266,17 +660,19 @@ export const GetProductDetails = async (productId: number) => {
         const response = await axios.get(`${PRODUCTS_ENDPOINT}/${productId}`);
         console.log(`✅ GetProductDetails: Successfully fetched product ${productId}`);
         
-        // Enhance product data with QR code and ensure all fields
+        // Enhance product data with QR code, seller info, and ensure all fields
         const enhancedProduct = {
             ...response.data,
             qrCode: response.data.qrCode || `QR-${productId}`,
             thumbnail: response.data.thumbnail || response.data.images?.[0] || `https://via.placeholder.com/600x400?text=Product+${productId}`,
             images: response.data.images || [response.data.thumbnail] || [`https://via.placeholder.com/600x400?text=Product+${productId}`],
             reviews: response.data.reviews || getMockReviews(productId),
+            sellerInfo: getSellerInfoForProduct(productId),
             meta: response.data.meta || {
                 materials: ["Premium Materials", "Fine Craftsmanship"],
                 origin: "Internationally Sourced",
-                shipping: "Worldwide Express Delivery"
+                shipping: "Worldwide Express Delivery",
+                sellerNote: "Sold by verified premium seller"
             }
         };
         
@@ -285,7 +681,9 @@ export const GetProductDetails = async (productId: number) => {
     } catch (error) {
         console.error(`❌ GetProductDetails: Error fetching product ${productId}:`, error);
         
-        // Enhanced mock product data with QR code
+        // Enhanced mock product data with QR code and seller info
+        const sellerInfo = getSellerInfoForProduct(productId);
+        
         const mockProduct = {
             id: productId,
             title: `Premium Luxury Product #${productId}`,
@@ -298,6 +696,8 @@ export const GetProductDetails = async (productId: number) => {
             tags: ["premium", "exclusive", "limited-edition", "handcrafted", "luxury"],
             thumbnail: "https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=600&h=400&fit=crop",
             qrCode: `QR-${productId}`,
+            sellerInfo: sellerInfo,
+            sellerId: sellerInfo.id,
             images: [
                 "https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=600&h=400&fit=crop",
                 "https://images.unsplash.com/photo-1560769629-975ec94e6a86?w=600&h=400&fit=crop",
@@ -315,7 +715,8 @@ export const GetProductDetails = async (productId: number) => {
                 origin: "Made in Italy",
                 shipping: "Worldwide Express Shipping",
                 careInstructions: "Dry clean only. Avoid direct sunlight.",
-                authenticity: "100% Authentic with Certificate"
+                authenticity: "100% Authentic with Certificate",
+                sellerNote: `Sold by ${sellerInfo.name} - Verified Premium Seller`
             },
             specifications: {
                 material: "Premium Materials",
@@ -323,7 +724,8 @@ export const GetProductDetails = async (productId: number) => {
                 size: "Standard/Medium",
                 feature1: "Water Resistant",
                 feature2: "Scratch Proof",
-                feature3: "Eco Friendly"
+                feature3: "Eco Friendly",
+                sellerGuarantee: "30-day money back guarantee"
             }
         };
         
@@ -380,25 +782,25 @@ const formatCategoryName = (category: string) => {
         .join(' ');
 };
 
-// Category icons and colors mapping
+// Category icons and colors mapping - UPDATED WITH CORRECT CATEGORIES
 const categoryIcons = [
     { name: 'smartphones', icon: '📱', color: '#F29F58' },
     { name: 'laptops', icon: '💻', color: '#AB4459' },
     { name: 'fragrances', icon: '🌸', color: '#441752' },
-    { name: 'groceries', icon: '🛒', color: '#F29F58' },
-    { name: 'home-decoration', icon: '🏠', color: '#AB4459' },
-    { name: 'furniture', icon: '🛋️', color: '#441752' },
-    { name: 'tops', icon: '👕', color: '#1B1833' },
-    { name: 'womens-dresses', icon: '👗', color: '#F29F58' },
-    { name: 'womens-shoes', icon: '👠', color: '#AB4459' },
-    { name: 'mens-shirts', icon: '👔', color: '#441752' },
-    { name: 'mens-shoes', icon: '👞', color: '#1B1833' },
+    { name: 'beauty', icon: '✨', color: '#4ECDC4' },
+    { name: 'groceries', icon: '🛒', color: '#FF6B95' },
+    { name: 'home-decoration', icon: '🏠', color: '#7877C6' },
+    { name: 'furniture', icon: '🛋️', color: '#F29F58' },
+    { name: 'tops', icon: '👕', color: '#AB4459' },
+    { name: 'womens-dresses', icon: '👗', color: '#441752' },
+    { name: 'womens-shoes', icon: '👠', color: '#4ECDC4' },
+    { name: 'mens-shirts', icon: '👔', color: '#FF6B95' },
+    { name: 'mens-shoes', icon: '👞', color: '#7877C6' },
     { name: 'mens-watches', icon: '⌚', color: '#F29F58' },
     { name: 'womens-watches', icon: '⌚', color: '#AB4459' },
     { name: 'womens-bags', icon: '👜', color: '#441752' },
-    { name: 'womens-jewellery', icon: '💎', color: '#1B1833' },
-    { name: 'sunglasses', icon: '🕶️', color: '#F29F58' },
-    { name: 'motorcycle', icon: '🏍️', color: '#441752' },
+    { name: 'womens-jewellery', icon: '💎', color: '#4ECDC4' },
+    { name: 'sunglasses', icon: '🕶️', color: '#FF6B95' },
+    { name: 'vehicle', icon: '🚗', color: '#7877C6' },
+    { name: 'motorcycle', icon: '🏍️', color: '#F29F58' },
 ];
-
-export { SearchProducts };
