@@ -1,163 +1,227 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
+  Typography,
   Box,
   Avatar,
-  Typography,
-  Grid,
-  Paper,
-  TextField,
+  Stack,
   Button,
-  Chip,
-  Tabs,
-  Tab,
-  IconButton,
-  alpha,
+  Container,
+  List,
+  ListItemButton,
+  ListItemIcon,
+  ListItemText,
+  Divider,
+  TextField,
 } from "@mui/material";
-import { Close, Edit, PhotoCamera, Verified, Logout } from "@mui/icons-material";
+import AccountCircleIcon from "@mui/icons-material/AccountCircle";
+import LockIcon from "@mui/icons-material/Lock";
+import NotificationsIcon from "@mui/icons-material/Notifications";
+import { alpha } from "@mui/material/styles";
 import { useUserStore } from "../store/userStore";
-import ExeluraLogo from '../assets/exelura-logo.png';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from "react-router-dom";
+import AccountMenu from "../components/AccountMenu";
+
+const CSS_VARS = {
+  primaryDark: "#1B1833",
+  primaryPurple: "#441752",
+  primaryPink: "#AB4459",
+  primaryOrange: "#F29F58",
+};
+
+const sidebarItems = [
+  { label: "Account Info", icon: <AccountCircleIcon /> },
+  { label: "Security", icon: <LockIcon /> },
+  { label: "Notifications", icon: <NotificationsIcon /> },
+];
 
 const ProfileSettingPage: React.FC = () => {
   const { currentUser, logout } = useUserStore();
+  const [selectedIndex, setSelectedIndex] = useState(0);
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState(0);
-  const [isEditing, setIsEditing] = useState(false);
 
-  const [formData, setFormData] = useState({
-    name: currentUser?.name || "Alexandra Chen",
-    email: currentUser?.email || "alexandra@luxury.com",
-    phone: currentUser?.phone || "+1 (555) 123-4567",
-    gender: currentUser?.gender || "female",
-    dob: currentUser?.dob || "1990-05-15",
-    address: "123 Luxury Avenue, Beverly Hills, CA 90210",
-    currentPassword: '',
-    newPassword: '',
-    confirmNewPassword: '',
-  });
-
-  const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-  };
-
-  const handleSave = () => {
-    setIsEditing(false);
-    console.log("Saved profile:", formData);
-  };
-
+  const handleSelect = (index: number) => setSelectedIndex(index);
   const handleLogout = () => {
     logout();
-    navigate('/');
+    navigate("/");
   };
 
   return (
-    <Box sx={{ minHeight: "100vh", backgroundColor: "#0A081F", color: "#fff", pb: 4, position: 'relative' }}>
-
-      {/* Exelura Logo */}
-      <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}>
-        <img src={ExeluraLogo} alt="Exelura Logo" style={{ height: 60 }} />
-      </Box>
-
-      {/* Header */}
-      <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", px: 3, borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
-        <Typography variant="h5" fontWeight={700}>Profile Settings</Typography>
-        <Button
-          startIcon={<Logout />}
-          onClick={handleLogout}
-          sx={{
-            color: "#FF6B95",
-            borderColor: alpha('#FF6B95', 0.3),
-            border: "1px solid",
-            "&:hover": { backgroundColor: alpha('#FF6B95', 0.1), borderColor: '#FF6B95' },
-          }}
-        >
-          Logout
-        </Button>
-      </Box>
-
-      {/* Tabs */}
-      <Tabs
-        value={activeTab}
-        onChange={(_, value) => setActiveTab(value)}
+    <Box sx={{ display: "flex", flexDirection: "column", minHeight: "100vh", bgcolor: "transparent", color: "#fff" }}>
+      {/* Sticky Header with AccountMenu */}
+      <Box
+        className="sticky-header"
         sx={{
-          px: 3,
-          borderBottom: 1,
-          borderColor: 'divider',
-          '& .MuiTab-root': { color: alpha('#FFFFFF', 0.7), '&.Mui-selected': { color: '#7877C6' } },
+          position: "sticky",
+          top: 0,
+          zIndex: 1300,
+          width: "100%",
+          backdropFilter: "blur(20px)",
+          backgroundColor: alpha("#0A081F", 0.95),
+          borderBottom: "1px solid rgba(120, 119, 198, 0.2)",
+          boxShadow: "0 8px 32px rgba(0, 0, 0, 0.5)",
+          WebkitBackdropFilter: "blur(20px)",
+          transition: "all 0.3s ease",
         }}
       >
-        <Tab label="Profile" />
-        <Tab label="Security" />
-      </Tabs>
-
-      <Box sx={{ px: 3, pt: 3, pb: 8 }}>
-        {/* PROFILE TAB */}
-        {activeTab === 0 && (
-          <Grid container spacing={3}>
-            <Grid item xs={12} md={6}>
-              <Paper elevation={0} sx={{ p: 3, bgcolor: alpha('#FFFFFF', 0.05), borderRadius: 2 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, mb: 3 }}>
-                  <Box sx={{ position: 'relative' }}>
-                    <Avatar
-                      src="https://images.unsplash.com/photo-1494790108755-2616b786d4d9?w=400&h=400&fit=crop"
-                      sx={{ width: 100, height: 100, border: '3px solid #7877C6' }}
-                    />
-                    <IconButton sx={{ position: 'absolute', bottom: 0, right: 0, backgroundColor: '#7877C6', color: 'white', '&:hover': { backgroundColor: '#5A59A1' } }}>
-                      <PhotoCamera />
-                    </IconButton>
-                  </Box>
-                  <Box sx={{ flex: 1 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
-                      <Typography variant="h5" fontWeight={700}>{formData.name}</Typography>
-                      <Chip label="Premium Member" icon={<Verified />} size="small" sx={{ backgroundColor: alpha('#FF6B95', 0.2), color: '#FF6B95', fontWeight: 600 }} />
-                    </Box>
-                    <Button variant="outlined" startIcon={<Edit />} onClick={() => setIsEditing(!isEditing)} sx={{ borderColor: '#7877C6', color: '#7877C6' }}>
-                      {isEditing ? 'Cancel Editing' : 'Edit Profile'}
-                    </Button>
-                  </Box>
-                </Box>
-
-                <TextField fullWidth label="Full Name" value={formData.name} onChange={(e) => handleInputChange('name', e.target.value)} disabled={!isEditing} sx={{ mb: 2, input: { color: 'white' } }} />
-                <TextField fullWidth label="Email" value={formData.email} onChange={(e) => handleInputChange('email', e.target.value)} disabled={!isEditing} sx={{ mb: 2, input: { color: 'white' } }} />
-                <TextField fullWidth label="Phone" value={formData.phone} onChange={(e) => handleInputChange('phone', e.target.value)} disabled={!isEditing} sx={{ mb: 2, input: { color: 'white' } }} />
-                <TextField fullWidth multiline rows={4} label="Address" value={formData.address} onChange={(e) => handleInputChange('address', e.target.value)} disabled={!isEditing} sx={{ mb: 3, input: { color: 'white' } }} />
-              </Paper>
-            </Grid>
-          </Grid>
-        )}
-
-        {/* SECURITY TAB */}
-        {activeTab === 1 && (
-          <Paper elevation={0} sx={{ p: 3, bgcolor: alpha('#FFFFFF', 0.05), borderRadius: 2 }}>
-            <Typography variant="h6" sx={{ mb: 2 }}>Security Settings</Typography>
-
-            <TextField fullWidth type="password" label="Current Password" value={formData.currentPassword} onChange={(e) => handleInputChange('currentPassword', e.target.value)} disabled={!isEditing} sx={{ mb: 2, input: { color: 'white' } }} />
-            <TextField fullWidth type="password" label="New Password" value={formData.newPassword} onChange={(e) => handleInputChange('newPassword', e.target.value)} disabled={!isEditing} sx={{ mb: 2, input: { color: 'white' } }} />
-            <TextField fullWidth type="password" label="Confirm New Password" value={formData.confirmNewPassword} onChange={(e) => handleInputChange('confirmNewPassword', e.target.value)} disabled={!isEditing} sx={{ mb: 2, input: { color: 'white' } }} />
-
-            <Button variant="contained" onClick={() => console.log("Change Password clicked")} sx={{ mt: 2, background: 'linear-gradient(135deg, #7877C6 0%, #5A59A1 100%)' }}>
-              Change Password
-            </Button>
-          </Paper>
-        )}
-
-        {/* Save Button */}
-        <Box sx={{ mt: 4, display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
-          <Button onClick={handleSave} variant="contained" sx={{ background: 'linear-gradient(135deg, #7877C6 0%, #5A59A1 100%)' }}>
-            Save Changes
-          </Button>
-        </Box>
-
+        <AccountMenu onSearch={() => {}} scrolled={false} onNavigateToSellerDashboard={() => {}} />
       </Box>
 
-      {/* Close Button */}
-      <IconButton
-        onClick={() => navigate('/')}
-        sx={{ position: 'fixed', bottom: 20, right: 20, backgroundColor: '#FF6B95', color: 'white', '&:hover': { backgroundColor: '#FF4B7D' } }}
-      >
-        <Close />
-      </IconButton>
+      {/* Main Layout */}
+      <Box sx={{ display: "flex", flex: 1 }}>
+        {/* SIDEBAR */}
+        <Box
+          sx={{
+            width: 260,
+            borderRight: `1px solid ${alpha(CSS_VARS.primaryOrange, 0.3)}`,
+            px: 2,
+            py: 3,
+            bgcolor: alpha(CSS_VARS.primaryDark, 0.9),
+            flexShrink: 0,
+            position: "sticky",
+            top: `64px`,
+            height: `calc(100vh - 64px)`,
+            overflowY: "auto",
+          }}
+        >
+          <Stack direction="row" spacing={1.5} alignItems="center" mb={3}>
+            <Avatar
+              src={currentUser?.avatarUrl}
+              alt={currentUser?.username}
+              sx={{
+                width: 56,
+                height: 56,
+                bgcolor: CSS_VARS.primaryOrange,
+                border: `2px solid ${CSS_VARS.primaryPink}`,
+              }}
+            />
+            <Box>
+              <Typography variant="h6" fontWeight={700} noWrap sx={{ color: "#fff" }}>
+                {currentUser?.username || "Guest User"}
+              </Typography>
+              <Typography variant="body2" sx={{ color: alpha("#fff", 0.6) }}>
+                Settings
+              </Typography>
+            </Box>
+          </Stack>
 
+          <Divider sx={{ mb: 2, borderColor: alpha(CSS_VARS.primaryOrange, 0.3) }} />
+
+          <List>
+            {sidebarItems.map((item, index) => (
+              <ListItemButton
+                key={item.label}
+                selected={selectedIndex === index}
+                onClick={() => handleSelect(index)}
+                sx={{
+                  mb: 1,
+                  borderRadius: 1,
+                  color: "#fff",
+                  "&.Mui-selected": {
+                    bgcolor: alpha(CSS_VARS.primaryOrange, 0.2),
+                    fontWeight: 600,
+                    borderLeft: `3px solid ${CSS_VARS.primaryOrange}`,
+                    pl: 1.7,
+                  },
+                  "&:not(.Mui-selected)": {
+                    "&:hover": {
+                      bgcolor: alpha(CSS_VARS.primaryPurple, 0.5),
+                      borderLeft: `3px solid ${alpha(CSS_VARS.primaryOrange, 0.1)}`,
+                      pl: 1.7,
+                    },
+                  },
+                }}
+              >
+                <ListItemIcon sx={{ color: selectedIndex === index ? CSS_VARS.primaryOrange : alpha("#fff", 0.7) }}>
+                  {item.icon}
+                </ListItemIcon>
+                <ListItemText primary={item.label} primaryTypographyProps={{ fontWeight: selectedIndex === index ? 600 : 400 }} />
+              </ListItemButton>
+            ))}
+          </List>
+        </Box>
+
+        {/* CONTENT AREA */}
+        <Container maxWidth="lg" sx={{ flex: 1, py: 3, bgcolor: alpha(CSS_VARS.primaryDark, 0.4), borderLeft: `1px solid ${alpha(CSS_VARS.primaryOrange, 0.1)}` }}>
+          <Stack spacing={3}>
+            <Typography variant="h4" fontWeight={700} color={CSS_VARS.primaryOrange} mb={2}>
+              {sidebarItems[selectedIndex].label}
+            </Typography>
+
+            {/* Content for Account Info */}
+            {selectedIndex === 0 && (
+              <Stack spacing={2}>
+                <TextField
+                  fullWidth
+                  label="Full Name"
+                  defaultValue={currentUser?.name || ""}
+                  sx={{
+                    input: { color: "white" },
+                    label: { color: "#aaa" },
+                  }}
+                />
+                <TextField
+                  fullWidth
+                  label="Email"
+                  defaultValue={currentUser?.email || ""}
+                  sx={{
+                    input: { color: "white" },
+                    label: { color: "#aaa" },
+                  }}
+                />
+                <TextField
+                  fullWidth
+                  label="Phone"
+                  defaultValue={currentUser?.phone || ""}
+                  sx={{
+                    input: { color: "white" },
+                    label: { color: "#aaa" },
+                  }}
+                />
+              </Stack>
+            )}
+
+            {/* Content for Security */}
+            {selectedIndex === 1 && (
+              <Stack spacing={2}>
+                <TextField
+                  fullWidth
+                  type="password"
+                  label="Current Password"
+                  sx={{
+                    input: { color: "white" },
+                    label: { color: "#aaa" },
+                  }}
+                />
+                <TextField
+                  fullWidth
+                  type="password"
+                  label="New Password"
+                  sx={{
+                    input: { color: "white" },
+                    label: { color: "#aaa" },
+                  }}
+                />
+                <TextField
+                  fullWidth
+                  type="password"
+                  label="Confirm New Password"
+                  sx={{
+                    input: { color: "white" },
+                    label: { color: "#aaa" },
+                  }}
+                />
+              </Stack>
+            )}
+
+            {/* Content for Notifications */}
+            {selectedIndex === 2 && (
+              <Typography sx={{ color: alpha("#fff", 0.7) }}>
+                Notification settings will be displayed here.
+              </Typography>
+            )}
+          </Stack>
+        </Container>
+      </Box>
     </Box>
   );
 };
