@@ -107,11 +107,38 @@ export interface SellerStats {
   popularCategories: Array<{ name: string; count: number }>;
 }
 
+// Notification and Message Interfaces
+export interface Notification {
+  id: number;
+  userId: number;
+  type: 'order' | 'promotion' | 'system';
+  title: string;
+  message: string;
+  data?: any;
+  read: boolean;
+  createdAt: string;
+}
+
+export interface Message {
+  id: number;
+  senderId: number;
+  receiverId: number;
+  content: string;
+  read: boolean;
+  createdAt: string;
+}
+
 interface UserStore {
   // User state
   currentUser: User | null;
   isLoggedIn: boolean;
-  isSeller: boolean; // Added seller flag
+  isSeller: boolean;
+  
+  // Notification and Message state
+  notifications: Notification[];
+  unreadNotificationCount: number;
+  messages: Message[];
+  unreadMessageCount: number;
   
   // Cart state
   cart: CartItem[];
@@ -131,6 +158,12 @@ interface UserStore {
   logout: () => void;
   register: (user: User) => void;
   updateProfile: (userData: Partial<User>) => void;
+  
+  // Notification and Message actions
+  addNotification: (notification: Notification) => void;
+  markNotificationAsRead: (id: number) => void;
+  addMessage: (message: Message) => void;
+  markMessageAsRead: (id: number) => void;
   
   // Seller switching actions
   switchToSeller: () => void;
@@ -215,6 +248,48 @@ const defaultUser: User = {
   createdAt: new Date().toISOString(),
   role: 'user'
 };
+
+// Initial Notifications
+const initialNotifications: Notification[] = [
+  {
+    id: 1,
+    userId: 1,
+    type: 'order',
+    title: 'Order Confirmed',
+    message: 'Your order #1001 has been confirmed',
+    read: false,
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: 2,
+    userId: 1,
+    type: 'promotion',
+    title: 'Special Offer',
+    message: 'Get 20% off on all electronics this weekend',
+    read: true,
+    createdAt: new Date().toISOString()
+  }
+];
+
+// Initial Messages
+const initialMessages: Message[] = [
+  {
+    id: 1,
+    senderId: 2,
+    receiverId: 1,
+    content: 'Hello, I have a question about your product',
+    read: false,
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: 2,
+    senderId: 1,
+    receiverId: 2,
+    content: 'Thanks for your message! How can I help?',
+    read: true,
+    createdAt: new Date().toISOString()
+  }
+];
 
 // Initial Seller Products
 const initialSellerProducts: SellerProduct[] = [
@@ -312,7 +387,15 @@ export const useUserStore = create<UserStore>()(
       // Initial state
       currentUser: null,
       isLoggedIn: false,
-      isSeller: false, // Initialize seller flag
+      isSeller: false,
+      
+      // Notification and Message state
+      notifications: initialNotifications,
+      unreadNotificationCount: 0,
+      messages: initialMessages,
+      unreadMessageCount: 0,
+      
+      // Cart state
       cart: [],
       cartTotal: 0,
       cartCount: 0,
@@ -342,6 +425,8 @@ export const useUserStore = create<UserStore>()(
             currentUser: defaultUser,
             isLoggedIn: true,
             isSeller: false,
+            unreadNotificationCount: initialNotifications.filter(n => !n.read && n.userId === 1).length,
+            unreadMessageCount: initialMessages.filter(m => !m.read && m.receiverId === 1).length,
           });
         }
       },
@@ -350,7 +435,9 @@ export const useUserStore = create<UserStore>()(
       login: (user) => set({ 
         currentUser: user, 
         isLoggedIn: true,
-        isSeller: user.role === 'seller'
+        isSeller: user.role === 'seller',
+        unreadNotificationCount: get().notifications.filter(n => !n.read && n.userId === user.id).length,
+        unreadMessageCount: get().messages.filter(m => !m.read && m.receiverId === user.id).length,
       }),
       
       logout: () => set({ 
@@ -359,7 +446,9 @@ export const useUserStore = create<UserStore>()(
         isSeller: false,
         cart: [],
         cartTotal: 0,
-        cartCount: 0
+        cartCount: 0,
+        unreadNotificationCount: 0,
+        unreadMessageCount: 0,
       }),
       
       register: (user) => {
@@ -375,7 +464,9 @@ export const useUserStore = create<UserStore>()(
         set({ 
           currentUser: newUser, 
           isLoggedIn: true,
-          isSeller: false
+          isSeller: false,
+          unreadNotificationCount: 0,
+          unreadMessageCount: 0,
         });
       },
       
@@ -384,6 +475,74 @@ export const useUserStore = create<UserStore>()(
           ? { ...state.currentUser, ...userData } 
           : null
       })),
+      
+      // Notification actions
+      addNotification: (notification) => {
+        set((state) => {
+          const newNotifications = [...state.notifications, notification];
+          const unreadCount = newNotifications.filter(
+            n => !n.read && n.userId === state.currentUser?.id
+          ).length;
+          
+          return {
+            notifications: newNotifications,
+            unreadNotificationCount: unreadCount
+          };
+        });
+      },
+      
+      markNotificationAsRead: (id) => {
+        set((state) => {
+          const updatedNotifications = state.notifications.map(notification =>
+            notification.id === id 
+              ? { ...notification, read: true }
+              : notification
+          );
+          
+          const unreadCount = updatedNotifications.filter(
+            n => !n.read && n.userId === state.currentUser?.id
+          ).length;
+          
+          return {
+            notifications: updatedNotifications,
+            unreadNotificationCount: unreadCount
+          };
+        });
+      },
+      
+      // Message actions
+      addMessage: (message) => {
+        set((state) => {
+          const newMessages = [...state.messages, message];
+          const unreadCount = newMessages.filter(
+            m => !m.read && m.receiverId === state.currentUser?.id
+          ).length;
+          
+          return {
+            messages: newMessages,
+            unreadMessageCount: unreadCount
+          };
+        });
+      },
+      
+      markMessageAsRead: (id) => {
+        set((state) => {
+          const updatedMessages = state.messages.map(message =>
+            message.id === id 
+              ? { ...message, read: true }
+              : message
+          );
+          
+          const unreadCount = updatedMessages.filter(
+            m => !m.read && m.receiverId === state.currentUser?.id
+          ).length;
+          
+          return {
+            messages: updatedMessages,
+            unreadMessageCount: unreadCount
+          };
+        });
+      },
       
       // Seller switching actions
       switchToSeller: () => {
@@ -577,10 +736,25 @@ export const useUserStore = create<UserStore>()(
           }
         });
         
+        // Create notification for order
+        const orderNotification: Notification = {
+          id: Date.now(),
+          userId: state.currentUser?.id || 0,
+          type: 'order',
+          title: 'Order Created',
+          message: `Your order #${newOrder.id} has been created`,
+          data: { orderId: newOrder.id },
+          read: false,
+          createdAt: new Date().toISOString()
+        };
+        
         set((state) => ({
           orders: [...state.orders, newOrder],
           cart: state.cart.filter(item => !item.isSelected)
         }));
+        
+        // Add notification
+        state.addNotification(orderNotification);
         
         // Update stats
         state.updateSellerStats();
@@ -603,14 +777,26 @@ export const useUserStore = create<UserStore>()(
             : order
         );
         
+        // Create notification for status update
+        const order = state.orders.find(o => o.id === orderId);
+        if (order && order.userId) {
+          const statusNotification: Notification = {
+            id: Date.now(),
+            userId: order.userId,
+            type: 'order',
+            title: 'Order Status Updated',
+            message: `Your order #${orderId} status has been updated to ${status}`,
+            data: { orderId, status },
+            read: false,
+            createdAt: new Date().toISOString()
+          };
+          state.addNotification(statusNotification);
+        }
+        
         set({ orders: updatedOrders });
         state.updateSellerStats();
         
-        // In a real app, send notification to user here
-        const order = state.orders.find(o => o.id === orderId);
-        if (order) {
-          console.log(`📢 Notification sent to ${order.customerName}: Order #${orderId} status updated to ${status}`);
-        }
+        console.log(`📢 Order #${orderId} status updated to ${status}`);
       },
       
       cancelOrder: (orderId) => {
@@ -638,6 +824,21 @@ export const useUserStore = create<UserStore>()(
               });
             }
           });
+          
+          // Create notification for cancellation
+          if (cancelledOrder.userId) {
+            const cancelNotification: Notification = {
+              id: Date.now(),
+              userId: cancelledOrder.userId,
+              type: 'order',
+              title: 'Order Cancelled',
+              message: `Your order #${orderId} has been cancelled`,
+              data: { orderId, status: 'cancelled' },
+              read: false,
+              createdAt: new Date().toISOString()
+            };
+            state.addNotification(cancelNotification);
+          }
         }
         
         set({ orders: updatedOrders });
@@ -781,6 +982,8 @@ export const useUserStore = create<UserStore>()(
         cart: state.cart,
         cartTotal: state.cartTotal,
         cartCount: state.cartCount,
+        notifications: state.notifications,
+        messages: state.messages,
         sellerProducts: state.sellerProducts,
         orders: state.orders,
         sellerStats: state.sellerStats
@@ -789,6 +992,19 @@ export const useUserStore = create<UserStore>()(
         if (state) {
           state.calculateCartTotal();
           state.updateSellerStats();
+          
+          // Update unread counts after rehydration
+          if (state.currentUser) {
+            const unreadNotificationCount = state.notifications.filter(
+              n => !n.read && n.userId === state.currentUser?.id
+            ).length;
+            const unreadMessageCount = state.messages.filter(
+              m => !m.read && m.receiverId === state.currentUser?.id
+            ).length;
+            
+            state.unreadNotificationCount = unreadNotificationCount;
+            state.unreadMessageCount = unreadMessageCount;
+          }
         }
       }
     }
@@ -808,9 +1024,13 @@ export const logStoreState = () => {
     isLoggedIn: state.isLoggedIn,
     user: state.currentUser,
     isSeller: state.isSeller,
-    cart: state.cart,
+    cart: state.cart.length,
     cartTotal: state.cartTotal,
     cartCount: state.cartCount,
+    notifications: state.notifications.length,
+    unreadNotifications: state.unreadNotificationCount,
+    messages: state.messages.length,
+    unreadMessages: state.unreadMessageCount,
     sellerProducts: state.sellerProducts.length,
     orders: state.orders.length,
     sellerStats: state.sellerStats

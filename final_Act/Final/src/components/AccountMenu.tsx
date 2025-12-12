@@ -29,11 +29,19 @@ import ShoppingBagIcon from '@mui/icons-material/ShoppingBag';
 import MyPurchaseDialog from "../components/MyPurchaseDialog";
 import StorefrontIcon from '@mui/icons-material/Storefront';
 import SwitchAccountIcon from '@mui/icons-material/SwitchAccount';
-import Button from '@mui/material/Button'; // Add this import
+import Button from '@mui/material/Button';
+import Paper from '@mui/material/Paper';
+import Stack from '@mui/material/Stack';
+import HomeIcon from '@mui/icons-material/Home';
+import ChatIcon from '@mui/icons-material/Chat';
+import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive';
+import Badge from '@mui/material/Badge';
 
 interface AccountMenuProps {
   onSearch: (searchTerm: string) => void;
   scrolled: boolean;
+  unreadCount?: number;
+  messageCount?: number;
 }
 
 // Define CSS Variables from App.css
@@ -51,7 +59,10 @@ export default function AccountMenu({ onSearch, scrolled }: AccountMenuProps) {
   const [snackbarMessage, setSnackbarMessage] = React.useState("");
   const [isSearchExpanded, setIsSearchExpanded] = React.useState(false);
   const [purchaseDialogOpen, setPurchaseDialogOpen] = React.useState(false);
-  const [sellerModePromptOpen, setSellerModePromptOpen] = React.useState(false); // Add state for seller prompt
+  const [sellerModePromptOpen, setSellerModePromptOpen] = React.useState(false);
+  const [unreadNotifications, setUnreadNotifications] = React.useState(0);
+  const [unreadMessages, setUnreadMessages] = React.useState(0);
+  const [orders] = React.useState<any[]>([]); // Simulated orders array
 
   const navigate = useNavigate();
   const theme = useTheme();
@@ -114,7 +125,6 @@ export default function AccountMenu({ onSearch, scrolled }: AccountMenuProps) {
 
   const handleLoginAsSeller = () => {
     handleSimulatedAction('Logged in as seller successfully!', () => {
-      // Simulate seller login
       login({
         id: 2,
         name: 'Seller User',
@@ -144,6 +154,71 @@ export default function AccountMenu({ onSearch, scrolled }: AccountMenuProps) {
     } else {
       navigate("/seller-dashboard");
       handleClose();
+    }
+  };
+
+  // Add function to check for notifications
+  const checkNotifications = React.useCallback(() => {
+    // In a real app, you'd fetch this from an API
+    const hasPendingOrders = orders.some(order => 
+      order.status === 'approved' || order.status === 'shipped'
+    );
+    
+    // Simulate notification count
+    if (hasPendingOrders) {
+      setUnreadNotifications(prev => prev + 1);
+    }
+  }, [orders]);
+
+  // Add useEffect to simulate checking notifications
+  React.useEffect(() => {
+    if (isLoggedIn && !isSeller) {
+      // Simulate checking for order updates
+      const interval = setInterval(() => {
+        checkNotifications();
+      }, 30000); // Check every 30 seconds
+      
+      return () => clearInterval(interval);
+    }
+  }, [isLoggedIn, isSeller, checkNotifications]);
+
+  // Add function to handle notification click
+  const handleNotificationsClick = () => {
+    if (!isLoggedIn) {
+      setSnackbarMessage('Please login to view notifications');
+      setSnackbarOpen(true);
+      return;
+    }
+    
+    // Show notifications dialog or navigate to notifications page
+    navigate('/notifications');
+    handleClose();
+    
+    // Reset notification count
+    setUnreadNotifications(0);
+  };
+
+  // Add function to handle messages click
+  const handleMessagesClick = () => {
+    if (!isLoggedIn) {
+      setSnackbarMessage('Please login to send messages');
+      setSnackbarOpen(true);
+      return;
+    }
+    
+    // Navigate to messages page
+    navigate('/messages');
+    handleClose();
+    
+    // Reset message count
+    setUnreadMessages(0);
+  };
+
+  // Add Home button handler
+  const handleHomeClick = () => {
+    navigate('/');
+    if (isMobile && isSearchExpanded) {
+      setTimeout(() => setIsSearchExpanded(false), 200);
     }
   };
 
@@ -218,6 +293,56 @@ export default function AccountMenu({ onSearch, scrolled }: AccountMenuProps) {
               </IconButton>
             </Tooltip>
           )}
+          
+          {/* Home Button */}
+          <Tooltip title="Home">
+            <IconButton 
+              onClick={handleHomeClick}
+              sx={{ 
+                color: CSS_VARS.primaryOrange, 
+                backgroundColor: alpha(CSS_VARS.primaryOrange, 0.1),
+                border: `1px solid ${alpha(CSS_VARS.primaryOrange, 0.3)}`,
+                '&:hover': { backgroundColor: alpha(CSS_VARS.primaryOrange, 0.2) }
+              }}
+            >
+              <HomeIcon />
+            </IconButton>
+          </Tooltip>
+          
+          {/* Messages Button */}
+          <Tooltip title="Messages">
+            <IconButton 
+              onClick={handleMessagesClick}
+              sx={{ 
+                color: CSS_VARS.primaryPink, 
+                backgroundColor: alpha(CSS_VARS.primaryPink, 0.1),
+                border: `1px solid ${alpha(CSS_VARS.primaryPink, 0.3)}`,
+                '&:hover': { backgroundColor: alpha(CSS_VARS.primaryPink, 0.2) }
+              }}
+            >
+              <Badge badgeContent={unreadMessages} color="error" max={9}>
+                <ChatIcon />
+              </Badge>
+            </IconButton>
+          </Tooltip>
+          
+          {/* Notifications Button */}
+          <Tooltip title="Notifications">
+            <IconButton 
+              onClick={handleNotificationsClick}
+              sx={{ 
+                color: CSS_VARS.primaryPurple, 
+                backgroundColor: alpha(CSS_VARS.primaryPurple, 0.1),
+                border: `1px solid ${alpha(CSS_VARS.primaryPurple, 0.3)}`,
+                '&:hover': { backgroundColor: alpha(CSS_VARS.primaryPurple, 0.2) }
+              }}
+            >
+              <Badge badgeContent={unreadNotifications} color="error" max={9}>
+                <NotificationsActiveIcon />
+              </Badge>
+            </IconButton>
+          </Tooltip>
+          
           {isLoggedIn && !isMobile && <Tooltip title="Premium Member"><WorkspacePremiumIcon sx={{ color: CSS_VARS.primaryOrange, fontSize: 28 }} /></Tooltip>}
           <Tooltip title={isLoggedIn ? (isSeller ? "Seller Account" : "User Account") : "Login"}>
             <IconButton onClick={handleClick} sx={{ backgroundColor: alpha(CSS_VARS.primaryPurple, 0.4), border: `1px solid ${alpha(CSS_VARS.primaryOrange, 0.3)}`, '&:hover': { backgroundColor: alpha(CSS_VARS.primaryPurple, 0.6) }, width: { xs: 40, sm: 48 }, height: { xs: 40, sm: 48 } }}>
