@@ -1,5 +1,5 @@
-// NotificationsPopover.tsx - Updated with only order-based notifications, sorted by timestamp (newest first)
-import React, { useState, useEffect } from 'react';
+// NotificationsPopover.tsx - Only order-based notifications from seller actions, sorted by timestamp (newest first)
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Box,
   Paper,
@@ -10,7 +10,6 @@ import {
   ListItemText,
   ListItemButton,
   Divider,
-  Chip,
   IconButton,
   Stack,
   alpha,
@@ -27,8 +26,6 @@ import {
   ShoppingBag as OrderIcon,
   Close as CloseIcon,
   Circle as CircleIcon,
-  Discount as DiscountIcon,
-  Security as SecurityIcon,
   Delete as DeleteIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
@@ -54,44 +51,100 @@ const NotificationsPopover = ({
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const { orders, currentUser } = useUserStore();
   const [notifications, setNotifications] = useState<any[]>([]);
+  const previousNotificationsCount = useRef(0);
+  const notificationSoundRef = useRef<HTMLAudioElement | null>(null);
+  const [processedOrderIds, setProcessedOrderIds] = useState<Set<string>>(() => {
+    // Load already processed order IDs from localStorage on initial render
+    const saved = localStorage.getItem('processedOrderNotifications');
+    return saved ? new Set(JSON.parse(saved)) : new Set();
+  });
+
+  // Initialize notification sound
+  useEffect(() => {
+    notificationSoundRef.current = new Audio('/notification-sound.mp3');
+    notificationSoundRef.current.volume = 0.3;
+  }, []);
 
   useEffect(() => {
     // Generate notifications only from orders where seller has taken action
     const userOrders = orders.filter(order => order.userId === currentUser?.id);
     
-    // Only create notifications for orders that have been acted upon by seller
-    const orderNotifications = userOrders
-      .filter(order => ['approved', 'shipped', 'delivered', 'cancelled'].includes(order.status))
-      .map(order => ({
-        id: order.id,
-        type: 'order',
-        title: `Order #${order.id} ${order.status === 'approved' ? 'Approved' : order.status === 'shipped' ? 'Shipped' : order.status === 'delivered' ? 'Delivered' : 'Cancelled'}`,
-        message: order.status === 'approved' 
-          ? 'Your order has been approved by the seller and will be shipped soon.'
-          : order.status === 'shipped' 
-            ? 'Your order has been shipped! Track your package for delivery updates.'
-            : order.status === 'delivered'
-              ? 'Your order has been delivered! We hope you enjoy your purchase.'
-              : 'Your order has been cancelled by the seller.',
-        status: order.status,
-        orderId: order.id,
-        timestamp: order.updatedAt || order.createdAt,
-        read: false,
-        priority: order.status === 'shipped' ? 'high' : 'medium',
-      }));
+    // Get orders that have valid status for notifications
+    const eligibleOrders = userOrders.filter(order => 
+      ['approved', 'shipped', 'delivered', 'cancelled'].includes(order.status)
+    );
 
-    // **IMPORTANT CHANGE:** Sort notifications by timestamp in descending order (newest first)
-    orderNotifications.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    // Check for NEW orders that haven't been processed yet
+    const newOrders = eligibleOrders.filter(order => !processedOrderIds.has(order.id));
+    
+    // Create notifications only for NEW orders
+    const newNotifications = newOrders.map(order => ({
+      id: `${order.id}-${order.status}-${order.updatedAt || order.createdAt}`,
+      type: 'order',
+      title: `Order #${order.id} ${order.status === 'approved' ? 'Approved' : order.status === 'shipped' ? 'Shipped' : order.status === 'delivered' ? 'Delivered' : 'Cancelled'}`,
+      message: order.status === 'approved' 
+        ? 'Your order has been approved by the seller and will be shipped soon.'
+        : order.status === 'shipped' 
+          ? 'Your order has been shipped! Track your package for delivery updates.'
+          : order.status === 'delivered'
+            ? 'Your order has been delivered! We hope you enjoy your purchase.'
+            : 'Your order has been cancelled by the seller.',
+      status: order.status,
+      orderId: order.id,
+      timestamp: order.updatedAt || order.createdAt,
+      read: false,
+      priority: order.status === 'shipped' ? 'high' : 'medium',
+      isNew: true, // Flag to indicate this is a new notification
+    }));
 
-    setNotifications([...orderNotifications]);
-  }, [orders, currentUser]);
+    // Add these new order IDs to processed set
+    if (newOrders.length > 0) {
+      const newProcessedIds = new Set([...processedOrderIds, ...newOrders.map(order => order.id)]);
+      setProcessedOrderIds(newProcessedIds);
+      // Save to localStorage
+      localStorage.setItem('processedOrderNotifications', JSON.stringify([...newProcessedIds]));
+    }
 
-  const handleDeleteNotification = (id: number, e: React.MouseEvent) => {
+    // Only add NEW notifications to existing ones, don't recreate all notifications on refresh
+    if (newNotifications.length > 0) {
+      setNotifications(prev => {
+        const combined = [...newNotifications, ...prev];
+        // Sort by timestamp in descending order (newest first)
+        combined.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+        return combined;
+      });
+
+      // Play sound for new notifications if popover is not open
+      if (!open) {
+        playNotificationSound();
+      }
+    } else {
+      // If no new notifications, just ensure existing ones are sorted
+      setNotifications(prev => {
+        const sorted = [...prev].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+        return sorted;
+      });
+    }
+
+    // Update previous count
+    previousNotificationsCount.current = notifications.filter(n => !n.read).length;
+  }, [orders, currentUser, open, processedOrderIds]);
+
+  const playNotificationSound = () => {
+    if (notificationSoundRef.current) {
+      notificationSoundRef.current.currentTime = 0;
+      notificationSoundRef.current.play().catch(error => {
+        console.log('Notification sound playback failed:', error);
+      });
+    }
+  };
+
+  const handleDeleteNotification = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     setNotifications(prev => prev.filter(notif => notif.id !== id));
   };
 
-  const handleMarkAsRead = (id: number, e?: React.MouseEvent) => {
+  const handleMarkAsRead = (id: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     setNotifications(prev => prev.map(notif => 
       notif.id === id ? { ...notif, read: true } : notif
@@ -114,6 +167,9 @@ const NotificationsPopover = ({
 
   const handleClearAll = () => {
     setNotifications([]);
+    // Also clear processed order IDs when clearing all notifications
+    setProcessedOrderIds(new Set());
+    localStorage.removeItem('processedOrderNotifications');
   };
 
   const getNotificationIcon = (type: string, status?: string) => {
@@ -236,7 +292,7 @@ const NotificationsPopover = ({
           </Box>
           <Box>
             <Typography variant="h6" fontWeight={700} sx={{ color: '#FFFFFF' }}>
-              Notifications
+              Order Updates
             </Typography>
             <Typography variant="caption" sx={{ color: alpha('#FFFFFF', 0.7) }}>
               {currentUnreadCount} unread • {notifications.length} total
@@ -313,10 +369,13 @@ const NotificationsPopover = ({
               filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.2))',
             }} />
             <Typography variant="h6" gutterBottom sx={{ color: '#FFFFFF', fontWeight: 600 }}>
-              No Notifications
+              No Order Updates
             </Typography>
             <Typography variant="body2" sx={{ color: alpha('#FFFFFF', 0.5) }}>
-              You'll see notifications here when sellers update your orders.
+              You'll see notifications here when sellers take new actions on your orders.
+            </Typography>
+            <Typography variant="caption" sx={{ color: alpha('#FFFFFF', 0.4), mt: 1, display: 'block' }}>
+              Notifications are only shown for: Approved, Shipped, Delivered, or Cancelled orders
             </Typography>
           </Box>
         ) : (

@@ -30,6 +30,9 @@ import {
   Tooltip,
   Badge,
   InputAdornment,
+  alpha,
+  Divider,
+  LinearProgress,
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -44,9 +47,12 @@ import {
   Visibility as VisibilityIcon,
   Edit as EditIcon,
   Add as AddIcon,
+  ShoppingBag as ShoppingBagIcon,
+  Category as CategoryIcon,
+  AttachMoney as AttachMoneyIcon,
 } from '@mui/icons-material';
 import { GetSellerProducts } from '../API/ProductsAPI';
-import SellerAccountMenu from '../components/SellerAccountMenu'; // Add this import
+import SellerAccountMenu from '../components/SellerAccountMenu';
 
 interface Product {
   id: number;
@@ -65,43 +71,18 @@ interface Product {
   views?: number;
 }
 
-// Luxury Color Palette - Converted to use with alpha function properly
-const LUXURY_COLORS = {
-  primaryDark: '#0A081F',
-  primaryPurple: '#7877C6',
-  accentCyan: '#4ECDC4',
-  accentOrange: '#F29F58',
-  accentPink: '#FF6B95',
-  accentGold: '#FFD166',
-  accentGreen: '#06D6A0',
-  darkBg: '#1A173B',
-  lightBg: '#2A2660',
-  white: '#FFFFFF',
-  gray: 'rgba(255, 255, 255, 0.7)',
-};
-
-// Helper function to apply alpha to colors
-const getColorWithAlpha = (color: string, opacity: number) => {
-  // If color is in rgba format, extract the rgb values
-  if (color.startsWith('rgba')) {
-    const match = color.match(/rgba\((\d+),\s*(\d+),\s*(\d+),\s*([\d.]+)\)/);
-    if (match) {
-      const [_, r, g, b] = match;
-      return `rgba(${r}, ${g}, ${b}, ${opacity})`;
-    }
-  }
-  
-  // If color is in hex format, convert to rgba
-  if (color.startsWith('#')) {
-    const hex = color.replace('#', '');
-    const r = parseInt(hex.substring(0, 2), 16);
-    const g = parseInt(hex.substring(2, 4), 16);
-    const b = parseInt(hex.substring(4, 6), 16);
-    return `rgba(${r}, ${g}, ${b}, ${opacity})`;
-  }
-  
-  return color;
-};
+// Professional Color Palette matching OrderManagement
+const PRIMARY_COLOR = '#4ECDC4'; // Teal/Mint
+const SECONDARY_COLOR = '#7877C6'; // Indigo/Violet
+const ACCENT_COLOR = '#FF6B95'; // Pink/Cancel
+const ACCENT_ORANGE = '#F29F58'; // Orange
+const ACCENT_GOLD = '#FFD166'; // Gold
+const ACCENT_GREEN = '#06D6A0'; // Green
+const BACKGROUND_GRADIENT = 'linear-gradient(135deg, #0A081F 0%, #1A173B 100%)';
+const CARD_GRADIENT = 'linear-gradient(135deg, #1A173B 0%, #2A2660 100%)';
+const BORDER_COLOR = 'rgba(120, 119, 198, 0.2)';
+const HOVER_BACKGROUND = 'rgba(255, 255, 255, 0.05)';
+const TABLE_HEADER_BACKGROUND = 'rgba(120, 119, 198, 0.15)';
 
 const ProductManagement = () => {
   const [products, setProducts] = useState<Product[]>([]);
@@ -119,15 +100,28 @@ const ProductManagement = () => {
     totalValue: 0,
     lowStock: 0,
     topRated: 0,
+    outOfStock: 0,
+    activeProducts: 0,
   });
+  const [scrolled, setScrolled] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const isTablet = useMediaQuery(theme.breakpoints.down('lg'));
+  const isMobile = useMediaQuery('(max-width:600px)');
+  const isTablet = useMediaQuery('(max-width:960px)');
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 50);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   const fetchProducts = async () => {
     try {
       setLoading(true);
+      setIsRefreshing(true);
       setError(null);
       const sellerProducts = await GetSellerProducts(2);
       
@@ -156,7 +150,6 @@ const ProductManagement = () => {
       ).sort();
       setCategories(uniqueCategories);
       
-      // Calculate stats
       calculateStats(formattedProducts);
       
     } catch (err) {
@@ -164,19 +157,24 @@ const ProductManagement = () => {
       setError('Failed to load products. Please try again.');
     } finally {
       setLoading(false);
+      setIsRefreshing(false);
     }
   };
 
   const calculateStats = (products: Product[]) => {
     const totalValue = products.reduce((sum, p) => sum + (p.price * p.stock), 0);
-    const lowStock = products.filter(p => p.stock < 10).length;
+    const lowStock = products.filter(p => p.stock < 10 && p.stock > 0).length;
     const topRated = products.filter(p => (p.rating || 0) >= 4).length;
+    const outOfStock = products.filter(p => p.stock === 0).length;
+    const activeProducts = products.filter(p => p.status === 'active' && p.stock > 0).length;
     
     setStats({
       totalProducts: products.length,
       totalValue,
       lowStock,
       topRated,
+      outOfStock,
+      activeProducts,
     });
   };
 
@@ -191,7 +189,8 @@ const ProductManagement = () => {
       filtered = filtered.filter(product =>
         product.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
         product.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        product.brand?.toLowerCase().includes(searchTerm.toLowerCase())
+        product.brand?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        product.category.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
     
@@ -223,21 +222,19 @@ const ProductManagement = () => {
   };
 
   const handleExportData = () => {
-    // Export functionality
     console.log('Exporting product data...');
   };
 
   const handleAddProduct = () => {
-    // Add product functionality
     console.log('Adding new product...');
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'active': return 'success';
-      case 'inactive': return 'default';
-      case 'out_of_stock': return 'error';
-      default: return 'default';
+      case 'active': return PRIMARY_COLOR;
+      case 'inactive': return alpha('#ffffff', 0.5);
+      case 'out_of_stock': return ACCENT_COLOR;
+      default: return alpha('#ffffff', 0.5);
     }
   };
 
@@ -262,75 +259,6 @@ const ProductManagement = () => {
     }).format(amount);
   };
 
-  const StatCard = ({ icon: Icon, title, value, color, subtitle }: any) => {
-    const gradientColor1 = getColorWithAlpha(color, 0.1);
-    const gradientColor2 = getColorWithAlpha(color, 0.05);
-    const borderColor = getColorWithAlpha(color, 0.2);
-    const iconBgColor1 = getColorWithAlpha(color, 0.2);
-    const iconBgColor2 = getColorWithAlpha(color, 0.1);
-    const iconBorderColor = getColorWithAlpha(color, 0.3);
-
-    return (
-      <Card sx={{
-        background: `linear-gradient(135deg, ${gradientColor1} 0%, ${gradientColor2} 100%)`,
-        border: `1px solid ${borderColor}`,
-        borderRadius: 3,
-        height: '100%',
-        transition: 'transform 0.3s ease, box-shadow 0.3s ease',
-        '&:hover': {
-          transform: 'translateY(-4px)',
-          boxShadow: `0 12px 30px ${getColorWithAlpha(color, 0.2)}`,
-        },
-      }}>
-        <CardContent>
-          <Stack direction="row" alignItems="center" justifyContent="space-between">
-            <Box>
-              <Typography variant="caption" sx={{ 
-                color: LUXURY_COLORS.gray, 
-                fontWeight: 500,
-                textTransform: 'uppercase',
-                letterSpacing: '0.05em',
-                fontSize: '0.75rem',
-              }}>
-                {title}
-              </Typography>
-              <Typography variant="h4" sx={{ 
-                fontWeight: 800,
-                mt: 1,
-                mb: 0.5,
-                background: `linear-gradient(135deg, ${color} 0%, ${getColorWithAlpha(color, 0.8)} 100%)`,
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                fontSize: { xs: '1.5rem', sm: '1.75rem', md: '2rem' },
-              }}>
-                {title.includes('Value') ? formatCurrency(value) : value}
-              </Typography>
-              {subtitle && (
-                <Typography variant="caption" sx={{ color: getColorWithAlpha(color, 0.8) }}>
-                  {subtitle}
-                </Typography>
-              )}
-            </Box>
-            <Box sx={{
-              width: 56,
-              height: 56,
-              borderRadius: '50%',
-              background: `linear-gradient(135deg, ${iconBgColor1} 0%, ${iconBgColor2} 100%)`,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              border: `1px solid ${iconBorderColor}`,
-              boxShadow: `0 4px 12px ${getColorWithAlpha(color, 0.2)}`,
-            }}>
-              <Icon sx={{ fontSize: 28, color: color }} />
-            </Box>
-          </Stack>
-        </CardContent>
-      </Card>
-    );
-  };
-
-  // Handle search from SellerAccountMenu
   const handleSearch = (searchTerm: string) => {
     setSearchTerm(searchTerm);
   };
@@ -338,169 +266,302 @@ const ProductManagement = () => {
   return (
     <Box sx={{ 
       minHeight: '100vh', 
-      background: `linear-gradient(135deg, ${LUXURY_COLORS.primaryDark} 0%, ${LUXURY_COLORS.darkBg} 100%)`,
-      pt: 0, // Remove top padding since SellerAccountMenu is sticky
-      pb: 4,
+      background: BACKGROUND_GRADIENT,
+      fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
     }}>
       {/* Sticky Seller Account Menu */}
-      <Box sx={{ position: 'sticky', top: 0, zIndex: 1300 }}>
-        <SellerAccountMenu onSearch={handleSearch} scrolled={true} />
+      <Box sx={{ position: 'sticky', top: 0, zIndex: 1200 }}>
+        <SellerAccountMenu onSearch={handleSearch} scrolled={scrolled} />
       </Box>
 
-      <Container maxWidth={isTablet ? 'lg' : 'xl'} sx={{ px: { xs: 2, sm: 3 }, mt: 3 }}>
-        {/* Header Section */}
-        <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', md: 'center' }} spacing={3} sx={{ mb: 4 }}>
-          <Box>
-            <Typography variant="h3" fontWeight={800} gutterBottom sx={{ 
-              color: 'white',
-              fontSize: { xs: '2rem', md: '2.5rem' },
-              background: `linear-gradient(135deg, ${LUXURY_COLORS.accentCyan} 0%, ${LUXURY_COLORS.primaryPurple} 100%)`,
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-            }}>
-              Product Management
-            </Typography>
-            <Typography variant="body1" sx={{ 
-              color: LUXURY_COLORS.gray,
-              maxWidth: 600,
-            }}>
-              Manage your product portfolio, inventory, and pricing with precision and elegance.
-            </Typography>
-          </Box>
-          
-          <Stack direction="row" spacing={2}>
-            <Button
-              variant="outlined"
-              startIcon={<DownloadIcon />}
-              onClick={handleExportData}
-              sx={{
-                borderColor: LUXURY_COLORS.accentCyan,
-                color: LUXURY_COLORS.accentCyan,
-                borderRadius: 2,
-                px: 3,
-                '&:hover': {
-                  borderColor: LUXURY_COLORS.accentCyan,
-                  backgroundColor: getColorWithAlpha(LUXURY_COLORS.accentCyan, 0.1),
-                },
-              }}
-            >
-              Export
-            </Button>
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={handleAddProduct}
-              sx={{
-                background: `linear-gradient(135deg, ${LUXURY_COLORS.accentCyan} 0%, #36A398 100%)`,
-                color: 'white',
-                borderRadius: 2,
-                px: 3,
-                boxShadow: `0 4px 15px ${getColorWithAlpha(LUXURY_COLORS.accentCyan, 0.3)}`,
-                '&:hover': {
-                  background: `linear-gradient(135deg, #36A398 0%, ${LUXURY_COLORS.accentCyan} 100%)`,
-                  boxShadow: `0 6px 20px ${getColorWithAlpha(LUXURY_COLORS.accentCyan, 0.4)}`,
-                },
-              }}
-            >
-              Add Product
-            </Button>
-          </Stack>
-        </Stack>
+      {/* Changed maxWidth from "xl" to "lg" for constrained laptop view */}
+      <Container maxWidth="lg" sx={{ p: 3, pt: { xs: 3, sm: 5 } }}>
+        {/* Header */}
+        <Typography 
+          variant={isMobile ? "h5" : "h4"} 
+          fontWeight="light" 
+          sx={{ color: 'white', mb: 4, letterSpacing: 1 }}
+        >
+          📦 Product Management
+        </Typography>
 
-        {/* Stats Cards */}
-        <Grid container spacing={3} sx={{ mb: 4 }}>
-          <Grid item xs={12} sm={6} lg={3}>
-            <StatCard
-              icon={InventoryIcon}
-              title="Total Products"
-              value={stats.totalProducts}
-              color={LUXURY_COLORS.primaryPurple}
-              subtitle="Active in catalog"
-            />
+        {/* Stats Cards - Compact Design */}
+        <Grid container spacing={2} sx={{ mb: 3 }}>
+          <Grid item xs={6} sm={4} md={2}>
+            <Card sx={{ 
+              background: CARD_GRADIENT,
+              border: `1px solid ${BORDER_COLOR}`,
+              borderRadius: 2,
+              p: 2,
+              height: '100%',
+              boxShadow: `0 4px 10px ${alpha(SECONDARY_COLOR, 0.2)}`,
+            }}>
+              <CardContent sx={{ p: 0, '&:last-child': { pb: 0 } }}>
+                <Stack direction="row" alignItems="center" spacing={1}>
+                  <Box sx={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: '50%',
+                    background: `linear-gradient(135deg, ${alpha(SECONDARY_COLOR, 0.2)} 0%, ${alpha(SECONDARY_COLOR, 0.1)} 100%)`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    border: `1px solid ${alpha(SECONDARY_COLOR, 0.3)}`,
+                  }}>
+                    <InventoryIcon sx={{ fontSize: 20, color: SECONDARY_COLOR }} />
+                  </Box>
+                  <Box>
+                    <Typography variant="h5" fontWeight="bold" sx={{ color: 'white' }}>
+                      {stats.totalProducts}
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: alpha('#ffffff', 0.7), textTransform: 'uppercase' }}>
+                      Total
+                    </Typography>
+                  </Box>
+                </Stack>
+              </CardContent>
+            </Card>
           </Grid>
-          <Grid item xs={12} sm={6} lg={3}>
-            <StatCard
-              icon={MonetizationOnIcon}
-              title="Inventory Value"
-              value={stats.totalValue}
-              color={LUXURY_COLORS.accentGold}
-              subtitle="Total stock value"
-            />
+
+          <Grid item xs={6} sm={4} md={2}>
+            <Card sx={{ 
+              background: CARD_GRADIENT,
+              border: `1px solid ${alpha(ACCENT_GOLD, 0.4)}`,
+              borderRadius: 2,
+              p: 2,
+              height: '100%',
+              boxShadow: `0 4px 10px ${alpha(ACCENT_GOLD, 0.15)}`,
+            }}>
+              <CardContent sx={{ p: 0, '&:last-child': { pb: 0 } }}>
+                <Stack direction="row" alignItems="center" spacing={1}>
+                  <Box sx={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: '50%',
+                    background: `linear-gradient(135deg, ${alpha(ACCENT_GOLD, 0.2)} 0%, ${alpha(ACCENT_GOLD, 0.1)} 100%)`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    border: `1px solid ${alpha(ACCENT_GOLD, 0.3)}`,
+                  }}>
+                    <AttachMoneyIcon sx={{ fontSize: 20, color: ACCENT_GOLD }} />
+                  </Box>
+                  <Box>
+                    <Typography variant="h5" fontWeight="bold" sx={{ color: ACCENT_GOLD }}>
+                      {formatCurrency(stats.totalValue)}
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: alpha('#ffffff', 0.7), textTransform: 'uppercase' }}>
+                      Value
+                    </Typography>
+                  </Box>
+                </Stack>
+              </CardContent>
+            </Card>
           </Grid>
-          <Grid item xs={12} sm={6} lg={3}>
-            <StatCard
-              icon={TrendingUpIcon}
-              title="Low Stock"
-              value={stats.lowStock}
-              color={LUXURY_COLORS.accentOrange}
-              subtitle="Need replenishment"
-            />
+
+          <Grid item xs={6} sm={4} md={2}>
+            <Card sx={{ 
+              background: CARD_GRADIENT,
+              border: `1px solid ${alpha(ACCENT_ORANGE, 0.4)}`,
+              borderRadius: 2,
+              p: 2,
+              height: '100%',
+              boxShadow: `0 4px 10px ${alpha(ACCENT_ORANGE, 0.15)}`,
+            }}>
+              <CardContent sx={{ p: 0, '&:last-child': { pb: 0 } }}>
+                <Stack direction="row" alignItems="center" spacing={1}>
+                  <Box sx={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: '50%',
+                    background: `linear-gradient(135deg, ${alpha(ACCENT_ORANGE, 0.2)} 0%, ${alpha(ACCENT_ORANGE, 0.1)} 100%)`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    border: `1px solid ${alpha(ACCENT_ORANGE, 0.3)}`,
+                  }}>
+                    <TrendingUpIcon sx={{ fontSize: 20, color: ACCENT_ORANGE }} />
+                  </Box>
+                  <Box>
+                    <Typography variant="h5" fontWeight="bold" sx={{ color: ACCENT_ORANGE }}>
+                      {stats.lowStock}
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: alpha('#ffffff', 0.7), textTransform: 'uppercase' }}>
+                      Low Stock
+                    </Typography>
+                  </Box>
+                </Stack>
+              </CardContent>
+            </Card>
           </Grid>
-          <Grid item xs={12} sm={6} lg={3}>
-            <StatCard
-              icon={StarIcon}
-              title="Top Rated"
-              value={stats.topRated}
-              color={LUXURY_COLORS.accentGreen}
-              subtitle="4+ star products"
-            />
+
+          <Grid item xs={6} sm={4} md={2}>
+            <Card sx={{ 
+              background: CARD_GRADIENT,
+              border: `1px solid ${alpha(ACCENT_COLOR, 0.4)}`,
+              borderRadius: 2,
+              p: 2,
+              height: '100%',
+              boxShadow: `0 4px 10px ${alpha(ACCENT_COLOR, 0.15)}`,
+            }}>
+              <CardContent sx={{ p: 0, '&:last-child': { pb: 0 } }}>
+                <Stack direction="row" alignItems="center" spacing={1}>
+                  <Box sx={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: '50%',
+                    background: `linear-gradient(135deg, ${alpha(ACCENT_COLOR, 0.2)} 0%, ${alpha(ACCENT_COLOR, 0.1)} 100%)`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    border: `1px solid ${alpha(ACCENT_COLOR, 0.3)}`,
+                  }}>
+                    <ShoppingBagIcon sx={{ fontSize: 20, color: ACCENT_COLOR }} />
+                  </Box>
+                  <Box>
+                    <Typography variant="h5" fontWeight="bold" sx={{ color: ACCENT_COLOR }}>
+                      {stats.outOfStock}
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: alpha('#ffffff', 0.7), textTransform: 'uppercase' }}>
+                      Out of Stock
+                    </Typography>
+                  </Box>
+                </Stack>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          <Grid item xs={6} sm={4} md={2}>
+            <Card sx={{ 
+              background: CARD_GRADIENT,
+              border: `1px solid ${alpha(ACCENT_GREEN, 0.4)}`,
+              borderRadius: 2,
+              p: 2,
+              height: '100%',
+              boxShadow: `0 4px 10px ${alpha(ACCENT_GREEN, 0.15)}`,
+            }}>
+              <CardContent sx={{ p: 0, '&:last-child': { pb: 0 } }}>
+                <Stack direction="row" alignItems="center" spacing={1}>
+                  <Box sx={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: '50%',
+                    background: `linear-gradient(135deg, ${alpha(ACCENT_GREEN, 0.2)} 0%, ${alpha(ACCENT_GREEN, 0.1)} 100%)`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    border: `1px solid ${alpha(ACCENT_GREEN, 0.3)}`,
+                  }}>
+                    <StarIcon sx={{ fontSize: 20, color: ACCENT_GREEN }} />
+                  </Box>
+                  <Box>
+                    <Typography variant="h5" fontWeight="bold" sx={{ color: ACCENT_GREEN }}>
+                      {stats.topRated}
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: alpha('#ffffff', 0.7), textTransform: 'uppercase' }}>
+                      Top Rated
+                    </Typography>
+                  </Box>
+                </Stack>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          <Grid item xs={6} sm={4} md={2}>
+            <Card sx={{ 
+              background: CARD_GRADIENT,
+              border: `1px solid ${alpha(PRIMARY_COLOR, 0.4)}`,
+              borderRadius: 2,
+              p: 2,
+              height: '100%',
+              boxShadow: `0 4px 10px ${alpha(PRIMARY_COLOR, 0.15)}`,
+            }}>
+              <CardContent sx={{ p: 0, '&:last-child': { pb: 0 } }}>
+                <Stack direction="row" alignItems="center" spacing={1}>
+                  <Box sx={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: '50%',
+                    background: `linear-gradient(135deg, ${alpha(PRIMARY_COLOR, 0.2)} 0%, ${alpha(PRIMARY_COLOR, 0.1)} 100%)`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    border: `1px solid ${alpha(PRIMARY_COLOR, 0.3)}`,
+                  }}>
+                    <CategoryIcon sx={{ fontSize: 20, color: PRIMARY_COLOR }} />
+                  </Box>
+                  <Box>
+                    <Typography variant="h5" fontWeight="bold" sx={{ color: PRIMARY_COLOR }}>
+                      {stats.activeProducts}
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: alpha('#ffffff', 0.7), textTransform: 'uppercase' }}>
+                      Active
+                    </Typography>
+                  </Box>
+                </Stack>
+              </CardContent>
+            </Card>
           </Grid>
         </Grid>
 
         {/* Search and Filter Section */}
         <Paper sx={{ 
-          p: { xs: 2, md: 3 }, 
+          p: 2, 
           mb: 3, 
-          backgroundColor: getColorWithAlpha(LUXURY_COLORS.white, 0.05),
-          border: `1px solid ${getColorWithAlpha(LUXURY_COLORS.primaryPurple, 0.2)}`,
-          borderRadius: 3,
+          background: alpha('#ffffff', 0.05),
+          border: `1px solid ${BORDER_COLOR}`,
+          borderRadius: 2,
         }}>
           <Grid container spacing={2} alignItems="center">
             <Grid item xs={12} md={4}>
               <TextField
                 fullWidth
-                placeholder="Search products by name, brand, or description..."
+                placeholder="Search products..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 size="medium"
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
-                      <SearchIcon sx={{ color: getColorWithAlpha(LUXURY_COLORS.white, 0.5) }} />
+                      <SearchIcon sx={{ color: alpha('#ffffff', 0.5) }} />
                     </InputAdornment>
                   ),
                   sx: {
-                    backgroundColor: getColorWithAlpha(LUXURY_COLORS.white, 0.05),
+                    background: alpha('#ffffff', 0.08),
                     color: 'white',
-                    borderRadius: 2,
+                    borderRadius: 1,
                     '& .MuiOutlinedInput-notchedOutline': {
-                      borderColor: getColorWithAlpha(LUXURY_COLORS.white, 0.2),
+                      borderColor: 'transparent',
                     },
                     '&:hover .MuiOutlinedInput-notchedOutline': {
-                      borderColor: LUXURY_COLORS.primaryPurple,
+                      borderColor: SECONDARY_COLOR,
+                    },
+                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                      borderColor: SECONDARY_COLOR,
+                      borderWidth: '2px',
                     },
                   }
                 }}
               />
             </Grid>
             
-            <Grid item xs={12} sm={6} md={2}>
+            <Grid item xs={12} sm={6} md={3}>
               <FormControl fullWidth size="medium">
-                <InputLabel sx={{ color: LUXURY_COLORS.gray }}>Category</InputLabel>
+                <InputLabel sx={{ color: alpha('#ffffff', 0.7), fontSize: '0.875rem' }}>Category</InputLabel>
                 <Select
                   label="Category"
                   value={categoryFilter}
                   onChange={(e) => setCategoryFilter(e.target.value)}
                   sx={{
-                    backgroundColor: getColorWithAlpha(LUXURY_COLORS.white, 0.05),
+                    background: alpha('#ffffff', 0.08),
                     color: 'white',
-                    borderRadius: 2,
-                    '& .MuiSelect-icon': { color: LUXURY_COLORS.gray },
+                    borderRadius: 1,
+                    '& .MuiSelect-icon': { color: alpha('#ffffff', 0.7) },
                     '& .MuiOutlinedInput-notchedOutline': {
-                      borderColor: getColorWithAlpha(LUXURY_COLORS.white, 0.2),
+                      borderColor: 'transparent',
                     },
                     '&:hover .MuiOutlinedInput-notchedOutline': {
-                      borderColor: LUXURY_COLORS.primaryPurple,
+                      borderColor: SECONDARY_COLOR,
                     },
                   }}
                 >
@@ -520,23 +581,23 @@ const ProductManagement = () => {
               </FormControl>
             </Grid>
             
-            <Grid item xs={12} sm={6} md={2}>
+            <Grid item xs={12} sm={6} md={3}>
               <FormControl fullWidth size="medium">
-                <InputLabel sx={{ color: LUXURY_COLORS.gray }}>Status</InputLabel>
+                <InputLabel sx={{ color: alpha('#ffffff', 0.7), fontSize: '0.875rem' }}>Status</InputLabel>
                 <Select
                   label="Status"
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
                   sx={{
-                    backgroundColor: getColorWithAlpha(LUXURY_COLORS.white, 0.05),
+                    background: alpha('#ffffff', 0.08),
                     color: 'white',
-                    borderRadius: 2,
-                    '& .MuiSelect-icon': { color: LUXURY_COLORS.gray },
+                    borderRadius: 1,
+                    '& .MuiSelect-icon': { color: alpha('#ffffff', 0.7) },
                     '& .MuiOutlinedInput-notchedOutline': {
-                      borderColor: getColorWithAlpha(LUXURY_COLORS.white, 0.2),
+                      borderColor: 'transparent',
                     },
                     '&:hover .MuiOutlinedInput-notchedOutline': {
-                      borderColor: LUXURY_COLORS.primaryPurple,
+                      borderColor: SECONDARY_COLOR,
                     },
                   }}
                 >
@@ -548,75 +609,75 @@ const ProductManagement = () => {
               </FormControl>
             </Grid>
             
-            <Grid item xs={12} sm={6} md={2}>
+            <Grid item xs={12} sm={6} md={1}>
               <Button
                 fullWidth
                 variant="outlined"
-                startIcon={<FilterIcon />}
                 onClick={handleClearFilters}
                 sx={{ 
-                  borderColor: LUXURY_COLORS.primaryPurple, 
-                  color: LUXURY_COLORS.primaryPurple,
+                  borderColor: SECONDARY_COLOR, 
+                  color: SECONDARY_COLOR,
                   height: '56px',
-                  borderRadius: 2,
+                  borderRadius: 1,
+                  minWidth: 'auto',
                   '&:hover': {
-                    borderColor: LUXURY_COLORS.accentCyan,
-                    color: LUXURY_COLORS.accentCyan,
-                    backgroundColor: getColorWithAlpha(LUXURY_COLORS.primaryPurple, 0.1),
+                    borderColor: PRIMARY_COLOR,
+                    color: PRIMARY_COLOR,
+                    backgroundColor: alpha(SECONDARY_COLOR, 0.1),
                   },
                 }}
               >
-                Clear Filters
+                Clear
               </Button>
             </Grid>
             
-            <Grid item xs={12} sm={6} md={2}>
+            <Grid item xs={12} sm={6} md={1}>
               <Button
                 fullWidth
                 variant="contained"
-                startIcon={<RefreshIcon />}
                 onClick={fetchProducts}
+                disabled={isRefreshing}
                 sx={{
-                  background: `linear-gradient(135deg, ${LUXURY_COLORS.primaryPurple} 0%, #5A59A1 100%)`,
+                  background: `linear-gradient(135deg, ${SECONDARY_COLOR} 0%, #5A59A1 100%)`,
                   color: 'white',
                   height: '56px',
-                  borderRadius: 2,
-                  boxShadow: `0 4px 15px ${getColorWithAlpha(LUXURY_COLORS.primaryPurple, 0.3)}`,
+                  borderRadius: 1,
+                  minWidth: 'auto',
+                  boxShadow: `0 4px 15px ${alpha(SECONDARY_COLOR, 0.3)}`,
                   '&:hover': {
-                    background: `linear-gradient(135deg, #5A59A1 0%, ${LUXURY_COLORS.primaryPurple} 100%)`,
-                    boxShadow: `0 6px 20px ${getColorWithAlpha(LUXURY_COLORS.primaryPurple, 0.4)}`,
+                    background: `linear-gradient(135deg, #5A59A1 0%, ${SECONDARY_COLOR} 100%)`,
+                    boxShadow: `0 6px 20px ${alpha(SECONDARY_COLOR, 0.4)}`,
                   },
                 }}
               >
-                Refresh
+                <RefreshIcon />
               </Button>
             </Grid>
           </Grid>
         </Paper>
 
-        {/* Results Count */}
+        {/* Results and Actions */}
         <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography variant="body2" sx={{ color: LUXURY_COLORS.gray }}>
+          <Typography variant="body2" sx={{ color: alpha('#ffffff', 0.7) }}>
             Showing {filteredProducts.length} of {products.length} products
           </Typography>
-          <Badge 
-            badgeContent={stats.lowStock} 
-            color="error"
-            sx={{
-              '& .MuiBadge-badge': {
-                background: `linear-gradient(135deg, ${LUXURY_COLORS.accentOrange} 0%, #FF8E53 100%)`,
-                boxShadow: `0 2px 8px ${getColorWithAlpha(LUXURY_COLORS.accentOrange, 0.4)}`,
-              }
-            }}
-          >
-            <Typography variant="caption" sx={{ color: LUXURY_COLORS.accentOrange }}>
-              {stats.lowStock} items low in stock
-            </Typography>
-          </Badge>
         </Box>
 
+        {/* Loading Indicator */}
+        {isRefreshing && (
+          <LinearProgress sx={{ 
+            height: 4, 
+            borderRadius: 2,
+            backgroundColor: alpha(SECONDARY_COLOR, 0.2),
+            '& .MuiLinearProgress-bar': {
+              background: `linear-gradient(90deg, ${SECONDARY_COLOR} 0%, ${PRIMARY_COLOR} 100%)`,
+            },
+            mb: 2
+          }} />
+        )}
+
         {error && (
-          <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }} onClose={() => setError(null)}>
+          <Alert severity="error" sx={{ mb: 2, borderRadius: 1 }} onClose={() => setError(null)}>
             {error}
           </Alert>
         )}
@@ -626,46 +687,55 @@ const ProductManagement = () => {
             display: 'flex', 
             justifyContent: 'center', 
             alignItems: 'center', 
-            minHeight: 400,
+            minHeight: 300,
             flexDirection: 'column',
-            gap: 3,
+            gap: 2,
           }}>
             <CircularProgress sx={{ 
-              color: LUXURY_COLORS.primaryPurple,
-              width: 60,
-              height: 60,
+              color: PRIMARY_COLOR,
+              width: 40,
+              height: 40,
             }} />
-            <Typography sx={{ color: LUXURY_COLORS.gray }}>
-              Loading your luxury product catalog...
+            <Typography sx={{ color: alpha('#ffffff', 0.7) }}>
+              Loading product catalog...
             </Typography>
           </Box>
         ) : (
           <>
             {filteredProducts.length === 0 ? (
-              <Alert severity="info" sx={{ mb: 3, borderRadius: 2 }}>
+              <Alert severity="info" sx={{ mb: 2, borderRadius: 1 }}>
                 No products found. {searchTerm && 'Try a different search term or clear filters.'}
               </Alert>
             ) : (
               <Paper sx={{ 
-                backgroundColor: getColorWithAlpha(LUXURY_COLORS.white, 0.05), 
-                border: `1px solid ${getColorWithAlpha(LUXURY_COLORS.primaryPurple, 0.2)}`,
-                borderRadius: 3,
+                background: alpha('#ffffff', 0.05), 
+                border: `1px solid ${BORDER_COLOR}`,
+                borderRadius: 2,
                 overflow: 'hidden',
+                boxShadow: '0 10px 20px rgba(0, 0, 0, 0.4)'
               }}>
-                <TableContainer sx={{ maxHeight: { xs: 500, md: 600 } }}>
+                <TableContainer sx={{ maxHeight: 500 }}>
                   <Table stickyHeader>
                     <TableHead>
                       <TableRow sx={{ 
-                        background: `linear-gradient(135deg, ${getColorWithAlpha(LUXURY_COLORS.primaryPurple, 0.2)} 0%, ${getColorWithAlpha(LUXURY_COLORS.accentCyan, 0.1)} 100%)`,
+                        background: TABLE_HEADER_BACKGROUND,
+                        '& th': { 
+                          borderBottom: `2px solid ${alpha(SECONDARY_COLOR, 0.4)}`,
+                          color: 'white', 
+                          fontWeight: 'bolder',
+                          textTransform: 'uppercase',
+                          letterSpacing: 1,
+                          fontSize: '0.75rem',
+                          py: 2
+                        }
                       }}>
-                        <TableCell sx={{ color: 'white', fontWeight: 700, minWidth: 300 }}>Product</TableCell>
-                        <TableCell sx={{ color: 'white', fontWeight: 700 }}>Category</TableCell>
-                        <TableCell sx={{ color: 'white', fontWeight: 700 }}>Price</TableCell>
-                        <TableCell sx={{ color: 'white', fontWeight: 700 }}>Stock</TableCell>
-                        <TableCell sx={{ color: 'white', fontWeight: 700 }}>Sold</TableCell>
-                        <TableCell sx={{ color: 'white', fontWeight: 700 }}>Rating</TableCell>
-                        <TableCell sx={{ color: 'white', fontWeight: 700 }}>Status</TableCell>
-                        <TableCell sx={{ color: 'white', fontWeight: 700 }}>Actions</TableCell>
+                        <TableCell>PRODUCT</TableCell>
+                        <TableCell>CATEGORY</TableCell>
+                        <TableCell>PRICE</TableCell>
+                        <TableCell>STOCK</TableCell>
+                        <TableCell>RATING</TableCell>
+                        <TableCell>STATUS</TableCell>
+                        <TableCell align="right">ACTIONS</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -675,9 +745,14 @@ const ProductManagement = () => {
                           hover 
                           sx={{ 
                             '&:hover': { 
-                              backgroundColor: getColorWithAlpha(LUXURY_COLORS.primaryPurple, 0.1) 
+                              backgroundColor: HOVER_BACKGROUND,
+                              cursor: 'pointer'
                             },
-                            transition: 'all 0.2s ease',
+                            '& td': {
+                              borderBottom: '1px solid rgba(120, 119, 198, 0.1)',
+                              color: 'white',
+                              py: 2
+                            }
                           }}
                         >
                           <TableCell>
@@ -687,34 +762,23 @@ const ProductManagement = () => {
                                 src={product.thumbnail}
                                 alt={product.title}
                                 sx={{ 
-                                  width: 60, 
-                                  height: 60, 
-                                  borderRadius: 2, 
+                                  width: 40, 
+                                  height: 40, 
+                                  borderRadius: 1, 
                                   objectFit: 'cover',
-                                  border: `1px solid ${getColorWithAlpha(LUXURY_COLORS.white, 0.1)}`,
-                                  boxShadow: `0 4px 12px ${getColorWithAlpha(LUXURY_COLORS.primaryDark, 0.5)}`,
-                                  transition: 'transform 0.3s ease',
-                                  '&:hover': {
-                                    transform: 'scale(1.05)',
-                                  }
+                                  border: `1px solid ${alpha('#ffffff', 0.1)}`,
                                 }}
                                 onError={(e) => {
-                                  e.currentTarget.src = 'https://via.placeholder.com/60';
+                                  e.currentTarget.src = 'https://via.placeholder.com/40';
                                 }}
                               />
-                              <Box sx={{ maxWidth: 250 }}>
-                                <Typography variant="body2" fontWeight="bold" sx={{ color: 'white' }}>
-                                  {product.title}
+                              <Box sx={{ maxWidth: 200 }}>
+                                <Typography variant="body2" fontWeight="medium" sx={{ color: 'white' }}>
+                                  {product.title.length > 30 ? product.title.substring(0, 30) + '...' : product.title}
                                 </Typography>
                                 <Stack direction="row" alignItems="center" spacing={1} sx={{ mt: 0.5 }}>
-                                  <Typography variant="caption" sx={{ color: LUXURY_COLORS.gray }}>
+                                  <Typography variant="caption" sx={{ color: alpha('#ffffff', 0.5) }}>
                                     ID: {product.id}
-                                  </Typography>
-                                  <Typography variant="caption" sx={{ 
-                                    color: getColorWithAlpha(LUXURY_COLORS.accentGold, 0.8),
-                                    fontWeight: 500,
-                                  }}>
-                                    • {product.brand || 'Generic'}
                                   </Typography>
                                 </Stack>
                               </Box>
@@ -727,8 +791,8 @@ const ProductManagement = () => {
                               ).join(' ')} 
                               size="small" 
                               sx={{ 
-                                backgroundColor: getColorWithAlpha(LUXURY_COLORS.primaryPurple, 0.2), 
-                                color: LUXURY_COLORS.primaryPurple,
+                                backgroundColor: alpha(SECONDARY_COLOR, 0.2), 
+                                color: SECONDARY_COLOR,
                                 textTransform: 'capitalize',
                                 fontWeight: 600,
                                 fontSize: '0.75rem',
@@ -742,8 +806,8 @@ const ProductManagement = () => {
                               </Typography>
                               {product.discountPercentage && product.discountPercentage > 0 && (
                                 <Stack direction="row" alignItems="center" spacing={0.5}>
-                                  <LocalOfferIcon sx={{ fontSize: 14, color: LUXURY_COLORS.accentGreen }} />
-                                  <Typography variant="caption" sx={{ color: LUXURY_COLORS.accentGreen }}>
+                                  <LocalOfferIcon sx={{ fontSize: 12, color: ACCENT_GREEN }} />
+                                  <Typography variant="caption" sx={{ color: ACCENT_GREEN }}>
                                     {product.discountPercentage}% off
                                   </Typography>
                                 </Stack>
@@ -754,28 +818,18 @@ const ProductManagement = () => {
                             <Typography 
                               variant="body2" 
                               sx={{ 
-                                color: product.stock < 10 ? LUXURY_COLORS.accentOrange : 
-                                      product.stock < 50 ? LUXURY_COLORS.accentGold : 'white',
+                                color: product.stock === 0 ? ACCENT_COLOR :
+                                      product.stock < 10 ? ACCENT_ORANGE : 
+                                      product.stock < 50 ? ACCENT_GOLD : 'white',
                                 fontWeight: product.stock < 10 ? 'bold' : 'normal',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 0.5,
                               }}
                             >
-                              {product.stock}
-                              <Typography variant="caption" sx={{ color: LUXURY_COLORS.gray }}>
-                                units
-                              </Typography>
-                            </Typography>
-                          </TableCell>
-                          <TableCell>
-                            <Typography variant="body2" sx={{ color: 'white' }}>
-                              {product.sold || 0}
+                              {product.stock} units
                             </Typography>
                           </TableCell>
                           <TableCell>
                             <Stack direction="row" alignItems="center" spacing={0.5}>
-                              <StarIcon sx={{ fontSize: 16, color: LUXURY_COLORS.accentGold }} />
+                              <StarIcon sx={{ fontSize: 14, color: ACCENT_GOLD }} />
                               <Typography variant="body2" sx={{ color: 'white' }}>
                                 {product.rating?.toFixed(1) || 'N/A'}
                               </Typography>
@@ -785,31 +839,25 @@ const ProductManagement = () => {
                             <Chip
                               label={getStatusLabel(product.status)}
                               size="small"
-                              color={getStatusColor(product.status) as any}
                               sx={{ 
+                                backgroundColor: alpha(getStatusColor(product.status), 0.2),
+                                color: getStatusColor(product.status),
                                 fontWeight: 'bold',
-                                fontSize: '0.7rem',
-                                height: 24,
-                                minWidth: 90,
-                                boxShadow: `0 2px 8px ${
-                                  getStatusColor(product.status) === 'success' ? getColorWithAlpha(LUXURY_COLORS.accentGreen, 0.3) : 
-                                  getStatusColor(product.status) === 'error' ? getColorWithAlpha(LUXURY_COLORS.accentPink, 0.3) : 
-                                  getColorWithAlpha(LUXURY_COLORS.accentOrange, 0.3)
-                                }`,
+                                fontSize: '0.75rem',
+                                letterSpacing: 0.5
                               }}
                             />
                           </TableCell>
-                          <TableCell>
-                            <Stack direction="row" spacing={1}>
+                          <TableCell align="right">
+                            <Stack direction="row" spacing={0.5} justifyContent="flex-end">
                               <Tooltip title="View Product" arrow>
                                 <IconButton
                                   size="small"
                                   sx={{ 
-                                    color: LUXURY_COLORS.accentCyan,
-                                    backgroundColor: getColorWithAlpha(LUXURY_COLORS.accentCyan, 0.1),
+                                    color: ACCENT_ORANGE,
+                                    backgroundColor: alpha(ACCENT_ORANGE, 0.1),
                                     '&:hover': { 
-                                      backgroundColor: getColorWithAlpha(LUXURY_COLORS.accentCyan, 0.2),
-                                      transform: 'scale(1.1)',
+                                      backgroundColor: alpha(ACCENT_ORANGE, 0.2),
                                     },
                                   }}
                                 >
@@ -820,11 +868,10 @@ const ProductManagement = () => {
                                 <IconButton
                                   size="small"
                                   sx={{ 
-                                    color: LUXURY_COLORS.accentOrange,
-                                    backgroundColor: getColorWithAlpha(LUXURY_COLORS.accentOrange, 0.1),
+                                    color: PRIMARY_COLOR,
+                                    backgroundColor: alpha(PRIMARY_COLOR, 0.1),
                                     '&:hover': { 
-                                      backgroundColor: getColorWithAlpha(LUXURY_COLORS.accentOrange, 0.2),
-                                      transform: 'scale(1.1)',
+                                      backgroundColor: alpha(PRIMARY_COLOR, 0.2),
                                     },
                                   }}
                                 >
@@ -847,12 +894,17 @@ const ProductManagement = () => {
                   onPageChange={handleChangePage}
                   onRowsPerPageChange={handleChangeRowsPerPage}
                   sx={{ 
-                    backgroundColor: getColorWithAlpha(LUXURY_COLORS.white, 0.05),
+                    backgroundColor: alpha('#ffffff', 0.05),
                     color: 'white',
-                    borderTop: `1px solid ${getColorWithAlpha(LUXURY_COLORS.white, 0.1)}`,
+                    borderTop: `1px solid ${alpha('#ffffff', 0.1)}`,
                     '& .MuiTablePagination-selectIcon': { color: 'white' },
-                    '& .MuiTablePagination-select': { color: 'white' },
-                    '& .MuiTablePagination-displayedRows': { color: LUXURY_COLORS.gray },
+                    '& .MuiTablePagination-select': { 
+                      color: 'white',
+                      border: `1px solid ${alpha(SECONDARY_COLOR, 0.5)}`,
+                      borderRadius: 1,
+                      padding: '4px 8px'
+                    },
+                    '& .MuiTablePagination-displayedRows': { color: alpha('#ffffff', 0.7) },
                     '& .MuiTablePagination-actions button': { color: 'white' },
                   }}
                 />

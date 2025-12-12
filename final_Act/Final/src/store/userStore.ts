@@ -1,4 +1,4 @@
-// userStore.ts - FINAL VERSION WITH SINGLE SELLER INTEGRATION
+// userStore.ts - FINAL VERSION (CLEAN - NO DEFAULT DATA)
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 
@@ -118,7 +118,7 @@ export interface SellerStats {
 export interface Notification {
   id: number;
   userId: number;
-  type: 'order' | 'promotion' | 'system';
+  type: 'order' | 'promotion' | 'system' | 'new_order' | 'cancelled' | 'shipped' | 'delivered';
   title: string;
   message: string;
   data?: any;
@@ -167,8 +167,10 @@ interface UserStore {
   updateProfile: (userData: Partial<User>) => void;
   
   // Notification actions
-  addNotification: (notification: Notification) => void;
+  addNotification: (notification: Omit<Notification, 'id'>) => void;
   markNotificationAsRead: (id: number) => void;
+  deleteNotification: (id: number) => void;
+  clearAllNotifications: (userId?: number) => void;
   addMessage: (message: Message) => void;
   markMessageAsRead: (id: number) => void;
   
@@ -196,6 +198,8 @@ interface UserStore {
   updateOrderStatus: (orderId: number, status: Order['status']) => void;
   sendOrderNotification: (orderId: number, status: Order['status'] | 'status_update', customerEmail: string) => void;
   cancelOrder: (orderId: number) => void;
+  deleteOrder: (orderId: number) => void; // NEW: Delete order completely
+  deleteAllOrders: () => void; // NEW: Delete all orders
   getCustomerOrders: () => Order[];
   getSellerOrders: (sellerId?: number) => Order[];
   
@@ -252,28 +256,10 @@ const defaultUser: User = {
   role: 'user'
 };
 
-const initialNotifications: Notification[] = [
-  {
-    id: 1,
-    userId: 1,
-    type: 'order',
-    title: 'Order Confirmed',
-    message: 'Your order #1001 has been confirmed',
-    read: false,
-    createdAt: new Date().toISOString()
-  },
-  {
-    id: 2,
-    userId: 2,
-    type: 'order',
-    title: 'New Order Received',
-    message: 'You have a new order #1001 from John Doe',
-    read: false,
-    createdAt: new Date().toISOString()
-  }
-];
-
+// EMPTY initial data
+const initialNotifications: Notification[] = [];
 const initialMessages: Message[] = [];
+const initialOrders: Order[] = [];
 
 // Initial Seller Products - ALL belong to seller ID 2
 const initialSellerProducts: SellerProduct[] = [
@@ -284,7 +270,7 @@ const initialSellerProducts: SellerProduct[] = [
     price: 999,
     category: 'smartphones',
     stock: 45,
-    sold: 120,
+    sold: 0,
     rating: 4.5,
     images: ['https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=600&h=400&fit=crop'],
     status: 'active',
@@ -299,7 +285,7 @@ const initialSellerProducts: SellerProduct[] = [
     price: 2499,
     category: 'womens-watches',
     stock: 12,
-    sold: 45,
+    sold: 0,
     rating: 4.8,
     images: ['https://images.unsplash.com/photo-1523170335258-f5ed11844a49?w=600&h=400&fit=crop'],
     status: 'active',
@@ -314,7 +300,7 @@ const initialSellerProducts: SellerProduct[] = [
     price: 299,
     category: 'electronics',
     stock: 25,
-    sold: 80,
+    sold: 0,
     rating: 4.3,
     images: ['https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600&h=400&fit=crop'],
     status: 'active',
@@ -324,72 +310,10 @@ const initialSellerProducts: SellerProduct[] = [
   }
 ];
 
-// Initial Orders - ALL belong to seller ID 2
-const initialOrders: Order[] = [
-  {
-    id: 1001,
-    userId: 1,
-    customerName: 'John Doe',
-    customerEmail: 'john@xelura.com',
-    customerPhone: '+1234567890',
-    items: [
-      {
-        id: 1,
-        productId: 1,
-        productName: 'Premium Smartphone X',
-        quantity: 1,
-        price: 999,
-        thumbnail: 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=150&h=150&fit=crop',
-        sellerId: 2
-      }
-    ],
-    subtotal: 999,
-    shippingFee: 15,
-    tax: 89.91,
-    total: 1103.91,
-    status: 'pending',
-    shippingAddress: '123 Main Street, New York, NY',
-    paymentMethod: 'credit_card',
-    paymentStatus: 'paid',
-    createdAt: new Date('2024-03-15').toISOString(),
-    updatedAt: new Date('2024-03-15').toISOString(),
-    sellerId: 2
-  },
-  {
-    id: 1002,
-    userId: 1,
-    customerName: 'John Doe',
-    customerEmail: 'john@xelura.com',
-    customerPhone: '+1234567890',
-    items: [
-      {
-        id: 2,
-        productId: 2,
-        productName: 'Luxury Watch Pro',
-        quantity: 1,
-        price: 2499,
-        thumbnail: 'https://images.unsplash.com/photo-1523170335258-f5ed11844a49?w=150&h=150&fit=crop',
-        sellerId: 2
-      }
-    ],
-    subtotal: 2499,
-    shippingFee: 25,
-    tax: 224.91,
-    total: 2748.91,
-    status: 'approved',
-    shippingAddress: '123 Main Street, New York, NY',
-    paymentMethod: 'paypal',
-    paymentStatus: 'paid',
-    createdAt: new Date('2024-03-14').toISOString(),
-    updatedAt: new Date('2024-03-14').toISOString(),
-    sellerId: 2
-  }
-];
-
 export const useUserStore = create<UserStore>()(
   persist(
     (set, get) => ({
-      // Initial state
+      // Initial state - EMPTY
       currentUser: null,
       isLoggedIn: false,
       isSeller: false,
@@ -407,18 +331,14 @@ export const useUserStore = create<UserStore>()(
       sellerProducts: initialSellerProducts,
       orders: initialOrders,
       sellerStats: {
-        totalRevenue: 3852.82,
-        totalOrders: 2,
+        totalRevenue: 0,
+        totalOrders: 0,
         totalProducts: 3,
-        totalCustomers: 1,
-        monthlyGrowth: 12.5,
+        totalCustomers: 0,
+        monthlyGrowth: 0,
         lowStockProducts: 1,
         outOfStockProducts: 0,
-        popularCategories: [
-          { name: 'smartphones', count: 120 },
-          { name: 'womens-watches', count: 45 },
-          { name: 'electronics', count: 80 }
-        ]
+        popularCategories: []
       },
       
       // Initialize with demo user
@@ -430,7 +350,7 @@ export const useUserStore = create<UserStore>()(
             currentUser: defaultUser,
             isLoggedIn: true,
             isSeller: false,
-            unreadNotificationCount: initialNotifications.filter(n => !n.read && n.userId === 1).length,
+            unreadNotificationCount: 0,
             unreadMessageCount: 0,
           });
         }
@@ -482,9 +402,14 @@ export const useUserStore = create<UserStore>()(
       })),
       
       // Notification actions
-      addNotification: (notification) => {
+      addNotification: (notificationData) => {
+        const newNotification: Notification = {
+          id: Date.now(),
+          ...notificationData
+        };
+        
         set((state) => {
-          const newNotifications = [...state.notifications, notification];
+          const newNotifications = [...state.notifications, newNotification];
           const unreadCount = newNotifications.filter(
             n => !n.read && n.userId === state.currentUser?.id
           ).length;
@@ -494,6 +419,8 @@ export const useUserStore = create<UserStore>()(
             unreadNotificationCount: unreadCount
           };
         });
+        
+        console.log('🔔 Notification added:', newNotification.title);
       },
       
       markNotificationAsRead: (id) => {
@@ -513,6 +440,43 @@ export const useUserStore = create<UserStore>()(
             unreadNotificationCount: unreadCount
           };
         });
+      },
+      
+      deleteNotification: (id) => {
+        set((state) => {
+          const updatedNotifications = state.notifications.filter(notification => notification.id !== id);
+          const unreadCount = updatedNotifications.filter(
+            n => !n.read && n.userId === state.currentUser?.id
+          ).length;
+          
+          return {
+            notifications: updatedNotifications,
+            unreadNotificationCount: unreadCount
+          };
+        });
+        
+        console.log('🗑️ Notification deleted:', id);
+      },
+      
+      clearAllNotifications: (userId?: number) => {
+        set((state) => {
+          if (userId) {
+            // Clear notifications for specific user
+            const filteredNotifications = state.notifications.filter(n => n.userId !== userId);
+            return {
+              notifications: filteredNotifications,
+              unreadNotificationCount: 0
+            };
+          } else {
+            // Clear all notifications
+            return {
+              notifications: [],
+              unreadNotificationCount: 0
+            };
+          }
+        });
+        
+        console.log('🗑️ All notifications cleared');
       },
       
       // Message actions (simplified for single seller)
@@ -747,26 +711,29 @@ export const useUserStore = create<UserStore>()(
           }
         });
         
-        // Create notification for seller (ID 2)
-        const sellerNotification: Notification = {
-          id: Date.now(),
+        // Create notification for seller (ID 2) - NEW ORDER
+        const sellerNotification = {
           userId: 2,
-          type: 'order',
-          title: 'New Order Received',
-          message: `You have a new order #${newOrder.id} from ${state.currentUser?.name || 'Customer'}`,
-          data: { orderId: newOrder.id, customerName: state.currentUser?.name },
+          type: 'new_order' as const,
+          title: '🎉 New Order Received!',
+          message: `You have a new order #${newOrder.id} from ${state.currentUser?.name || 'Customer'} for ${usdFormatted.format(total)}`,
+          data: { 
+            orderId: newOrder.id, 
+            customerName: state.currentUser?.name,
+            total,
+            priority: 'high'
+          },
           read: false,
           createdAt: new Date().toISOString()
         };
         state.addNotification(sellerNotification);
         
         // Create notification for customer
-        const customerNotification: Notification = {
-          id: Date.now() + 1,
+        const customerNotification = {
           userId: state.currentUser?.id || 0,
-          type: 'order',
-          title: 'Order Created',
-          message: `Your order #${newOrder.id} has been created`,
+          type: 'order' as const,
+          title: 'Order Confirmed',
+          message: `Your order #${newOrder.id} has been confirmed`,
           data: { orderId: newOrder.id },
           read: false,
           createdAt: new Date().toISOString()
@@ -778,7 +745,7 @@ export const useUserStore = create<UserStore>()(
           cart: state.cart.filter(item => !item.isSelected)
         }));
         
-        // Add notifications
+        // Add customer notification
         state.addNotification(customerNotification);
         
         // Update stats for seller 2
@@ -804,11 +771,10 @@ export const useUserStore = create<UserStore>()(
         // Create notification for customer
         const order = state.orders.find(o => o.id === orderId);
         if (order && order.userId) {
-          const statusNotification: Notification = {
-            id: Date.now(),
+          const statusNotification = {
             userId: order.userId,
-            type: 'order',
-            title: 'Order Status Updated',
+            type: status as any,
+            title: `Order ${status.charAt(0).toUpperCase() + status.slice(1)}`,
             message: `Your order #${orderId} status has been updated to ${status}`,
             data: { orderId, status },
             read: false,
@@ -816,6 +782,18 @@ export const useUserStore = create<UserStore>()(
           };
           state.addNotification(statusNotification);
         }
+        
+        // Create notification for seller
+        const sellerNotification = {
+          userId: 2,
+          type: status as any,
+          title: `Order #${orderId} ${status.charAt(0).toUpperCase() + status.slice(1)}`,
+          message: `Order #${orderId} has been marked as ${status}`,
+          data: { orderId, status },
+          read: false,
+          createdAt: new Date().toISOString()
+        };
+        state.addNotification(sellerNotification);
         
         set({ orders: updatedOrders });
         state.updateSellerStats(2);
@@ -830,10 +808,9 @@ export const useUserStore = create<UserStore>()(
         const order = state.orders.find(o => o.id === orderId);
         
         if (order) {
-          const notification: Notification = {
-            id: Date.now(),
+          const notification = {
             userId: order.userId,
-            type: 'order',
+            type: 'order' as const,
             title: 'Order Notification',
             message: `Your order #${orderId} has been ${status}`,
             data: { orderId, status },
@@ -875,10 +852,9 @@ export const useUserStore = create<UserStore>()(
           
           // Create notification for cancellation
           if (cancelledOrder.userId) {
-            const cancelNotification: Notification = {
-              id: Date.now(),
+            const cancelNotification = {
               userId: cancelledOrder.userId,
-              type: 'order',
+              type: 'cancelled' as const,
               title: 'Order Cancelled',
               message: `Your order #${orderId} has been cancelled`,
               data: { orderId, status: 'cancelled' },
@@ -891,6 +867,62 @@ export const useUserStore = create<UserStore>()(
         
         set({ orders: updatedOrders });
         state.updateSellerStats(2);
+      },
+      
+      // NEW: Delete order completely
+      deleteOrder: (orderId) => {
+        const state = get();
+        const orderToDelete = state.orders.find(order => order.id === orderId);
+        
+        // Create deletion notification if order exists
+        if (orderToDelete) {
+          const deleteNotification = {
+            userId: orderToDelete.userId,
+            type: 'system' as const,
+            title: 'Order Deleted',
+            message: `Order #${orderId} has been deleted by the seller`,
+            data: { orderId, status: 'deleted' },
+            read: false,
+            createdAt: new Date().toISOString()
+          };
+          state.addNotification(deleteNotification);
+        }
+        
+        // Remove the order
+        set((state) => ({
+          orders: state.orders.filter(order => order.id !== orderId)
+        }));
+        
+        // Update seller stats
+        state.updateSellerStats(2);
+        console.log(`🗑️ Order #${orderId} deleted`);
+      },
+      
+      // NEW: Delete all orders
+      deleteAllOrders: () => {
+        const state = get();
+        
+        // Create notifications for all affected users
+        const userIds = [...new Set(state.orders.map(order => order.userId))];
+        userIds.forEach(userId => {
+          const deleteNotification = {
+            userId,
+            type: 'system' as const,
+            title: 'Orders Cleared',
+            message: 'All orders have been cleared by the seller',
+            data: { action: 'clear_all_orders' },
+            read: false,
+            createdAt: new Date().toISOString()
+          };
+          state.addNotification(deleteNotification);
+        });
+        
+        // Remove all orders
+        set({ orders: [] });
+        
+        // Update seller stats
+        state.updateSellerStats(2);
+        console.log('🗑️ All orders deleted');
       },
       
       getCustomerOrders: () => {
@@ -1002,7 +1034,7 @@ export const useUserStore = create<UserStore>()(
             totalOrders,
             totalProducts,
             totalCustomers,
-            monthlyGrowth: 12.5,
+            monthlyGrowth: totalOrders > 0 ? 12.5 : 0,
             lowStockProducts: sellerProducts.filter(p => p.stock < 10 && p.stock > 0).length,
             outOfStockProducts: sellerProducts.filter(p => p.stock === 0).length,
             popularCategories: popularCategories.sort((a, b) => b.count - a.count)
@@ -1093,6 +1125,12 @@ export const useUserStore = create<UserStore>()(
     }
   )
 );
+
+// Helper for currency formatting
+const usdFormatted = new Intl.NumberFormat('en-US', {
+  style: 'currency',
+  currency: 'USD'
+});
 
 export const initializeStore = () => {
   const store = useUserStore.getState();

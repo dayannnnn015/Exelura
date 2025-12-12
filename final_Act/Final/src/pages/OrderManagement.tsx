@@ -31,6 +31,11 @@ import {
   Badge,
   useTheme,
   useMediaQuery,
+  Checkbox,
+  Menu,
+  MenuItem,
+  ListItemIcon,
+  ListItemText,
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -43,6 +48,8 @@ import {
   Print as PrintIcon,
   Download as DownloadIcon,
   DoneAll as DoneIcon,
+  Delete as DeleteIcon,
+  MoreVert as MoreVertIcon,
 } from '@mui/icons-material';
 import { useUserStore, type Order } from '../store/userStore';
 import { useNavigate } from 'react-router-dom';
@@ -62,7 +69,7 @@ const TABLE_HEADER_BACKGROUND = 'rgba(120, 119, 198, 0.15)'; // Slightly darker 
 // --- Component Start ---
 
 const OrderManagement = () => {
-  const { getSellerOrders, updateOrderStatus, sendOrderNotification, currentUser } = useUserStore();
+  const { getSellerOrders, updateOrderStatus, sendOrderNotification, currentUser, deleteOrder } = useUserStore();
   const navigate = useNavigate();
   const [filteredOrders, setFilteredOrders] = useState<Order[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -73,6 +80,9 @@ const OrderManagement = () => {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [isLoading, setIsLoading] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [selectedOrders, setSelectedOrders] = useState<number[]>([]);
+  const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null);
+  const [currentMenuOrder, setCurrentMenuOrder] = useState<Order | null>(null);
 
   // Responsive Hooks
   const isMobile = useMediaQuery('(max-width:600px)');
@@ -192,6 +202,58 @@ const OrderManagement = () => {
     }
   };
 
+  // NEW: Delete order functionality
+  const handleDeleteOrder = (orderId: number) => {
+    if (window.confirm(`Are you sure you want to delete order #${orderId}? This action cannot be undone.`)) {
+      deleteOrder(orderId);
+      setFilteredOrders(prev => prev.filter(order => order.id !== orderId));
+      setSelectedOrders(prev => prev.filter(id => id !== orderId));
+      
+      // Close menu if open
+      handleMenuClose();
+    }
+  };
+
+  // NEW: Bulk delete functionality
+  const handleBulkDelete = () => {
+    if (selectedOrders.length === 0) return;
+    
+    if (window.confirm(`Delete ${selectedOrders.length} selected order(s)? This action cannot be undone.`)) {
+      selectedOrders.forEach(orderId => deleteOrder(orderId));
+      setFilteredOrders(prev => prev.filter(order => !selectedOrders.includes(order.id)));
+      setSelectedOrders([]);
+    }
+  };
+
+  // NEW: Toggle individual order selection
+  const handleToggleOrderSelection = (orderId: number) => {
+    setSelectedOrders(prev =>
+      prev.includes(orderId)
+        ? prev.filter(id => id !== orderId)
+        : [...prev, orderId]
+    );
+  };
+
+  // NEW: Toggle all orders selection
+  const handleToggleAllSelection = () => {
+    if (selectedOrders.length === filteredOrders.length) {
+      setSelectedOrders([]);
+    } else {
+      setSelectedOrders(filteredOrders.map(order => order.id));
+    }
+  };
+
+  // NEW: Menu handlers
+  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, order: Order) => {
+    setMenuAnchorEl(event.currentTarget);
+    setCurrentMenuOrder(order);
+  };
+
+  const handleMenuClose = () => {
+    setMenuAnchorEl(null);
+    setCurrentMenuOrder(null);
+  };
+
   // Printing logic (Functionality preserved)
   const handlePrintOrder = (order: Order) => {
     const printWindow = window.open('', '_blank');
@@ -277,12 +339,11 @@ const OrderManagement = () => {
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       );
       setFilteredOrders(sortedOrders);
+      setSelectedOrders([]);
       setIsLoading(false);
     }, 500);
   };
   
-  // handleExportOrders function has been removed as requested.
-
   const handleChangePage = (event: unknown, newPage: number) => {
     setPage(newPage);
   };
@@ -350,24 +411,23 @@ const OrderManagement = () => {
     <Box sx={{ 
       minHeight: '100vh', 
       background: BACKGROUND_GRADIENT,
-      fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif', // Ensure professional font stack
+      fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
     }}>
       {/* Sticky Seller Account Menu */}
       <Box sx={{ position: 'sticky', top: 0, zIndex: 1200 }}>
         <SellerAccountMenu scrolled={scrolled} />
       </Box>
 
-      {/* Changed maxWidth from "xl" to "lg" for constrained laptop view */}
       <Container maxWidth="lg" sx={{ p: 3, pt: { xs: 3, sm: 5 } }}>
         <Typography 
             variant={isMobile ? "h5" : "h4"} 
             fontWeight="light" 
             sx={{ color: 'white', mb: 4, letterSpacing: 1 }}
         >
-            🚀 Xelura Seller Dashboard
+            🚀 Orders Management
         </Typography>
 
-        {/* Stats Cards - Minimized Typography and professional border/shadow */}
+        {/* Stats Cards */}
         <Grid container spacing={3} sx={{ mb: 4 }}>
           {/* Total Orders Card */}
           <Grid item xs={6} sm={4} md={2}>
@@ -491,7 +551,7 @@ const OrderManagement = () => {
           </Grid>
         </Grid>
 
-        {/* Filters and Actions (Relocated from Order Operations) */}
+        {/* Filters and Actions */}
         <Paper sx={{ 
           p: 3, 
           mb: 3, 
@@ -505,7 +565,21 @@ const OrderManagement = () => {
             spacing={{ xs: 2, sm: 3 }} 
             justifyContent="flex-end"
           >
-            {/* Removed Export CSV button here */}
+            {/* Bulk Delete Button */}
+            {selectedOrders.length > 0 && (
+              <Button
+                variant="contained"
+                startIcon={<DeleteIcon />}
+                onClick={handleBulkDelete}
+                sx={{ 
+                  backgroundColor: '#FF4757',
+                  '&:hover': { backgroundColor: '#FF3333' }
+                }}
+              >
+                Delete Selected ({selectedOrders.length})
+              </Button>
+            )}
+            
             <Button
               variant="outlined"
               startIcon={<RefreshIcon />}
@@ -628,7 +702,6 @@ const OrderManagement = () => {
             )}
         </Box>
 
-
         {/* Orders Table */}
         <TableContainer component={Paper} sx={{ 
           background: alpha('#ffffff', 0.05),
@@ -636,7 +709,7 @@ const OrderManagement = () => {
           backdropFilter: 'blur(10px)',
           mb: 3,
           borderRadius: 3,
-          overflowX: 'auto', // Ensure responsiveness
+          overflowX: 'auto',
           boxShadow: '0 10px 20px rgba(0, 0, 0, 0.4)'
         }}>
           <Table sx={{ minWidth: 750 }}>
@@ -653,6 +726,14 @@ const OrderManagement = () => {
                   py: 2
                 }
               }}>
+                <TableCell padding="checkbox">
+                  <Checkbox
+                    indeterminate={selectedOrders.length > 0 && selectedOrders.length < filteredOrders.length}
+                    checked={filteredOrders.length > 0 && selectedOrders.length === filteredOrders.length}
+                    onChange={handleToggleAllSelection}
+                    sx={{ color: 'white' }}
+                  />
+                </TableCell>
                 <TableCell>ORDER</TableCell>
                 <TableCell>CUSTOMER</TableCell>
                 <TableCell>DATE</TableCell>
@@ -678,8 +759,21 @@ const OrderManagement = () => {
                       py: 2
                     }
                   }}
-                  onClick={() => handleViewOrder(order)}
+                  onClick={(e) => {
+                    if ((e.target as HTMLElement).closest('input[type="checkbox"]') || 
+                        (e.target as HTMLElement).closest('button')) {
+                      return;
+                    }
+                    handleViewOrder(order);
+                  }}
                 >
+                  <TableCell padding="checkbox" onClick={(e) => e.stopPropagation()}>
+                    <Checkbox
+                      checked={selectedOrders.includes(order.id)}
+                      onChange={() => handleToggleOrderSelection(order.id)}
+                      sx={{ color: 'white' }}
+                    />
+                  </TableCell>
                   <TableCell>
                     <Stack spacing={0.5}>
                       <Typography fontWeight="bold" sx={{ fontSize: isMobile ? '0.85rem' : '0.95rem' }}>
@@ -764,73 +858,20 @@ const OrderManagement = () => {
                         </IconButton>
                       </Tooltip>
                       
-                      {/* Approve */}
-                      {order.status === 'pending' && (
-                        <Tooltip title="Approve Order">
-                          <IconButton
-                            size="medium"
-                            onClick={() => handleApproveOrder(order.id)}
-                            sx={{
-                              color: PRIMARY_COLOR,
-                              backgroundColor: alpha(PRIMARY_COLOR, 0.1),
-                              '&:hover': { backgroundColor: alpha(PRIMARY_COLOR, 0.2) }
-                            }}
-                          >
-                            <CheckIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                      )}
-                      
-                      {/* Ship */}
-                      {order.status === 'approved' && (
-                        <Tooltip title="Mark as Shipped">
-                          <IconButton
-                            size="medium"
-                            onClick={() => handleShipOrder(order.id)}
-                            sx={{
-                              color: SECONDARY_COLOR,
-                              backgroundColor: alpha(SECONDARY_COLOR, 0.1),
-                              '&:hover': { backgroundColor: alpha(SECONDARY_COLOR, 0.2) }
-                            }}
-                          >
-                            <ShippingIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                      )}
-                      
-                      {/* Deliver */}
-                      {order.status === 'shipped' && (
-                        <Tooltip title="Mark as Delivered">
-                          <IconButton
-                            size="medium"
-                            onClick={() => handleDeliverOrder(order.id)}
-                            sx={{
-                              color: PRIMARY_COLOR,
-                              backgroundColor: alpha(PRIMARY_COLOR, 0.1),
-                              '&:hover': { backgroundColor: alpha(PRIMARY_COLOR, 0.2) }
-                            }}
-                          >
-                            <DoneIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                      )}
-                      
-                      {/* Cancel */}
-                      {['pending', 'approved', 'shipped'].includes(order.status) && (
-                        <Tooltip title="Cancel Order">
-                          <IconButton
-                            size="medium"
-                            onClick={() => handleCancelOrder(order.id)}
-                            sx={{
-                              color: ACCENT_COLOR,
-                              backgroundColor: alpha(ACCENT_COLOR, 0.1),
-                              '&:hover': { backgroundColor: alpha(ACCENT_COLOR, 0.2) }
-                            }}
-                          >
-                            <CancelIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                      )}
+                      {/* More Actions Menu */}
+                      <Tooltip title="More Actions">
+                        <IconButton
+                          size="medium"
+                          onClick={(e) => handleMenuOpen(e, order)}
+                          sx={{
+                            color: alpha('#ffffff', 0.7),
+                            backgroundColor: alpha('#ffffff', 0.05),
+                            '&:hover': { backgroundColor: alpha('#ffffff', 0.1) }
+                          }}
+                        >
+                          <MoreVertIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
                     </Stack>
                   </TableCell>
                 </TableRow>
@@ -839,7 +880,7 @@ const OrderManagement = () => {
               {/* No Orders State */}
               {filteredOrders.length === 0 && !isLoading && (
                 <TableRow>
-                  <TableCell colSpan={7} align="center" sx={{ py: 8, color: alpha('#ffffff', 0.5) }}>
+                  <TableCell colSpan={8} align="center" sx={{ py: 8, color: alpha('#ffffff', 0.5) }}>
                     <Stack spacing={3} alignItems="center">
                       <ShoppingBagIcon sx={{ fontSize: 72, color: alpha('#ffffff', 0.3) }} />
                       <Box>
@@ -897,7 +938,101 @@ const OrderManagement = () => {
           )}
         </TableContainer>
 
-        {/* Order Details Dialog */}
+        {/* More Actions Menu */}
+        <Menu
+          anchorEl={menuAnchorEl}
+          open={Boolean(menuAnchorEl)}
+          onClose={handleMenuClose}
+          PaperProps={{
+            sx: {
+              background: CARD_GRADIENT,
+              border: `1px solid ${BORDER_COLOR}`,
+              color: 'white',
+              minWidth: 200,
+            }
+          }}
+        >
+          {currentMenuOrder && (
+            <>
+              {/* Approve Option */}
+              {currentMenuOrder.status === 'pending' && (
+                <MenuItem onClick={() => {
+                  handleApproveOrder(currentMenuOrder.id);
+                  handleMenuClose();
+                }}>
+                  <ListItemIcon>
+                    <CheckIcon fontSize="small" sx={{ color: PRIMARY_COLOR }} />
+                  </ListItemIcon>
+                  <ListItemText>Approve Order</ListItemText>
+                </MenuItem>
+              )}
+
+              {/* Ship Option */}
+              {currentMenuOrder.status === 'approved' && (
+                <MenuItem onClick={() => {
+                  handleShipOrder(currentMenuOrder.id);
+                  handleMenuClose();
+                }}>
+                  <ListItemIcon>
+                    <ShippingIcon fontSize="small" sx={{ color: SECONDARY_COLOR }} />
+                  </ListItemIcon>
+                  <ListItemText>Mark as Shipped</ListItemText>
+                </MenuItem>
+              )}
+
+              {/* Deliver Option */}
+              {currentMenuOrder.status === 'shipped' && (
+                <MenuItem onClick={() => {
+                  handleDeliverOrder(currentMenuOrder.id);
+                  handleMenuClose();
+                }}>
+                  <ListItemIcon>
+                    <DoneIcon fontSize="small" sx={{ color: PRIMARY_COLOR }} />
+                  </ListItemIcon>
+                  <ListItemText>Mark as Delivered</ListItemText>
+                </MenuItem>
+              )}
+
+              {/* Cancel Option */}
+              {['pending', 'approved', 'shipped'].includes(currentMenuOrder.status) && (
+                <MenuItem onClick={() => {
+                  handleCancelOrder(currentMenuOrder.id);
+                  handleMenuClose();
+                }}>
+                  <ListItemIcon>
+                    <CancelIcon fontSize="small" sx={{ color: ACCENT_COLOR }} />
+                  </ListItemIcon>
+                  <ListItemText>Cancel Order</ListItemText>
+                </MenuItem>
+              )}
+
+              <Divider sx={{ borderColor: alpha('#ffffff', 0.1), my: 1 }} />
+
+              {/* Print Option */}
+              <MenuItem onClick={() => {
+                handlePrintOrder(currentMenuOrder);
+                handleMenuClose();
+              }}>
+                <ListItemIcon>
+                  <PrintIcon fontSize="small" sx={{ color: '#F29F58' }} />
+                </ListItemIcon>
+                <ListItemText>Print Invoice</ListItemText>
+              </MenuItem>
+
+              {/* Delete Option */}
+              <MenuItem onClick={() => {
+                handleDeleteOrder(currentMenuOrder.id);
+              }}>
+                <ListItemIcon>
+                  <DeleteIcon fontSize="small" sx={{ color: '#FF4757' }} />
+                </ListItemIcon>
+                <ListItemText sx={{ color: '#FF4757' }}>Delete Order</ListItemText>
+              </MenuItem>
+            </>
+          )}
+        </Menu>
+
+        {/* Order Details Dialog (existing code preserved) */}
         <Dialog
           open={orderDialogOpen}
           onClose={() => setOrderDialogOpen(false)}
@@ -1121,9 +1256,32 @@ const OrderManagement = () => {
                     </Button>
                   </Grid>
                   
+                  {/* NEW: Delete Button in Dialog */}
+                  <Grid item xs={12} sm={3}>
+                    <Button
+                      fullWidth
+                      variant="contained"
+                      startIcon={<DeleteIcon />}
+                      onClick={() => {
+                        if (window.confirm(`Delete order #${selectedOrder.id}? This action cannot be undone.`)) {
+                          handleDeleteOrder(selectedOrder.id);
+                          setOrderDialogOpen(false);
+                        }
+                      }}
+                      sx={{
+                        background: 'linear-gradient(135deg, #FF4757 0%, #FF3333 100%)',
+                        color: 'white',
+                        py: 1.5,
+                        '&:hover': { background: 'linear-gradient(135deg, #FF3333 0%, #FF4757 100%)' }
+                      }}
+                    >
+                      Delete Order
+                    </Button>
+                  </Grid>
+                  
                   {/* Dynamic Action Buttons */}
                   {selectedOrder.status === 'pending' && (
-                    <Grid item xs={12} sm={6}>
+                    <Grid item xs={12} sm={3}>
                       <Button
                         fullWidth
                         variant="contained"
@@ -1145,7 +1303,7 @@ const OrderManagement = () => {
                   )}
                   
                   {selectedOrder.status === 'approved' && (
-                    <Grid item xs={12} sm={6}>
+                    <Grid item xs={12} sm={3}>
                       <Button
                         fullWidth
                         variant="contained"
@@ -1167,7 +1325,7 @@ const OrderManagement = () => {
                   )}
                   
                   {selectedOrder.status === 'shipped' && (
-                    <Grid item xs={12} sm={6}>
+                    <Grid item xs={12} sm={3}>
                       <Button
                         fullWidth
                         variant="contained"
@@ -1177,7 +1335,7 @@ const OrderManagement = () => {
                           setOrderDialogOpen(false);
                         }}
                         sx={{
-                          background: 'linear-gradient(135deg, #7ED321 0%, #5BA816 100%)', // Using a distinct green for 'Delivered'
+                          background: 'linear-gradient(135deg, #7ED321 0%, #5BA816 100%)',
                           color: 'white',
                           py: 1.5,
                           '&:hover': { background: 'linear-gradient(135deg, #5BA816 0%, #7ED321 100%)' }
@@ -1188,9 +1346,9 @@ const OrderManagement = () => {
                     </Grid>
                   )}
 
-                  {/* Cancel Button (Always 1/4 width if other actions are present, or 1/2 width if not) */}
+                  {/* Cancel Button */}
                   {['pending', 'approved', 'shipped'].includes(selectedOrder.status) && (
-                    <Grid item xs={12} sm={6}>
+                    <Grid item xs={12} sm={3}>
                       <Button
                         fullWidth
                         variant="contained"

@@ -22,6 +22,7 @@ import ProductManagement from "./pages/ProductManagement";
 import OrderManagement from "./pages/OrderManagement";
 import MyProfilePage from "./pages/MyProfilePage";
 import ProfileSettingPage from "./pages/ProfileSettingPage";
+import CheckoutPopover from './components/CheckoutPopover'; // ADDED
 
 // Create a separate component for the main app content
 const MainAppContent = () => {
@@ -38,10 +39,16 @@ const MainAppContent = () => {
   const [snackbarSeverity, setSnackbarSeverity] = useState<'success' | 'error' | 'info' | 'warning'>('success');
   const [isScrolled, setIsScrolled] = useState(false);
 
+  // ADDED: States for CheckoutPopover
+  const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [selectedItems, setSelectedItems] = useState<any[]>([]);
+  const [selectedTotal, setSelectedTotal] = useState(0);
+  const [purchaseDialogOpen, setPurchaseDialogOpen] = useState(false);
+
   const productsSectionRef = useRef<HTMLDivElement>(null);
   const categoriesRef = useRef<HTMLDivElement>(null);
 
-  const { addToCart, isLoggedIn, cartCount, currentUser, createOrder, cart } = useUserStore();
+  const { addToCart, isLoggedIn, cartCount, currentUser, createOrder, cart, checkoutSelectedItems } = useUserStore();
 
   // Initialize store and log state
   useEffect(() => {
@@ -183,16 +190,33 @@ const MainAppContent = () => {
     }, 100);
   }, [addToCart, isLoggedIn]);
 
+  // FIXED: Updated handleBuyNow to open CheckoutPopover
   const handleBuyNow = useCallback((product: any) => {
+    console.log('🚀 Buy Now clicked:', {
+      id: product.id,
+      title: product.title || product.name,
+      price: product.price,
+      quantity: product.quantity || 1
+    });
+
     if (!isLoggedIn) {
       showSnackbar('Please login to proceed with purchase', 'warning');
       return;
     }
 
-    const productToAdd = {
-      id: product.id || product._id,
-      title: product.title || product.name || 'Unnamed Product',
-      price: product.price || product.currentPrice || 0,
+    // Calculate the price with discount if applicable
+    const discountPrice = product.discountPercentage > 0 
+      ? product.price * (1 - (product.discountPercentage || 0) / 100)
+      : product.price;
+
+    // Create the item for checkout
+    const checkoutItem = {
+      id: product.id || product._id || Date.now(),
+      productId: product.id || product._id,
+      productName: product.title || product.name || 'Unnamed Product',
+      quantity: product.quantity || 1,
+      price: discountPrice,
+      originalPrice: product.price || product.currentPrice || 0,
       discountPercentage: product.discountPercentage || 0,
       thumbnail: product.thumbnail || product.image || product.images?.[0] || '',
       category: product.category || '',
@@ -202,29 +226,27 @@ const MainAppContent = () => {
       stock: product.stock || 10,
       tags: product.tags || [],
       reviews: product.reviews || [],
-      quantity: product.quantity || 1,
-      productId: product.id || product._id,
-      productName: product.title || product.name || 'Unnamed Product',
       isSelected: true,
+      sellerId: 2 // Default seller ID as per your checkout logic
     };
 
-    addToCart(productToAdd, product.quantity || 1);
-    showSnackbar(`🚀 Redirecting to checkout...`, 'info');
-
-    // Navigate to checkout or create order directly
-    const selectedItems = cart.filter(item => item.isSelected);
-    if (selectedItems.length > 0) {
-      createOrder({
-        items: selectedItems,
-        total: selectedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0),
-        shippingAddress: currentUser?.address || '',
-        paymentMethod: 'credit_card',
-      });
-      showSnackbar(`Order created successfully!`, 'success');
-    }
-
+    // Set the selected items and total for checkout
+    setSelectedItems([checkoutItem]);
+    setSelectedTotal(discountPrice * (product.quantity || 1));
+    
+    // Open the checkout popover
+    setCheckoutOpen(true);
+    
+    // Close quick view modal
     setQuickViewOpen(false);
-  }, [addToCart, isLoggedIn, cart, createOrder, currentUser]);
+    
+    showSnackbar('Opening checkout...', 'info');
+  }, [isLoggedIn]);
+
+  const handleCheckoutComplete = useCallback(() => {
+    showSnackbar('🎉 Order placed successfully!', 'success');
+    setPurchaseDialogOpen(true);
+  }, []);
 
   const handleFilterChange = useCallback((filter: 'all' | 'popular' | 'new') => {
     console.log('🔘 Filter changed:', filter);
@@ -494,8 +516,17 @@ const MainAppContent = () => {
         product={quickViewProduct}
         onClose={handleCloseQuickView}
         onAddToCart={handleAddToCart}
-        onBuyNow={handleBuyNow}
+        onBuyNow={handleBuyNow}  // This now opens CheckoutPopover
         isLoggedIn={isLoggedIn}
+      />
+
+      {/* ADDED: Checkout Popover */}
+      <CheckoutPopover
+        isOpen={checkoutOpen}
+        onClose={() => setCheckoutOpen(false)}
+        selectedItems={selectedItems}
+        selectedTotal={selectedTotal}
+        onCheckoutComplete={handleCheckoutComplete}
       />
 
       {/* Loading Overlay */}

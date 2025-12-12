@@ -34,7 +34,7 @@ import CheckCircle from '@mui/icons-material/CheckCircle';
 import { useUserStore } from '../store/userStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import PaymentModal from './PaymentModal';
-import MyPurchaseDialog from './MyPurchaseDialog'; // Import MyPurchaseDialog
+import MyPurchaseDialog from './MyPurchaseDialog';
 
 const usdFormatted = new Intl.NumberFormat('en-US', {
   style: 'currency',
@@ -46,6 +46,7 @@ interface CheckoutPopoverProps {
   onClose: () => void;
   selectedItems: any[];
   selectedTotal: number;
+  onCheckoutComplete?: () => void; // Add this callback
 }
 
 const CheckoutPopover: React.FC<CheckoutPopoverProps> = ({
@@ -53,6 +54,7 @@ const CheckoutPopover: React.FC<CheckoutPopoverProps> = ({
   onClose,
   selectedItems,
   selectedTotal,
+  onCheckoutComplete, // Use this callback
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -79,7 +81,7 @@ const CheckoutPopover: React.FC<CheckoutPopoverProps> = ({
   const [generatedReceipt, setGeneratedReceipt] = useState<string | null>(null);
   const [isPaymentConfirmed, setIsPaymentConfirmed] = useState(false);
   const [confirmedPaymentMethod, setConfirmedPaymentMethod] = useState<'GCASH' | 'PAYMAYA' | null>(null);
-  const [purchaseDialogOpen, setPurchaseDialogOpen] = useState(false); // State to control MyPurchaseDialog
+  const [purchaseDialogOpen, setPurchaseDialogOpen] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -120,10 +122,6 @@ const CheckoutPopover: React.FC<CheckoutPopoverProps> = ({
     setReceiptImage(receiptUrl);
     setIsPaymentConfirmed(true);
     setConfirmedPaymentMethod(paymentMethod);
-    
-    setTimeout(() => {
-      handleAutoCheckout();
-    }, 1500);
   };
 
   // Helper function to group items by seller (always seller 2)
@@ -180,8 +178,6 @@ const CheckoutPopover: React.FC<CheckoutPopoverProps> = ({
     setIsProcessing(true);
 
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
       // Create orders
       handleCreateOrders();
       
@@ -199,6 +195,12 @@ const CheckoutPopover: React.FC<CheckoutPopoverProps> = ({
         setIsProcessing(false);
         setIsPaymentConfirmed(false);
         setConfirmedPaymentMethod(null);
+        setPurchaseDialogOpen(true); // Open MyPurchaseDialog after checkout
+        
+        // Call the callback if provided
+        if (onCheckoutComplete) {
+          onCheckoutComplete();
+        }
       }, 2000);
     } catch (error) {
       setNotification({
@@ -215,7 +217,8 @@ const CheckoutPopover: React.FC<CheckoutPopoverProps> = ({
   const handleFinalOrder = async () => {
     if (selectedItems.length === 0) return;
 
-    if (paymentMethod !== 'COD' && !generatedReceipt && !isPaymentConfirmed) {
+    // FIXED: For digital payments, require payment confirmation
+    if (paymentMethod !== 'COD' && !isPaymentConfirmed) {
       setNotification({
         open: true,
         message: `Please complete ${paymentMethod} payment first.`,
@@ -245,13 +248,16 @@ const CheckoutPopover: React.FC<CheckoutPopoverProps> = ({
           onClose();
           setIsProcessing(false);
           setPurchaseDialogOpen(true); // Open MyPurchaseDialog after checkout
+          
+          // Call the callback if provided
+          if (onCheckoutComplete) {
+            onCheckoutComplete();
+          }
         }, 2000);
 
       } else {
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        
-        checkoutSelectedItems();
-        
+        // For GCASH/PAYMAYA, the order was already created in handleAutoCheckout
+        // Just show success and close
         setNotification({
           open: true,
           message: `🎉 ${paymentMethod} payment confirmed! Order placed for ${usdFormatted.format(selectedTotal)}.`,
@@ -264,6 +270,11 @@ const CheckoutPopover: React.FC<CheckoutPopoverProps> = ({
           setIsPaymentConfirmed(false);
           setConfirmedPaymentMethod(null);
           setPurchaseDialogOpen(true); // Open MyPurchaseDialog after checkout
+          
+          // Call the callback if provided
+          if (onCheckoutComplete) {
+            onCheckoutComplete();
+          }
         }, 2000);
       }
     } catch (error) {
@@ -957,7 +968,7 @@ const CheckoutPopover: React.FC<CheckoutPopoverProps> = ({
                     fullWidth
                     variant="contained"
                     onClick={handleFinalOrder}
-                    disabled={selectedItems.length === 0 || isProcessing || (paymentMethod !== 'COD' && !generatedReceipt && !isPaymentConfirmed)}
+                    disabled={selectedItems.length === 0 || isProcessing || (paymentMethod !== 'COD' && !isPaymentConfirmed)}
                     startIcon={<PaymentIcon sx={{ fontSize: isMobile ? '1rem' : '1.25rem' }} />}
                     size={isMobile ? "small" : "medium"}
                     sx={{
@@ -990,7 +1001,7 @@ const CheckoutPopover: React.FC<CheckoutPopoverProps> = ({
                     )}
                   </Button>
                   
-                  {paymentMethod !== 'COD' && !generatedReceipt && !isPaymentConfirmed && (
+                  {paymentMethod !== 'COD' && !isPaymentConfirmed && (
                     <Typography variant="caption" sx={{ 
                       color: alpha('#FFFFFF', 0.5), 
                       mt: isMobile ? 1.5 : 2, 
@@ -1060,7 +1071,7 @@ const CheckoutPopover: React.FC<CheckoutPopoverProps> = ({
       {/* MyPurchaseDialog */}
       <MyPurchaseDialog
         open={purchaseDialogOpen}
-        onClose={() => setPurchaseDialogOpen(false)} // Close handler for MyPurchaseDialog
+        onClose={() => setPurchaseDialogOpen(false)}
       />
 
       {/* Notification Snackbar */}

@@ -1,4 +1,3 @@
-// components/PaymentModal.tsx
 import React, { useState, useEffect } from 'react';
 import {
   Modal,
@@ -58,12 +57,14 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
   const [mpin, setMpin] = useState('••••');
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [autoCheckoutTriggered, setAutoCheckoutTriggered] = useState(false);
 
   useEffect(() => {
     if (open) {
       setStep(1);
       setError(null);
       setIsProcessing(false);
+      setAutoCheckoutTriggered(false);
     }
   }, [open]);
 
@@ -218,6 +219,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
     setIsProcessing(true);
     setStep(2);
 
+    // Simulate payment processing
     setTimeout(() => {
       setStep(3);
       setIsProcessing(false);
@@ -229,15 +231,16 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
       const receiptBlob = new Blob([receiptHtml], { type: 'text/html' });
       const receiptUrl = URL.createObjectURL(receiptBlob);
       
+      // Trigger payment success callback
+      onPaymentSuccess(receiptUrl);
+      
+      // Trigger auto-checkout after a delay
       setTimeout(() => {
-        onPaymentSuccess(receiptUrl);
-        
-        if (onAutoCheckout) {
+        if (onAutoCheckout && !autoCheckoutTriggered) {
+          setAutoCheckoutTriggered(true);
           onAutoCheckout();
         }
-        
-        onClose();
-      }, 1500);
+      }, 2000);
     }, 2500);
   };
 

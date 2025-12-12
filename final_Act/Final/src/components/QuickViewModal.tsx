@@ -1,7 +1,4 @@
 // components/QuickViewModal.tsx
-import { useUserStore } from '../store/userStore';
-// import Grid from '@mui/material/Grid'; // Grid removed
-
 import React, { useState, useEffect } from 'react';
 import {
   Modal,
@@ -29,13 +26,10 @@ import {
   Shield,
   Inventory,
   ZoomIn,
-  ContentCopy,
-  CheckCircle,
   ArrowBackIos,
   ArrowForwardIos,
 } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
-
 
 interface QuickViewModalProps {
   open: boolean;
@@ -59,7 +53,6 @@ const QuickViewModal: React.FC<QuickViewModalProps> = ({
   const [quantity, setQuantity] = useState(1);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [zoomOpen, setZoomOpen] = useState(false);
-  const [copied, setCopied] = useState(false);
   
   const discountPrice = product?.price * (1 - (product?.discountPercentage || 0) / 100);
   
@@ -124,13 +117,6 @@ const QuickViewModal: React.FC<QuickViewModalProps> = ({
     }
   };
 
-  const handleCopyLink = () => {
-    // In a real app, this would copy the product URL
-    navigator.clipboard.writeText(`https://example.com/products/${product.id}`);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
   if (!product) return null;
 
   return (
@@ -154,8 +140,7 @@ const QuickViewModal: React.FC<QuickViewModalProps> = ({
               maxWidth: { xs: '95%', sm: 800, md: 900 },
               maxHeight: '90vh',
               overflow: 'auto',
-              // Increased opacity slightly for better contrast on product image
-              backgroundColor: alpha('#0A081F', 0.98), 
+              backgroundColor: alpha('#0A081F', 0.98),
               backdropFilter: 'blur(20px)',
               border: '1px solid rgba(120, 119, 198, 0.3)',
               borderRadius: 3,
@@ -209,38 +194,37 @@ const QuickViewModal: React.FC<QuickViewModalProps> = ({
               )}
             </AnimatePresence>
 
-            {/* Replaced Grid container with Flexbox for layout */}
+            {/* Main Content */}
             <Box
               sx={{
                 p: { xs: 2, sm: 3, md: 4 },
                 display: 'flex',
                 flexDirection: { xs: 'column', md: 'row' },
-                gap: 4, // Spacing between image and details
+                gap: 4,
               }}
             >
-              {/* Left Column - Images (Now a Box component) */}
+              {/* Left Column - Images */}
               <Box
                 sx={{
-                  flex: 1, // Takes up 50% width on md+ screens
+                  flex: 1,
                   minWidth: { md: '50%' },
                 }}
               >
                 <Box sx={{ position: 'relative' }}>
-                  {/* Main Image Container - Centered and responsive */}
+                  {/* Main Image Container */}
                   <Box
                     sx={{
                       width: '100%',
                       height: { xs: 320, sm: 380, md: 420 },
                       borderRadius: 2,
                       overflow: 'hidden',
-                      // Slightly brighter background for image area
-                      backgroundColor: alpha('#FFFFFF', 0.05), 
+                      backgroundColor: alpha('#FFFFFF', 0.05),
                       mb: 2,
                       position: 'relative',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      border: '1px solid rgba(255, 255, 255, 0.12)', // Subtle border
+                      border: '1px solid rgba(255, 255, 255, 0.12)',
                       cursor: 'zoom-in',
                     }}
                     onClick={handleZoomClick}
@@ -264,7 +248,7 @@ const QuickViewModal: React.FC<QuickViewModalProps> = ({
                       </Box>
                     )}
 
-                    {/* Main Product Image - Perfectly centered and sized */}
+                    {/* Main Product Image */}
                     <Box
                       sx={{
                         width: '100%',
@@ -272,7 +256,7 @@ const QuickViewModal: React.FC<QuickViewModalProps> = ({
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        p: 3, // Padding ensures the image isn't too large/small
+                        p: 3,
                       }}
                     >
                       <img
@@ -459,17 +443,17 @@ const QuickViewModal: React.FC<QuickViewModalProps> = ({
                 </Box>
               </Box>
 
-              {/* Right Column - Details (Now a Box component) */}
+              {/* Right Column - Details */}
               <Box
                 sx={{
-                  flex: 1, // Takes up 50% width on md+ screens
+                  flex: 1,
                   minWidth: { md: '50%' },
                   display: 'flex', 
                   flexDirection: 'column'
                 }}
               >
                 <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                  {/* Category & Actions */}
+                  {/* Category */}
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
                     <Chip
                       label={product.category}
@@ -481,7 +465,6 @@ const QuickViewModal: React.FC<QuickViewModalProps> = ({
                         fontSize: '0.75rem',
                       }}
                     />
-                    {/* Action buttons (Favorite/Share) removed as requested */}
                   </Box>
 
                   {/* Title */}
@@ -747,7 +730,7 @@ const QuickViewModal: React.FC<QuickViewModalProps> = ({
         </Fade>
       </Modal>
 
-      {/* Image Zoom Modal (The product picture popover) */}
+      {/* Image Zoom Modal */}
       <Dialog
         open={zoomOpen}
         onClose={() => setZoomOpen(false)}
@@ -850,8 +833,8 @@ const QuickViewModal: React.FC<QuickViewModalProps> = ({
               width: '100%',
               height: '100%',
               display: 'flex',
-              alignItems: 'center', // Centers vertically
-              justifyContent: 'center', // Centers horizontally
+              alignItems: 'center',
+              justifyContent: 'center',
               p: 4,
             }}
           >
@@ -859,11 +842,11 @@ const QuickViewModal: React.FC<QuickViewModalProps> = ({
               src={product?.images?.[selectedImage] || product?.thumbnail}
               alt={`${product?.title} - Full view`}
               style={{
-                maxWidth: '100%', // Ensures image is not too large for the screen
-                maxHeight: '100%', // Ensures image is not too large for the screen
+                maxWidth: '100%',
+                maxHeight: '100%',
                 width: 'auto',
                 height: 'auto',
-                objectFit: 'contain', // Ensures the whole image is visible
+                objectFit: 'contain',
                 borderRadius: 8,
               }}
             />
