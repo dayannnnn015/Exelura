@@ -1,4 +1,3 @@
-// CheckoutPopover.tsx - Mobile Optimized
 import React, { useState, useEffect } from 'react';
 import {
   Modal,
@@ -57,7 +56,13 @@ const CheckoutPopover: React.FC<CheckoutPopoverProps> = ({
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'md'));
-  const { removeFromCart, checkoutSelectedItems } = useUserStore();
+  const { 
+    currentUser, 
+    removeFromCart, 
+    checkoutSelectedItems, 
+    createOrder,
+    syncProductsWithAPI
+  } = useUserStore();
   
   const [address, setAddress] = useState('123 Main St, Baguio City, Philippines');
   const [paymentMethod, setPaymentMethod] = useState<'COD' | 'GCASH' | 'PAYMAYA'>('COD');
@@ -76,13 +81,16 @@ const CheckoutPopover: React.FC<CheckoutPopoverProps> = ({
 
   useEffect(() => {
     if (isOpen) {
+      // Sync products from API before checkout
+      syncProductsWithAPI();
+      
       setIsProcessing(false);
       setReceiptImage(null);
       setGeneratedReceipt(null);
       setIsPaymentConfirmed(false);
       setConfirmedPaymentMethod(null);
     }
-  }, [isOpen]);
+  }, [isOpen, syncProductsWithAPI]);
 
   const handleRemoveItem = (itemId: number) => {
     removeFromCart(itemId);
@@ -116,6 +124,54 @@ const CheckoutPopover: React.FC<CheckoutPopoverProps> = ({
     }, 1500);
   };
 
+  // Helper function to group items by seller (always seller 2)
+  const groupItemsBySeller = () => {
+    // All items go to seller 2
+    return { 2: selectedItems };
+  };
+
+  const handleCreateOrders = () => {
+    const itemsBySeller = groupItemsBySeller();
+    const taxRate = 0.09;
+    
+    Object.entries(itemsBySeller).forEach(([sellerIdStr, sellerItems]) => {
+      const sellerId = 2; // Always seller 2
+      const subtotal = sellerItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+      const tax = subtotal * taxRate;
+      const shippingFee = 0;
+      const total = subtotal + tax + shippingFee;
+      
+      const orderData = {
+        userId: currentUser?.id || 1,
+        customerName: currentUser?.name || 'Customer',
+        customerEmail: currentUser?.email || 'customer@example.com',
+        customerPhone: currentUser?.phone,
+        items: sellerItems.map(item => ({
+          id: item.id,
+          productId: item.productId,
+          productName: item.productName,
+          quantity: item.quantity,
+          price: item.price,
+          thumbnail: item.thumbnail,
+          sellerId: 2 // Always seller 2
+        })),
+        subtotal,
+        shippingFee,
+        tax,
+        total,
+        status: 'pending' as const,
+        shippingAddress: address,
+        paymentMethod: paymentMethod === 'COD' ? 'cash_on_delivery' : 
+                      paymentMethod === 'GCASH' ? 'gcash' : 'paymaya',
+        paymentStatus: paymentMethod === 'COD' ? 'pending' : 'paid',
+        sellerId: 2, // Always seller 2
+        notes: `Payment via ${paymentMethod}`
+      };
+      
+      createOrder(orderData);
+    });
+  };
+
   const handleAutoCheckout = async () => {
     if (selectedItems.length === 0) return;
 
@@ -124,6 +180,10 @@ const CheckoutPopover: React.FC<CheckoutPopoverProps> = ({
     try {
       await new Promise(resolve => setTimeout(resolve, 1000));
       
+      // Create orders
+      handleCreateOrders();
+      
+      // Clear cart
       checkoutSelectedItems();
       
       setNotification({
@@ -165,6 +225,9 @@ const CheckoutPopover: React.FC<CheckoutPopoverProps> = ({
     setIsProcessing(true);
 
     try {
+      // Create orders
+      handleCreateOrders();
+      
       if (paymentMethod === 'COD') {
         await new Promise(resolve => setTimeout(resolve, 1500));
         
@@ -253,6 +316,7 @@ const CheckoutPopover: React.FC<CheckoutPopoverProps> = ({
               mx: isMobile ? 1 : 2,
             }}
           >
+            {/* Header */}
             <Box sx={{ 
               p: isMobile ? 1.5 : 3, 
               borderBottom: '1px solid rgba(120, 119, 198, 0.2)',
@@ -294,6 +358,7 @@ const CheckoutPopover: React.FC<CheckoutPopoverProps> = ({
               </IconButton>
             </Box>
 
+            {/* Content */}
             <Box sx={{ 
               flex: 1, 
               overflowY: 'auto',
@@ -319,8 +384,10 @@ const CheckoutPopover: React.FC<CheckoutPopoverProps> = ({
                 gap: isMobile ? 2 : 4 
               }}>
                 
+                {/* Left Column - Shipping & Payment */}
                 <Box sx={{ flex: 1, minWidth: 0 }}>
                   
+                  {/* Shipping Address */}
                   <Box sx={{ 
                     mb: isMobile ? 2 : 4, 
                     p: isMobile ? 1.5 : 3, 
@@ -374,6 +441,7 @@ const CheckoutPopover: React.FC<CheckoutPopoverProps> = ({
                     />
                   </Box>
                   
+                  {/* Payment Method */}
                   <Box sx={{ 
                     p: isMobile ? 1.5 : 3, 
                     border: '1px solid rgba(120, 119, 198, 0.2)', 
@@ -473,6 +541,7 @@ const CheckoutPopover: React.FC<CheckoutPopoverProps> = ({
                     </RadioGroup>
                   </Box>
                   
+                  {/* Digital Payment Section */}
                   {(paymentMethod === 'GCASH' || paymentMethod === 'PAYMAYA') && (
                     <Box sx={{ 
                       mt: isMobile ? 2 : 3, 
@@ -659,7 +728,7 @@ const CheckoutPopover: React.FC<CheckoutPopoverProps> = ({
                             >
                               <Box sx={{ textAlign: 'center' }}>
                                 <Typography variant={isMobile ? "body1" : "h6"} fontWeight="bold" sx={{ fontSize: isMobile ? '0.9rem' : '1rem' }}>
-                                  {paymentMethod} RECEIPT
+                                  ${paymentMethod} RECEIPT
                                 </Typography>
                                 <Typography variant="caption" sx={{ fontSize: isMobile ? '0.65rem' : '0.75rem' }}>
                                   Click to view & print
@@ -674,8 +743,10 @@ const CheckoutPopover: React.FC<CheckoutPopoverProps> = ({
 
                 </Box>
 
+                {/* Right Column - Order Summary & Items */}
                 <Box sx={{ flex: 1, minWidth: 0 }}>
                   
+                  {/* Order Summary */}
                   <Box sx={{ 
                       p: isMobile ? 1.5 : 3, 
                       backgroundColor: alpha('#FFFFFF', 0.03),
@@ -877,6 +948,7 @@ const CheckoutPopover: React.FC<CheckoutPopoverProps> = ({
                     </List>
                   </Box>
 
+                  {/* Place Order Button */}
                   <Button
                     fullWidth
                     variant="contained"
@@ -926,6 +998,7 @@ const CheckoutPopover: React.FC<CheckoutPopoverProps> = ({
                     </Typography>
                   )}
 
+                  {/* Features */}
                   <Box sx={{ 
                     mt: isMobile ? 2 : 3, 
                     p: isMobile ? 1 : 2, 
@@ -970,6 +1043,7 @@ const CheckoutPopover: React.FC<CheckoutPopoverProps> = ({
         </Fade>
       </Modal>
 
+      {/* Payment Modal */}
       <PaymentModal
         open={paymentModalOpen}
         onClose={() => setPaymentModalOpen(false)}
@@ -979,6 +1053,7 @@ const CheckoutPopover: React.FC<CheckoutPopoverProps> = ({
         onAutoCheckout={handleAutoCheckout}
       />
 
+      {/* Notification Snackbar */}
       <Snackbar
         open={notification.open}
         autoHideDuration={5000}

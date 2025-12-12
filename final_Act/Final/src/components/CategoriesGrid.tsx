@@ -1,3 +1,4 @@
+
 import React from 'react';
 import {
     Box,
@@ -38,8 +39,18 @@ import {
     Star,
     Diamond,
     FlashOn,
+    Smartphone,
+    Laptop,
+    Spa,
+    Watch,
+    ShoppingBag,
+    Home,
+    LocalMall,
+    DirectionsCar,
+    Face,
 } from '@mui/icons-material';
-import { GetCategoriesWithCounts } from '../API/ProductsAPI';
+import axios from 'axios';
+import { PRODUCTS_ENDPOINT } from '../configs/constants';
 
 // --- Styled Components ---
 
@@ -188,6 +199,196 @@ const StyledMenuItem = styled(MenuItem)(({ theme }) => ({
     },
 }));
 
+// Function to fetch categories from the API
+const fetchCategoriesWithCounts = async () => {
+    try {
+        // First get all categories
+        const categoriesResponse = await axios.get(`${PRODUCTS_ENDPOINT}/categories`);
+        let categories = categoriesResponse.data || [];
+        
+        // Filter out 'lighting' category and replace 'skincare' with 'beauty', 'automotive' with 'vehicle'
+        categories = categories
+            .filter((category: string) => category !== 'lighting')
+            .map((category: string) => {
+                if (category === 'skincare') return 'beauty';
+                if (category === 'automotive') return 'vehicle';
+                return category;
+            })
+            .filter((value: string, index: number, self: string[]) => self.indexOf(value) === index); // Remove duplicates
+        
+        // Create a map to count products per category
+        const productCounts: { [key: string]: number } = {};
+        
+        // Fetch some products to get category counts (limited to 100 for performance)
+        const productsResponse = await axios.get(`${PRODUCTS_ENDPOINT}?limit=100`);
+        const products = productsResponse.data.products || [];
+        
+        // Count products per category (with category name mapping)
+        products.forEach((product: any) => {
+            let category = product.category || 'uncategorized';
+            // Apply the same mapping to product categories
+            if (category === 'skincare') category = 'beauty';
+            if (category === 'automotive') category = 'vehicle';
+            productCounts[category] = (productCounts[category] || 0) + 1;
+        });
+        
+        // Map categories with their counts and enhance with UI properties
+        return categories.map((category: string, index: number) => {
+            const colorMap: { [key: string]: string } = {
+                'smartphones': '#FF6B95',
+                'laptops': '#4ECDC4',
+                'fragrances': '#FFD166',
+                'beauty': '#06D6A0',
+                'groceries': '#118AB2',
+                'home-decoration': '#EF476F',
+                'furniture': '#FF9A76',
+                'tops': '#A663CC',
+                'womens-dresses': '#FF8A5B',
+                'womens-shoes': '#00B4D8',
+                'mens-shirts': '#38B000',
+                'mens-shoes': '#7209B7',
+                'mens-watches': '#3A86FF',
+                'womens-watches': '#FF006E',
+                'womens-bags': '#8338EC',
+                'womens-jewellery': '#FB5607',
+                'sunglasses': '#80ED99',
+                'vehicle': '#00BBF9',
+                'motorcycle': '#F15BB5',
+            };
+            
+            const iconMap: { [key: string]: React.ReactNode } = {
+                'smartphones': <Smartphone />,
+                'laptops': <Laptop />,
+                'fragrances': <Spa />,
+                'beauty': <Face />,
+                'groceries': <ShoppingBag />,
+                'home-decoration': <Home />,
+                'furniture': <Home />,
+                'tops': <LocalMall />,
+                'womens-dresses': <LocalMall />,
+                'womens-shoes': <LocalMall />,
+                'mens-shirts': <LocalMall />,
+                'mens-shoes': <LocalMall />,
+                'mens-watches': <Watch />,
+                'womens-watches': <Watch />,
+                'womens-bags': <ShoppingBag />,
+                'womens-jewellery': <Diamond />,
+                'sunglasses': <Diamond />,
+                'vehicle': <DirectionsCar />,
+                'motorcycle': <DirectionsCar />,
+            };
+            
+            const defaultCategories = ['smartphones', 'laptops', 'fragrances', 'beauty', 'groceries'];
+            const popularCategories = ['smartphones', 'laptops', 'fragrances', 'womens-dresses', 'mens-shirts'];
+            
+            return {
+                id: index + 1,
+                name: category,
+                displayName: category.split('-').map((word: string) => 
+                    word.charAt(0).toUpperCase() + word.slice(1)
+                ).join(' '),
+                slug: category,
+                productCount: productCounts[category] || Math.floor(Math.random() * 50) + 10,
+                color: colorMap[category] || '#7877C6',
+                icon: iconMap[category] || <Category />,
+                isNew: !defaultCategories.includes(category),
+                isPopular: popularCategories.includes(category)
+            };
+        });
+        
+    } catch (error) {
+        console.error('Error fetching categories:', error);
+        // Return mock categories based on ProductsAPI structure
+        return getMockCategories();
+    }
+};
+
+// Mock categories fallback
+const getMockCategories = () => {
+    const categories = [
+        'smartphones',
+        'laptops', 
+        'fragrances',
+        'beauty',
+        'groceries',
+        'home-decoration',
+        'furniture',
+        'tops',
+        'womens-dresses',
+        'womens-shoes',
+        'mens-shirts',
+        'mens-shoes',
+        'mens-watches',
+        'womens-watches',
+        'womens-bags',
+        'womens-jewellery',
+        'sunglasses',
+        'vehicle',
+        'motorcycle'
+    ];
+    
+    const colorMap: { [key: string]: string } = {
+        'smartphones': '#FF6B95',
+        'laptops': '#4ECDC4',
+        'fragrances': '#FFD166',
+        'beauty': '#06D6A0',
+        'groceries': '#118AB2',
+        'home-decoration': '#EF476F',
+        'furniture': '#FF9A76',
+        'tops': '#A663CC',
+        'womens-dresses': '#FF8A5B',
+        'womens-shoes': '#00B4D8',
+        'mens-shirts': '#38B000',
+        'mens-shoes': '#7209B7',
+        'mens-watches': '#3A86FF',
+        'womens-watches': '#FF006E',
+        'womens-bags': '#8338EC',
+        'womens-jewellery': '#FB5607',
+        'sunglasses': '#80ED99',
+        'vehicle': '#00BBF9',
+        'motorcycle': '#F15BB5'
+    };
+    
+    const iconMap: { [key: string]: React.ReactNode } = {
+        'smartphones': <Smartphone />,
+        'laptops': <Laptop />,
+        'fragrances': <Spa />,
+        'beauty': <Face />,
+        'groceries': <ShoppingBag />,
+        'home-decoration': <Home />,
+        'furniture': <Home />,
+        'tops': <LocalMall />,
+        'womens-dresses': <LocalMall />,
+        'womens-shoes': <LocalMall />,
+        'mens-shirts': <LocalMall />,
+        'mens-shoes': <LocalMall />,
+        'mens-watches': <Watch />,
+        'womens-watches': <Watch />,
+        'womens-bags': <ShoppingBag />,
+        'womens-jewellery': <Diamond />,
+        'sunglasses': <Diamond />,
+        'vehicle': <DirectionsCar />,
+        'motorcycle': <DirectionsCar />
+    };
+    
+    const defaultCategories = ['smartphones', 'laptops', 'fragrances', 'beauty', 'groceries'];
+    const popularCategories = ['smartphones', 'laptops', 'fragrances', 'womens-dresses', 'mens-shirts'];
+    
+    return categories.map((category, index) => ({
+        id: index + 1,
+        name: category,
+        displayName: category.split('-').map((word: string) => 
+            word.charAt(0).toUpperCase() + word.slice(1)
+        ).join(' '),
+        slug: category,
+        productCount: Math.floor(Math.random() * 100) + 20,
+        color: colorMap[category] || '#7877C6',
+        icon: iconMap[category] || <Category />,
+        isNew: !defaultCategories.includes(category),
+        isPopular: popularCategories.includes(category)
+    }));
+};
+
 // --- Main Component ---
 
 interface CategoriesGridProps {
@@ -211,11 +412,11 @@ const CategoriesGrid: React.FC<CategoriesGridProps> = ({ onSelectCategory }) => 
         const fetchCategories = async () => {
             try {
                 setIsLoading(true);
-                const data = await GetCategoriesWithCounts();
+                const data = await fetchCategoriesWithCounts();
                 setCategories(data);
             } catch (error) {
                 console.error("Error fetching categories:", error);
-                setCategories([]);
+                setCategories(getMockCategories());
             } finally {
                 setIsLoading(false);
             }
@@ -337,40 +538,6 @@ const CategoriesGrid: React.FC<CategoriesGridProps> = ({ onSelectCategory }) => 
                             >
                                 {category.displayName}
                             </Typography>
-                            <Box sx={{ display: 'flex', gap: 0.5, flexShrink: 0 }}>
-                                {category.isNew && (
-                                    <Chip
-                                        label="New"
-                                        size="small"
-                                        icon={<FlashOn sx={{ fontSize: '0.7rem' }} />}
-                                        sx={{
-                                            height: 18,
-                                            fontSize: '0.65rem',
-                                            backgroundColor: alpha('#4ECDC4', 0.2),
-                                            color: '#4ECDC4',
-                                            fontWeight: 700,
-                                            borderRadius: 6,
-                                            border: `1px solid ${alpha('#4ECDC4', 0.3)}`,
-                                        }}
-                                    />
-                                )}
-                                {category.isPopular && (
-                                    <Chip
-                                        label="Popular"
-                                        size="small"
-                                        icon={<TrendingUp sx={{ fontSize: '0.7rem' }} />}
-                                        sx={{
-                                            height: 18,
-                                            fontSize: '0.65rem',
-                                            backgroundColor: alpha('#FF6B95', 0.2),
-                                            color: '#FF6B95',
-                                            fontWeight: 700,
-                                            borderRadius: 6,
-                                            border: `1px solid ${alpha('#FF6B95', 0.3)}`,
-                                        }}
-                                    />
-                                )}
-                            </Box>
                         </Box>
                         <Typography 
                             variant="caption" 
@@ -385,7 +552,7 @@ const CategoriesGrid: React.FC<CategoriesGridProps> = ({ onSelectCategory }) => 
                             }}
                         >
                             <Inventory fontSize="inherit" sx={{ fontSize: '0.85rem', opacity: 0.8 }} />
-                            {category.productCount} products
+                            Available products
                         </Typography>
                     </Box>
                 </Box>
@@ -500,19 +667,6 @@ const CategoriesGrid: React.FC<CategoriesGridProps> = ({ onSelectCategory }) => 
                                 }}
                             >
                                 {category.displayName}
-                            </Typography>
-                            <Typography 
-                                variant="caption" 
-                                sx={{ 
-                                    color: alpha('#FFFFFF', 0.7),
-                                    fontSize: '0.8rem',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: 0.5,
-                                    fontWeight: 500,
-                                }}
-                            >
-                                {category.productCount} products
                             </Typography>
                         </Box>
                     </StyledMenuItem>
@@ -646,17 +800,6 @@ const CategoriesGrid: React.FC<CategoriesGridProps> = ({ onSelectCategory }) => 
                                     }}
                                 >
                                     {selectedCategory && isMobile ? 'Selected' : 'Categories'}
-                                </Typography>
-                                <Typography 
-                                    variant="caption" 
-                                    sx={{ 
-                                        color: alpha('#FFFFFF', 0.6),
-                                        fontSize: '0.75rem',
-                                        fontWeight: 500,
-                                        letterSpacing: '0.3px',
-                                    }}
-                                >
-                                    Premium collection
                                 </Typography>
                             </Box>
                         </Box>
@@ -828,7 +971,7 @@ const CategoriesGrid: React.FC<CategoriesGridProps> = ({ onSelectCategory }) => 
                                         fontSize: '0.9rem',
                                         letterSpacing: '0.3px',
                                     }}>
-                                        {filteredCategories.length} premium categories
+                                        {filteredCategories.length} categories
                                     </Typography>
                                     <Typography 
                                         variant="caption" 
@@ -840,23 +983,9 @@ const CategoriesGrid: React.FC<CategoriesGridProps> = ({ onSelectCategory }) => 
                                             fontWeight: 500,
                                         }}
                                     >
-                                        {filteredCategories.reduce((sum, cat) => sum + cat.productCount, 0)} exclusive products
+                                        From Luxury Elite Store
                                     </Typography>
                                 </Box>
-                                <Chip
-                                    label="Premium"
-                                    size="small"
-                                    icon={<Star sx={{ fontSize: '0.8rem' }} />}
-                                    sx={{
-                                        height: 24,
-                                        fontSize: '0.75rem',
-                                        background: 'linear-gradient(135deg, rgba(242, 159, 88, 0.2) 0%, rgba(120, 119, 198, 0.2) 100%)',
-                                        color: '#F29F58',
-                                        fontWeight: 700,
-                                        borderRadius: 10,
-                                        border: '1px solid rgba(242, 159, 88, 0.3)',
-                                    }}
-                                />
                             </Box>
                         )}
                     </Box>
