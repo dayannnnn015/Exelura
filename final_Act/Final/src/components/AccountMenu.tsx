@@ -1,5 +1,4 @@
-// AccountMenu.tsx - Fixed navigation for Profile Settings & My Profile
-import { useNavigate } from "react-router-dom";
+// AccountMenu.tsx - Final with MessagesPopover
 import * as React from 'react';
 import Box from '@mui/material/Box';
 import Avatar from '@mui/material/Avatar';
@@ -30,16 +29,20 @@ import MyPurchaseDialog from "../components/MyPurchaseDialog";
 import StorefrontIcon from '@mui/icons-material/Storefront';
 import SwitchAccountIcon from '@mui/icons-material/SwitchAccount';
 import Button from '@mui/material/Button';
-import Paper from '@mui/material/Paper';
-import Stack from '@mui/material/Stack';
 import HomeIcon from '@mui/icons-material/Home';
 import ChatIcon from '@mui/icons-material/Chat';
 import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive';
 import Badge from '@mui/material/Badge';
+import { useNavigate } from 'react-router-dom';
+
+// Import Popover Components
+import NotificationsPopover from "./NotificationsPopover";
+import MessagesPopover from "./MessagesPopover";
 
 interface AccountMenuProps {
   onSearch: (searchTerm: string) => void;
   scrolled: boolean;
+  onNavigateToSellerDashboard?: () => void;
   unreadCount?: number;
   messageCount?: number;
 }
@@ -52,17 +55,22 @@ const CSS_VARS = {
   primaryOrange: '#F29F58',
 };
 
-export default function AccountMenu({ onSearch, scrolled }: AccountMenuProps) {
+export default function AccountMenu({ onSearch, scrolled, onNavigateToSellerDashboard }: AccountMenuProps) {
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const [searchTerm, setSearchTerm] = React.useState("");
   const [snackbarOpen, setSnackbarOpen] = React.useState(false);
   const [snackbarMessage, setSnackbarMessage] = React.useState("");
   const [isSearchExpanded, setIsSearchExpanded] = React.useState(false);
   const [purchaseDialogOpen, setPurchaseDialogOpen] = React.useState(false);
-  const [sellerModePromptOpen, setSellerModePromptOpen] = React.useState(false);
-  const [unreadNotifications, setUnreadNotifications] = React.useState(0);
-  const [unreadMessages, setUnreadMessages] = React.useState(0);
-  const [orders] = React.useState<any[]>([]); // Simulated orders array
+  const [unreadNotifications, setUnreadNotifications] = React.useState(3);
+  const [unreadMessages, setUnreadMessages] = React.useState(5);
+  
+  // State for popovers
+  const [notificationsAnchorEl, setNotificationsAnchorEl] = React.useState<HTMLElement | null>(null);
+  const [messagesAnchorEl, setMessagesAnchorEl] = React.useState<HTMLElement | null>(null);
+  
+  const notificationsOpen = Boolean(notificationsAnchorEl);
+  const messagesOpen = Boolean(messagesAnchorEl);
 
   const navigate = useNavigate();
   const theme = useTheme();
@@ -141,6 +149,11 @@ export default function AccountMenu({ onSearch, scrolled }: AccountMenuProps) {
   const handleSwitchToSeller = () => {
     handleSimulatedAction('Switched to seller account!', switchToSeller);
     handleClose();
+    if (onNavigateToSellerDashboard) {
+      onNavigateToSellerDashboard();
+    } else {
+      navigate("/seller-dashboard");
+    }
   };
 
   const handleSwitchToUser = () => {
@@ -148,74 +161,48 @@ export default function AccountMenu({ onSearch, scrolled }: AccountMenuProps) {
     handleClose();
   };
 
-  const handleGoToSellerDashboard = () => {
-    if (!isSeller) {
-      setSellerModePromptOpen(true);
-    } else {
-      navigate("/seller-dashboard");
-      handleClose();
-    }
-  };
-
-  // Add function to check for notifications
-  const checkNotifications = React.useCallback(() => {
-    // In a real app, you'd fetch this from an API
-    const hasPendingOrders = orders.some(order => 
-      order.status === 'approved' || order.status === 'shipped'
-    );
-    
-    // Simulate notification count
-    if (hasPendingOrders) {
-      setUnreadNotifications(prev => prev + 1);
-    }
-  }, [orders]);
-
-  // Add useEffect to simulate checking notifications
-  React.useEffect(() => {
-    if (isLoggedIn && !isSeller) {
-      // Simulate checking for order updates
-      const interval = setInterval(() => {
-        checkNotifications();
-      }, 30000); // Check every 30 seconds
-      
-      return () => clearInterval(interval);
-    }
-  }, [isLoggedIn, isSeller, checkNotifications]);
-
-  // Add function to handle notification click
-  const handleNotificationsClick = () => {
+  // Handle notifications click
+  const handleNotificationsClick = (event: React.MouseEvent<HTMLElement>) => {
     if (!isLoggedIn) {
       setSnackbarMessage('Please login to view notifications');
       setSnackbarOpen(true);
       return;
     }
     
-    // Show notifications dialog or navigate to notifications page
-    navigate('/notifications');
+    setNotificationsAnchorEl(event.currentTarget);
+    setUnreadNotifications(0);
     handleClose();
-    
-    // Reset notification count
+  };
+
+  const handleNotificationsClose = () => {
+    setNotificationsAnchorEl(null);
+  };
+
+  // Handle mark all notifications as read
+  const handleMarkAllNotificationsRead = () => {
     setUnreadNotifications(0);
   };
 
-  // Add function to handle messages click
-  const handleMessagesClick = () => {
+  // Handle messages click
+  const handleMessagesClick = (event: React.MouseEvent<HTMLElement>) => {
     if (!isLoggedIn) {
       setSnackbarMessage('Please login to send messages');
       setSnackbarOpen(true);
       return;
     }
     
-    // Navigate to messages page
-    navigate('/messages');
-    handleClose();
-    
-    // Reset message count
+    setMessagesAnchorEl(event.currentTarget);
     setUnreadMessages(0);
+    handleClose();
   };
 
-  // Add Home button handler
+  const handleMessagesClose = () => {
+    setMessagesAnchorEl(null);
+  };
+
+  // Add Home button handler - Navigates to main dashboard
   const handleHomeClick = () => {
+    // Always navigate to the main app dashboard (home page)
     navigate('/');
     if (isMobile && isSearchExpanded) {
       setTimeout(() => setIsSearchExpanded(false), 200);
@@ -227,7 +214,8 @@ export default function AccountMenu({ onSearch, scrolled }: AccountMenuProps) {
   const showSearchBar = !isMobile || isSearchExpanded;
 
   return (
-    <React.Fragment>
+    <Box>
+      {/* Main Header */}
       <Box sx={{
         position: 'sticky',
         top: 0,
@@ -275,11 +263,28 @@ export default function AccountMenu({ onSearch, scrolled }: AccountMenuProps) {
               onChange={(e) => setSearchTerm(e.target.value)}
               onKeyPress={handleKeyPress}
               InputProps={{
-                disableUnderline: isMobile,
                 startAdornment: <InputAdornment position="start"><SearchIcon sx={{ color: CSS_VARS.primaryOrange, fontSize: 24, mr: isMobile ? 1 : 0 }} /></InputAdornment>,
                 endAdornment: isMobile && isSearchExpanded && (<InputAdornment position="end"><IconButton onClick={handleCloseSearch} sx={{ color: CSS_VARS.primaryOrange, ml: 1, width: 40, height: 40 }}><CloseIcon /></IconButton></InputAdornment>),
-                sx: { backgroundColor: isMobile ? 'transparent' : alpha(CSS_VARS.primaryDark, 0.8), color: '#FFFFFF', borderRadius: 2, fontSize: '1rem', border: isMobile ? 'none' : '1px solid transparent', '& .MuiInputBase-input::placeholder': { color: 'rgba(255, 255, 255, 0.7)', opacity: 1 }, '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255, 255, 255, 0.2)', display: isMobile ? 'none' : 'block' }, '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: CSS_VARS.primaryOrange }, '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: CSS_VARS.primaryOrange, borderWidth: 2 } }
+                sx: { 
+                  backgroundColor: isMobile ? 'transparent' : alpha(CSS_VARS.primaryDark, 0.8), 
+                  color: '#FFFFFF', 
+                  borderRadius: 2, 
+                  fontSize: '1rem', 
+                  border: isMobile ? 'none' : '1px solid transparent',
+                  '& .MuiInputBase-input::placeholder': { color: 'rgba(255, 255, 255, 0.7)', opacity: 1 },
+                  '& .MuiOutlinedInput-notchedOutline': { 
+                    borderColor: 'rgba(255, 255, 255, 0.2)', 
+                    display: isMobile ? 'none' : 'block' 
+                  },
+                  '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: CSS_VARS.primaryOrange },
+                  '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: CSS_VARS.primaryOrange, borderWidth: 2 }
+                }
               }}
+              sx={isMobile ? {
+                '& .MuiInput-underline:before': { borderBottom: 'none' },
+                '& .MuiInput-underline:after': { borderBottom: 'none' },
+                '& .MuiInput-underline:hover:not(.Mui-disabled):before': { borderBottom: 'none' }
+              } : {}}
             />
           )}
         </Box>
@@ -294,8 +299,8 @@ export default function AccountMenu({ onSearch, scrolled }: AccountMenuProps) {
             </Tooltip>
           )}
           
-          {/* Home Button */}
-          <Tooltip title="Home">
+          {/* Home Button - Always navigates to main dashboard */}
+          <Tooltip title="Home (Main Dashboard)">
             <IconButton 
               onClick={handleHomeClick}
               sx={{ 
@@ -365,9 +370,25 @@ export default function AccountMenu({ onSearch, scrolled }: AccountMenuProps) {
       </Box>
 
       {/* ACCOUNT MENU */}
-      <Menu anchorEl={anchorEl} open={open} onClose={handleClose} PaperProps={{ sx: { backgroundColor: CSS_VARS.primaryDark, color: '#FFFFFF', border: `1px solid ${alpha(CSS_VARS.primaryOrange, 0.3)}`, boxShadow: '0 10px 40px rgba(0,0,0,0.5)', mt: 1, minWidth: 220 } }} transformOrigin={{ vertical: 'top', horizontal: 'right' }} anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}>
+      <Menu 
+        anchorEl={anchorEl} 
+        open={open} 
+        onClose={handleClose} 
+        PaperProps={{ 
+          sx: { 
+            backgroundColor: CSS_VARS.primaryDark, 
+            color: '#FFFFFF', 
+            border: `1px solid ${alpha(CSS_VARS.primaryOrange, 0.3)}`, 
+            boxShadow: '0 10px 40px rgba(0,0,0,0.5)', 
+            mt: 1, 
+            minWidth: 220 
+          } 
+        }} 
+        transformOrigin={{ vertical: 'top', horizontal: 'right' }} 
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
         {isLoggedIn ? (
-          <>
+          <div>
             <MenuItem sx={{ '&:hover': { backgroundColor: CSS_VARS.primaryPurple }, py: 1.5 }} onClick={(e) => e.stopPropagation()}>
               <ListItemIcon>
                 <Avatar sx={{ 
@@ -400,7 +421,7 @@ export default function AccountMenu({ onSearch, scrolled }: AccountMenuProps) {
             <Box sx={{ borderTop: `1px solid rgba(255, 255, 255, 0.1)`, my: 0.5 }} />
 
             {!isSeller ? (
-              <>
+              <div>
                 <MenuItem onClick={() => { navigate("/profile-setting"); handleClose(); }}>
                   <ListItemIcon><Settings fontSize="small" sx={{ color: CSS_VARS.primaryOrange }} /></ListItemIcon>
                   Profile Setting
@@ -414,18 +435,13 @@ export default function AccountMenu({ onSearch, scrolled }: AccountMenuProps) {
                   <ListItemIcon><Settings fontSize="small" sx={{ color: CSS_VARS.primaryOrange }} /></ListItemIcon>My Profile
                 </MenuItem>
 
-                <MenuItem onClick={handleGoToSellerDashboard} sx={{ '&:hover': { backgroundColor: CSS_VARS.primaryPurple } }}>
-                  <ListItemIcon><StorefrontIcon fontSize="small" sx={{ color: CSS_VARS.primaryOrange }} /></ListItemIcon>
-                  Seller Dashboard
-                </MenuItem>
-
                 <MenuItem onClick={handleSwitchToSeller} sx={{ '&:hover': { backgroundColor: CSS_VARS.primaryPurple } }}>
                   <ListItemIcon><SwitchAccountIcon fontSize="small" sx={{ color: CSS_VARS.primaryOrange }} /></ListItemIcon>
                   Switch to Seller
                 </MenuItem>
-              </>
+              </div>
             ) : (
-              <>
+              <div>
                 <MenuItem onClick={() => { navigate("/seller-dashboard"); handleClose(); }} sx={{ '&:hover': { backgroundColor: CSS_VARS.primaryPurple } }}>
                   <ListItemIcon><StorefrontIcon fontSize="small" sx={{ color: CSS_VARS.primaryOrange }} /></ListItemIcon>
                   Seller Dashboard
@@ -435,15 +451,15 @@ export default function AccountMenu({ onSearch, scrolled }: AccountMenuProps) {
                   <ListItemIcon><SwitchAccountIcon fontSize="small" sx={{ color: CSS_VARS.primaryOrange }} /></ListItemIcon>
                   Switch to User
                 </MenuItem>
-              </>
+              </div>
             )}
 
             <MenuItem onClick={handleLogout} sx={{ '&:hover': { backgroundColor: CSS_VARS.primaryPurple } }}>
               <ListItemIcon><Logout fontSize="small" sx={{ color: CSS_VARS.primaryOrange }} /></ListItemIcon>Logout
             </MenuItem>
-          </>
+          </div>
         ) : (
-          <>
+          <div>
             <MenuItem onClick={handleLogin} sx={{ '&:hover': { backgroundColor: CSS_VARS.primaryPurple } }}>
               <ListItemIcon><LoginIcon fontSize="small" sx={{ color: CSS_VARS.primaryOrange }} /></ListItemIcon>Login as User
             </MenuItem>
@@ -453,80 +469,26 @@ export default function AccountMenu({ onSearch, scrolled }: AccountMenuProps) {
             <MenuItem onClick={handleRegister} sx={{ '&:hover': { backgroundColor: CSS_VARS.primaryPurple } }}>
               <ListItemIcon><PersonAdd fontSize="small" sx={{ color: CSS_VARS.primaryOrange }} /></ListItemIcon>Register
             </MenuItem>
-          </>
+          </div>
         )}
       </Menu>
 
-      {/* Seller Mode Prompt Dialog */}
-      {sellerModePromptOpen && (
-        <Box
-          sx={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.8)',
-            backdropFilter: 'blur(10px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 2000,
-            px: 2,
-          }}
-        >
-          <Paper
-            sx={{
-              p: 4,
-              maxWidth: 500,
-              width: '100%',
-              background: `linear-gradient(135deg, ${CSS_VARS.primaryDark} 0%, ${alpha(CSS_VARS.primaryPurple, 0.8)} 100%)`,
-              border: `1px solid ${alpha(CSS_VARS.primaryOrange, 0.3)}`,
-              borderRadius: 3,
-              boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
-            }}
-          >
-            <Box sx={{ textAlign: 'center', mb: 3 }}>
-              <StorefrontIcon sx={{ fontSize: 60, color: CSS_VARS.primaryOrange, mb: 2 }} />
-              <Typography variant="h5" fontWeight="bold" gutterBottom>
-                Switch to Seller Mode
-              </Typography>
-              <Typography variant="body2" sx={{ color: alpha('#ffffff', 0.7), mb: 3 }}>
-                You need to switch to seller mode to access the Seller Dashboard. This will change your account view to seller mode.
-              </Typography>
-            </Box>
-            <Stack direction="row" spacing={2} justifyContent="center">
-              <Button
-                variant="outlined"
-                onClick={() => setSellerModePromptOpen(false)}
-                sx={{
-                  borderColor: CSS_VARS.primaryPink,
-                  color: CSS_VARS.primaryPink,
-                  '&:hover': { borderColor: CSS_VARS.primaryPink },
-                }}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="contained"
-                onClick={() => {
-                  handleSwitchToSeller();
-                  setSellerModePromptOpen(false);
-                  navigate("/seller-dashboard");
-                }}
-                sx={{
-                  background: `linear-gradient(135deg, ${CSS_VARS.primaryOrange} 0%, ${CSS_VARS.primaryPink} 100%)`,
-                  '&:hover': {
-                    background: `linear-gradient(135deg, ${CSS_VARS.primaryPink} 0%, ${CSS_VARS.primaryPurple} 100%)`,
-                  },
-                }}
-              >
-                Switch to Seller Mode
-              </Button>
-            </Stack>
-          </Paper>
-        </Box>
-      )}
+      {/* NOTIFICATIONS POPOVER */}
+      <NotificationsPopover
+        anchorEl={notificationsAnchorEl}
+        open={notificationsOpen}
+        onClose={handleNotificationsClose}
+        unreadCount={unreadNotifications}
+        onMarkAllRead={handleMarkAllNotificationsRead}
+      />
+
+      {/* MESSAGES POPOVER */}
+      <MessagesPopover
+        anchorEl={messagesAnchorEl}
+        open={messagesOpen}
+        onClose={handleMessagesClose}
+        unreadCount={unreadMessages}
+      />
 
       {/* PURCHASE DIALOG */}
       <MyPurchaseDialog open={purchaseDialogOpen} onClose={() => setPurchaseDialogOpen(false)} />
@@ -537,6 +499,6 @@ export default function AccountMenu({ onSearch, scrolled }: AccountMenuProps) {
           {snackbarMessage}
         </Alert>
       </Snackbar>
-    </React.Fragment>
+    </Box>
   );
 }

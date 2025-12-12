@@ -1,3 +1,4 @@
+
 import { useCallback, useEffect, useState, useRef } from "react";
 import { DEFAULT_PAGE, DEFAULT_PER_PAGE } from "../configs/constants";
 import {
@@ -111,12 +112,12 @@ const ProductSearch = ({
         return pages > 1;
     };
 
-    // Consistent grid columns for ALL categories
+    // Consistent grid columns for ALL categories - Adjusted for more width on desktop
     const getGridColumns = () => {
-        if (isExtraLarge) return 5;    // ≥1536px
-        if (isLarge) return 4;         // 1200-1535px
-        if (isMedium) return 3;        // 900-1199px
-        if (isSmall) return 2;         // 600-899px
+        if (isExtraLarge) return 6;    // ≥1536px - Changed from 5 to 6
+        if (isLarge) return 5;         // 1200-1535px - Changed from 4 to 5
+        if (isMedium) return 4;        // 900-1199px - Changed from 3 to 4
+        if (isSmall) return 3;         // 600-899px - Changed from 2 to 3
         if (isMobile) return 2;        // ≤599px
         return 2;
     };
@@ -136,21 +137,48 @@ const ProductSearch = ({
         return 1.75;
     };
 
-    // Consistent card height for ALL categories
+    // Reduced card height for ALL categories - Optimized for better density
     const getCardHeight = () => {
         if (viewMode === 'grid') {
-            if (isMobile) return 320;
-            if (isSmall) return 360;
-            if (isMedium) return 380;
-            return 400;
+            if (isMobile) return 320;      // Reduced from 380
+            if (isSmall) return 340;       // Reduced from 400
+            if (isMedium) return 360;      // Reduced from 420
+            return 380;                    // Reduced from 440
         } else {
             return 160;
         }
     };
 
+    // Get card dimensions for consistent sizing
+    const getCardDimensions = () => {
+        const height = getCardHeight();
+        // Calculate width based on aspect ratio (4:3 for image, plus content)
+        // Responsive width adjustments - wider on desktop
+        if (isExtraLarge) return { width: 260, height };      // Wider on desktop
+        if (isLarge) return { width: 230, height };           // Wider on desktop
+        if (isMedium) return { width: 210, height };          // Wider on tablet
+        if (isSmall) return { width: 190, height };           // Wider on tablet
+        if (isMobile) return { width: '100%', height };       // Full width on mobile
+        
+        return { width: '100%', height };
+    };
+
     // Consistent aspect ratio for ALL categories (4:3)
     const getAspectRatio = () => {
-        return isMobile ? (isSmallMobile ? '100%' : '75%') : '75%';
+        if (isMobile) {
+            if (isSmallMobile) return '100%';
+            return '75%';
+        }
+        return '70%'; // Slightly reduced for desktop to show more content
+    };
+
+    // Get consistent grid item width for desktop
+    const getGridItemWidth = () => {
+        if (isExtraLarge) return '16.666%';  // 6 items per row
+        if (isLarge) return '20%';           // 5 items per row
+        if (isMedium) return '25%';          // 4 items per row
+        if (isSmall) return '33.333%';       // 3 items per row
+        return '50%';                        // 2 items per row for mobile
     };
 
     const handleSearchProducts = useCallback(async () => {
@@ -319,7 +347,7 @@ const ProductSearch = ({
 
     const renderProductCard = (product: any) => {
         const discountPrice = product.price * (1 - product.discountPercentage / 100);
-        const cardHeight = getCardHeight();
+        const cardDimensions = getCardDimensions();
         const cardPadding = getCardPadding();
         const aspectRatio = getAspectRatio();
 
@@ -331,7 +359,12 @@ const ProductSearch = ({
                 exit={{ opacity: 0, scale: 0.95 }}
                 transition={{ duration: 0.2 }}
                 whileHover={{ y: -4 }}
-                style={{ width: '100%', height: '100%' }}
+                style={{ 
+                    width: '100%', 
+                    height: '100%',
+                    display: 'flex',
+                    justifyContent: 'center'
+                }}
             >
                 <Card
                     elevation={0}
@@ -339,9 +372,9 @@ const ProductSearch = ({
                     onMouseLeave={() => setHoveredProduct(null)}
                     onClick={(e) => handleProductClick(product.id, e)}
                     sx={{
-                        width: '100%',
-                        height: '100%',
-                        minHeight: cardHeight,
+                        width: cardDimensions.width,
+                        height: cardDimensions.height,
+                        minHeight: cardDimensions.height,
                         display: 'flex',
                         flexDirection: 'column',
                         backgroundColor: alpha('#FFFFFF', 0.08),
@@ -479,7 +512,7 @@ const ProductSearch = ({
                             display: 'flex',
                             flexDirection: 'column',
                             p: cardPadding,
-                            gap: 0.75,
+                            gap: 0.5,
                             '&:last-child': { pb: cardPadding }
                         }}
                     >
@@ -489,8 +522,8 @@ const ProductSearch = ({
                             size="small"
                             sx={{
                                 alignSelf: 'flex-start',
-                                fontSize: '0.6rem',
-                                height: 20,
+                                fontSize: '0.55rem',
+                                height: 18,
                                 backgroundColor: alpha('#7877C6', 0.15),
                                 color: '#7877C6',
                                 fontWeight: 600,
@@ -504,13 +537,13 @@ const ProductSearch = ({
                             fontWeight={600}
                             sx={{
                                 color: 'white',
-                                height: 40,
+                                height: 36,
                                 overflow: 'hidden',
                                 display: '-webkit-box',
                                 WebkitLineClamp: 2,
                                 WebkitBoxOrient: 'vertical',
-                                fontSize: isMobile ? '0.75rem' : '0.8rem',
-                                lineHeight: 1.3,
+                                fontSize: isMobile ? '0.7rem' : '0.75rem',
+                                lineHeight: 1.2,
                                 mb: 0.25,
                             }}
                         >
@@ -518,73 +551,75 @@ const ProductSearch = ({
                         </Typography>
 
                         {/* Rating & Stock - Mobile optimized */}
-                        <Box sx={{ 
-                            display: 'flex', 
-                            alignItems: 'center', 
-                            justifyContent: 'space-between', 
-                            mb: 0.75,
-                            gap: 0.5,
-                        }}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25 }}>
-                                <Rating 
-                                    value={product.rating} 
-                                    size={isMobile ? "small" : "small"}
-                                    readOnly 
-                                    precision={0.5}
-                                    sx={{ 
-                                        fontSize: isMobile ? '0.8rem' : '0.9rem',
-                                        '& .MuiRating-iconFilled': {
-                                            color: '#FFD700',
+                        {!isSmallMobile && (
+                            <Box sx={{ 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                justifyContent: 'space-between', 
+                                mb: 0.5,
+                                gap: 0.5,
+                            }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25 }}>
+                                    <Rating 
+                                        value={product.rating} 
+                                        size={isMobile ? "small" : "small"}
+                                        readOnly 
+                                        precision={0.5}
+                                        sx={{ 
+                                            fontSize: isMobile ? '0.75rem' : '0.85rem',
+                                            '& .MuiRating-iconFilled': {
+                                                color: '#FFD700',
+                                            }
+                                        }} 
+                                    />
+                                    <Typography variant="caption" sx={{ 
+                                        color: alpha('#FFFFFF', 0.7), 
+                                        fontSize: isMobile ? '0.55rem' : '0.65rem' 
+                                    }}>
+                                        ({product.rating?.toFixed(1)})
+                                    </Typography>
+                                </Box>
+                                <Chip
+                                    icon={<Inventory fontSize={isMobile ? "small" : "small"} />}
+                                    label={`${product.stock}`}
+                                    size="small"
+                                    sx={{
+                                        fontSize: isMobile ? '0.5rem' : '0.55rem',
+                                        height: 16,
+                                        backgroundColor: product.stock > 10 
+                                            ? alpha('#4CAF50', 0.2) 
+                                            : product.stock > 0 
+                                            ? alpha('#FF9800', 0.2) 
+                                            : alpha('#F44336', 0.2),
+                                        color: product.stock > 10 
+                                            ? '#4CAF50' 
+                                            : product.stock > 0 
+                                            ? '#FF9800' 
+                                            : '#F44336',
+                                        '& .MuiChip-icon': {
+                                            fontSize: isMobile ? 10 : 12,
+                                            ml: 0.25,
                                         }
-                                    }} 
+                                    }}
                                 />
-                                <Typography variant="caption" sx={{ 
-                                    color: alpha('#FFFFFF', 0.7), 
-                                    fontSize: isMobile ? '0.6rem' : '0.7rem' 
-                                }}>
-                                    ({product.rating?.toFixed(1)})
-                                </Typography>
                             </Box>
-                            <Chip
-                                icon={<Inventory fontSize={isMobile ? "small" : "small"} />}
-                                label={`${product.stock}`}
-                                size="small"
-                                sx={{
-                                    fontSize: isMobile ? '0.55rem' : '0.6rem',
-                                    height: 18,
-                                    backgroundColor: product.stock > 10 
-                                        ? alpha('#4CAF50', 0.2) 
-                                        : product.stock > 0 
-                                        ? alpha('#FF9800', 0.2) 
-                                        : alpha('#F44336', 0.2),
-                                    color: product.stock > 10 
-                                        ? '#4CAF50' 
-                                        : product.stock > 0 
-                                        ? '#FF9800' 
-                                        : '#F44336',
-                                    '& .MuiChip-icon': {
-                                        fontSize: isMobile ? 12 : 14,
-                                        ml: 0.25,
-                                    }
-                                }}
-                            />
-                        </Box>
+                        )}
 
                         {/* Price - Fixed to prevent wrapping */}
                         <Box sx={{ 
                             mt: 'auto', 
-                            pt: 0.75,
+                            pt: 0.5,
                             whiteSpace: 'nowrap',
                             overflow: 'hidden',
                         }}>
                             {product.discountPercentage > 0 ? (
-                                <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.75, flexWrap: 'nowrap' }}>
+                                <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5, flexWrap: 'nowrap' }}>
                                     <Typography
                                         variant="h6"
                                         fontWeight={700}
                                         sx={{ 
                                             color: '#FF6B95', 
-                                            fontSize: isMobile ? '0.85rem' : '0.95rem',
+                                            fontSize: isMobile ? '0.8rem' : '0.9rem',
                                             lineHeight: 1,
                                             whiteSpace: 'nowrap',
                                         }}
@@ -596,7 +631,7 @@ const ProductSearch = ({
                                         sx={{ 
                                             textDecoration: 'line-through', 
                                             color: alpha('#FFFFFF', 0.5),
-                                            fontSize: isMobile ? '0.65rem' : '0.7rem',
+                                            fontSize: isMobile ? '0.6rem' : '0.65rem',
                                             lineHeight: 1,
                                             whiteSpace: 'nowrap',
                                         }}
@@ -610,7 +645,7 @@ const ProductSearch = ({
                                     fontWeight={700}
                                     sx={{ 
                                         color: 'white', 
-                                        fontSize: isMobile ? '0.85rem' : '0.95rem',
+                                        fontSize: isMobile ? '0.8rem' : '0.9rem',
                                         lineHeight: 1,
                                         whiteSpace: 'nowrap',
                                     }}
@@ -621,18 +656,17 @@ const ProductSearch = ({
                         </Box>
 
                         {/* Action Buttons - Glassmorphic Cyberpunk Design */}
-                        <Stack direction="row" spacing={0.75} sx={{ mt: 1 }}>
-                            {/* Add to Cart Button */}
+                        <Stack direction="row" spacing={0.5} sx={{ mt: 0.75 }}>
+                            {/* Add to Cart Button - Removed icon */}
                             <Button
                                 variant="contained"
                                 size={isMobile ? "small" : "small"}
-                                startIcon={<ShoppingCart sx={{ fontSize: isMobile ? 10 : 11 }} />}
                                 onClick={(e) => handleAddToCart(product, e)}
                                 sx={{
                                     flex: 1,
-                                    fontSize: isMobile ? '0.6rem' : '0.65rem',
-                                    py: isMobile ? 0.3 : 0.35,
-                                    px: isMobile ? 0.25 : 0.5,
+                                    fontSize: isMobile ? '0.55rem' : '0.6rem',
+                                    py: isMobile ? 0.25 : 0.3,
+                                    px: isMobile ? 0.2 : 0.4,
                                     
                                     // Glassmorphic Cyberpunk Styling
                                     background: `linear-gradient(135deg, #7877C6 0%, #5A59A1 100%)`,
@@ -710,13 +744,13 @@ const ProductSearch = ({
                             <Button
                                 variant="contained"
                                 size={isMobile ? "small" : "small"}
-                                startIcon={<Bolt sx={{ fontSize: isMobile ? 10 : 11 }} />}
+                                startIcon={<Bolt sx={{ fontSize: isMobile ? 9 : 10 }} />}
                                 onClick={(e) => handleBuyNow(product, e)}
                                 sx={{
                                     flex: 1,
-                                    fontSize: isMobile ? '0.6rem' : '0.65rem',
-                                    py: isMobile ? 0.3 : 0.35,
-                                    px: isMobile ? 0.25 : 0.5,
+                                    fontSize: isMobile ? '0.55rem' : '0.6rem',
+                                    py: isMobile ? 0.25 : 0.3,
+                                    px: isMobile ? 0.2 : 0.4,
                                     
                                     // Glassmorphic Cyberpunk Styling - Red variant
                                     background: `linear-gradient(135deg, #FF6B95 0%, #FF5252 100%)`,
@@ -800,6 +834,7 @@ const ProductSearch = ({
         const discountPrice = product.price * (1 - product.discountPercentage / 100);
         const isSquareCard = isSmallMobile;
         const aspectRatio = isSquareCard ? '100%' : '75%';
+        const cardHeight = 320; // Reduced height for mobile cards
 
         return (
             <motion.div
@@ -810,6 +845,7 @@ const ProductSearch = ({
                 style={{ 
                     width: isSquareCard ? 'calc(50% - 6px)' : '100%',
                     flexShrink: 0,
+                    height: cardHeight,
                 }}
             >
                 <Card
@@ -937,6 +973,7 @@ const ProductSearch = ({
                             flex: 1,
                             display: 'flex',
                             flexDirection: 'column',
+                            gap: 0.25,
                         }}
                     >
                         <Typography
@@ -944,8 +981,8 @@ const ProductSearch = ({
                             sx={{
                                 color: '#7877C6',
                                 fontWeight: 600,
-                                mb: 0.25,
-                                fontSize: '0.55rem',
+                                mb: 0.1,
+                                fontSize: '0.5rem',
                             }}
                         >
                             {product.category}
@@ -961,55 +998,57 @@ const ProductSearch = ({
                                 display: '-webkit-box',
                                 WebkitLineClamp: 2,
                                 WebkitBoxOrient: 'vertical',
-                                fontSize: '0.7rem',
-                                lineHeight: 1.3,
+                                fontSize: '0.65rem',
+                                lineHeight: 1.2,
                             }}
                         >
                             {product.title}
                         </Typography>
 
-                        {/* Quick Stats for Mobile */}
-                        <Box sx={{ 
-                            display: 'flex', 
-                            alignItems: 'center', 
-                            justifyContent: 'space-between',
-                            gap: 0.5,
-                            mb: 0.5,
-                            flexWrap: 'wrap',
-                        }}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25 }}>
-                                <Rating 
-                                    value={product.rating} 
-                                    size="small" 
-                                    readOnly 
-                                    sx={{ fontSize: '0.75rem' }} 
+                        {/* Quick Stats for Mobile - Hidden on small mobile devices */}
+                        {!isSmallMobile && (
+                            <Box sx={{ 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                justifyContent: 'space-between',
+                                gap: 0.5,
+                                mb: 0.25,
+                                flexWrap: 'wrap',
+                            }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25 }}>
+                                    <Rating 
+                                        value={product.rating} 
+                                        size="small" 
+                                        readOnly 
+                                        sx={{ fontSize: '0.7rem' }} 
+                                    />
+                                    <Typography variant="caption" sx={{ 
+                                        color: alpha('#FFFFFF', 0.7), 
+                                        fontSize: '0.5rem' 
+                                    }}>
+                                        ({product.rating?.toFixed(1)})
+                                    </Typography>
+                                </Box>
+                                <Chip
+                                    label={`${product.stock} left`}
+                                    size="small"
+                                    sx={{
+                                        fontSize: '0.5rem',
+                                        height: 14,
+                                        backgroundColor: product.stock > 10 
+                                            ? alpha('#4CAF50', 0.2) 
+                                            : product.stock > 0 
+                                            ? alpha('#FF9800', 0.2) 
+                                            : alpha('#F44336', 0.2),
+                                        color: product.stock > 10 
+                                            ? '#4CAF50' 
+                                            : product.stock > 0 
+                                            ? '#FF9800' 
+                                            : '#F44336',
+                                    }}
                                 />
-                                <Typography variant="caption" sx={{ 
-                                    color: alpha('#FFFFFF', 0.7), 
-                                    fontSize: '0.55rem' 
-                                }}>
-                                    ({product.rating?.toFixed(1)})
-                                </Typography>
                             </Box>
-                            <Chip
-                                label={`${product.stock} left`}
-                                size="small"
-                                sx={{
-                                    fontSize: '0.55rem',
-                                    height: 16,
-                                    backgroundColor: product.stock > 10 
-                                        ? alpha('#4CAF50', 0.2) 
-                                        : product.stock > 0 
-                                        ? alpha('#FF9800', 0.2) 
-                                        : alpha('#F44336', 0.2),
-                                    color: product.stock > 10 
-                                        ? '#4CAF50' 
-                                        : product.stock > 0 
-                                        ? '#FF9800' 
-                                        : '#F44336',
-                                }}
-                            />
-                        </Box>
+                        )}
 
                         {/* Price - Fixed for Mobile */}
                         <Box sx={{ 
@@ -1022,7 +1061,7 @@ const ProductSearch = ({
                                     <Typography
                                         variant="subtitle2"
                                         fontWeight={700}
-                                        sx={{ color: '#FF6B95', fontSize: '0.8rem', whiteSpace: 'nowrap' }}
+                                        sx={{ color: '#FF6B95', fontSize: '0.75rem', whiteSpace: 'nowrap' }}
                                     >
                                         {usdFormatted.format(discountPrice)}
                                     </Typography>
@@ -1031,7 +1070,7 @@ const ProductSearch = ({
                                         sx={{ 
                                             textDecoration: 'line-through', 
                                             color: alpha('#FFFFFF', 0.5),
-                                            fontSize: '0.6rem',
+                                            fontSize: '0.55rem',
                                             whiteSpace: 'nowrap',
                                         }}
                                     >
@@ -1042,7 +1081,7 @@ const ProductSearch = ({
                                 <Typography
                                     variant="subtitle2"
                                     fontWeight={700}
-                                    sx={{ color: 'white', fontSize: '0.8rem', whiteSpace: 'nowrap' }}
+                                    sx={{ color: 'white', fontSize: '0.75rem', whiteSpace: 'nowrap' }}
                                 >
                                     {usdFormatted.format(product.price)}
                                 </Typography>
@@ -1269,12 +1308,18 @@ const ProductSearch = ({
                                         xl={2}
                                         key={index}
                                         sx={{ 
-                                            ...(isExtraLarge && { flexBasis: '20%', maxWidth: '20%' }),
+                                            ...(isExtraLarge && { flexBasis: '16.666%', maxWidth: '16.666%' }),
+                                            ...(isLarge && { flexBasis: '20%', maxWidth: '20%' }),
+                                            ...(isMedium && { flexBasis: '25%', maxWidth: '25%' }),
+                                            ...(isSmall && { flexBasis: '33.333%', maxWidth: '33.333%' }),
                                             minWidth: 0,
+                                            display: 'flex',
+                                            justifyContent: 'center',
                                         }}
                                     >
                                         <Skeleton
                                             variant="rectangular"
+                                            width={getCardDimensions().width}
                                             height={getCardHeight()}
                                             sx={{ 
                                                 borderRadius: 2,
@@ -1306,13 +1351,13 @@ const ProductSearch = ({
                                         display: 'flex', 
                                         flexWrap: 'wrap', 
                                         gap: 1.5,
-                                        justifyContent: isSmallMobile ? 'space-between' : 'flex-start',
+                                        justifyContent: isSmallMobile ? 'space-between' : 'center',
                                     }}>
                                         {products.map((product) => renderMobileProductCard(product))}
                                     </Box>
                                 ) : (
                                     // Desktop Grid with consistent columns for ALL categories
-                                    <Grid container spacing={getGridSpacing()}>
+                                    <Grid container spacing={getGridSpacing()} justifyContent="center">
                                         {products.map((product) => (
                                             <Grid
                                                 item
@@ -1324,10 +1369,23 @@ const ProductSearch = ({
                                                 key={product.id}
                                                 sx={{
                                                     display: 'flex',
-                                                    minHeight: getCardHeight(),
+                                                    justifyContent: 'center',
+                                                    alignItems: 'flex-start',
                                                     [theme.breakpoints.up('xl')]: {
+                                                        flexBasis: '16.666%',
+                                                        maxWidth: '16.666%',
+                                                    },
+                                                    [theme.breakpoints.between('lg', 'xl')]: {
                                                         flexBasis: '20%',
                                                         maxWidth: '20%',
+                                                    },
+                                                    [theme.breakpoints.between('md', 'lg')]: {
+                                                        flexBasis: '25%',
+                                                        maxWidth: '25%',
+                                                    },
+                                                    [theme.breakpoints.between('sm', 'md')]: {
+                                                        flexBasis: '33.333%',
+                                                        maxWidth: '33.333%',
                                                     },
                                                 }}
                                             >
@@ -1337,7 +1395,7 @@ const ProductSearch = ({
                                     </Grid>
                                 )
                             ) : (
-                                // List View
+                                // List View - Fixed for small devices
                                 <Box>
                                     {products.map((product) => (
                                         <motion.div
@@ -1351,7 +1409,7 @@ const ProductSearch = ({
                                                 onClick={(e) => handleProductClick(product.id, e)}
                                                 sx={{
                                                     mb: 2,
-                                                    p: 2,
+                                                    p: isMobile ? 1.5 : 2,
                                                     backgroundColor: alpha('#FFFFFF', 0.08),
                                                     backdropFilter: 'blur(20px)',
                                                     borderRadius: 2,
@@ -1359,12 +1417,13 @@ const ProductSearch = ({
                                                     transition: 'all 0.3s ease',
                                                     cursor: 'pointer',
                                                     display: 'flex',
-                                                    alignItems: 'center',
-                                                    gap: 2,
+                                                    flexDirection: isSmallMobile ? 'column' : 'row',
+                                                    alignItems: isSmallMobile ? 'flex-start' : 'center',
+                                                    gap: isSmallMobile ? 1.5 : 2,
                                                     '&:hover': {
                                                         borderColor: alpha('#7877C6', 0.6),
                                                         backgroundColor: alpha('#7877C6', 0.05),
-                                                        transform: 'translateX(4px)',
+                                                        transform: isMobile ? 'scale(1.02)' : 'translateX(4px)',
                                                     },
                                                     WebkitBackdropFilter: 'blur(20px)',
                                                 }}
@@ -1372,8 +1431,8 @@ const ProductSearch = ({
                                                 {/* Image */}
                                                 <Box
                                                     sx={{
-                                                        width: 100,
-                                                        height: 100,
+                                                        width: isSmallMobile ? '100%' : 100,
+                                                        height: isSmallMobile ? 120 : 100,
                                                         flexShrink: 0,
                                                         borderRadius: 1.5,
                                                         overflow: 'hidden',
@@ -1401,28 +1460,32 @@ const ProductSearch = ({
                                                             backgroundColor: alpha('#FFFFFF', 0.3),
                                                             backdropFilter: 'blur(10px)',
                                                             color: 'white',
-                                                            width: 24,
-                                                            height: 24,
-                                                            minWidth: 24,
-                                                            minHeight: 24,
+                                                            width: isMobile ? 22 : 24,
+                                                            height: isMobile ? 22 : 24,
+                                                            minWidth: isMobile ? 22 : 24,
+                                                            minHeight: isMobile ? 22 : 24,
                                                             '&:hover': {
                                                                 backgroundColor: alpha('#7877C6', 0.5),
                                                             },
                                                         }}
                                                     >
-                                                        <Visibility sx={{ fontSize: 14 }} />
+                                                        <Visibility sx={{ fontSize: isMobile ? 12 : 14 }} />
                                                     </IconButton>
                                                 </Box>
 
                                                 {/* Content */}
-                                                <Box sx={{ flex: 1, minWidth: 0 }}>
+                                                <Box sx={{ 
+                                                    flex: 1, 
+                                                    minWidth: 0,
+                                                    width: isSmallMobile ? '100%' : 'auto',
+                                                }}>
                                                     <Box sx={{ mb: 1 }}>
                                                         <Chip
                                                             label={product.category}
                                                             size="small"
                                                             sx={{
                                                                 mb: 0.5,
-                                                                fontSize: '0.7rem',
+                                                                fontSize: isMobile ? '0.6rem' : '0.7rem',
                                                                 backgroundColor: alpha('#7877C6', 0.15),
                                                                 color: '#7877C6',
                                                                 fontWeight: 600,
@@ -1437,9 +1500,10 @@ const ProductSearch = ({
                                                                 overflow: 'hidden',
                                                                 textOverflow: 'ellipsis',
                                                                 display: '-webkit-box',
-                                                                WebkitLineClamp: 2,
+                                                                WebkitLineClamp: isMobile ? 2 : 2,
                                                                 WebkitBoxOrient: 'vertical',
-                                                                fontSize: '0.9rem',
+                                                                fontSize: isMobile ? '0.8rem' : '0.9rem',
+                                                                lineHeight: 1.3,
                                                             }}
                                                         >
                                                             {product.title}
@@ -1450,22 +1514,30 @@ const ProductSearch = ({
                                                     <Box sx={{ 
                                                         display: 'flex', 
                                                         alignItems: 'center', 
-                                                        gap: 1.5, 
+                                                        gap: isMobile ? 0.75 : 1.5, 
                                                         flexWrap: 'wrap',
-                                                        mb: 1,
+                                                        mb: isMobile ? 0.75 : 1,
                                                     }}>
-                                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                                            <Rating value={product.rating} size="small" readOnly sx={{ fontSize: '1rem' }} />
-                                                            <Typography variant="body2" sx={{ color: alpha('#FFFFFF', 0.7), fontSize: '0.8rem' }}>
+                                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25 }}>
+                                                            <Rating 
+                                                                value={product.rating} 
+                                                                size={isMobile ? "small" : "small"} 
+                                                                readOnly 
+                                                                sx={{ fontSize: isMobile ? '0.85rem' : '1rem' }} 
+                                                            />
+                                                            <Typography variant="body2" sx={{ 
+                                                                color: alpha('#FFFFFF', 0.7), 
+                                                                fontSize: isMobile ? '0.65rem' : '0.8rem' 
+                                                            }}>
                                                                 {product.rating?.toFixed(1)}
                                                             </Typography>
                                                         </Box>
                                                         <Chip
-                                                            icon={<Inventory fontSize="small" />}
+                                                            icon={isMobile ? null : <Inventory fontSize="small" />}
                                                             label={`${product.stock} in stock`}
                                                             size="small"
                                                             sx={{
-                                                                fontSize: '0.7rem',
+                                                                fontSize: isMobile ? '0.6rem' : '0.7rem',
                                                                 backgroundColor: product.stock > 10 ? alpha('#4CAF50', 0.2) : alpha('#FF9800', 0.2),
                                                                 color: product.stock > 10 ? '#4CAF50' : '#FF9800',
                                                             }}
@@ -1476,25 +1548,38 @@ const ProductSearch = ({
                                                 {/* Price and Actions - Fixed for List View */}
                                                 <Box
                                                     sx={{
-                                                        width: 180,
+                                                        width: isSmallMobile ? '100%' : 180,
                                                         flexShrink: 0,
                                                         display: 'flex',
-                                                        flexDirection: 'column',
-                                                        alignItems: 'flex-end',
-                                                        gap: 1,
+                                                        flexDirection: isSmallMobile ? 'row' : 'column',
+                                                        alignItems: isSmallMobile ? 'center' : 'flex-end',
+                                                        justifyContent: isSmallMobile ? 'space-between' : 'flex-start',
+                                                        gap: isSmallMobile ? 1 : 1,
+                                                        mt: isSmallMobile ? 0.5 : 0,
                                                     }}
                                                 >
                                                     <Box sx={{ 
-                                                        textAlign: 'right',
+                                                        textAlign: isSmallMobile ? 'left' : 'right',
                                                         whiteSpace: 'nowrap',
                                                         overflow: 'hidden',
+                                                        flex: isSmallMobile ? 1 : 'none',
                                                     }}>
                                                         {product.discountPercentage > 0 ? (
-                                                            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                                                            <Box sx={{ 
+                                                                display: 'flex', 
+                                                                flexDirection: isSmallMobile ? 'row' : 'column', 
+                                                                alignItems: isSmallMobile ? 'center' : 'flex-end',
+                                                                gap: isSmallMobile ? 0.75 : 0.25,
+                                                            }}>
                                                                 <Typography
                                                                     variant="h6"
                                                                     fontWeight={700}
-                                                                    sx={{ color: '#FF6B95', fontSize: '1rem', whiteSpace: 'nowrap' }}
+                                                                    sx={{ 
+                                                                        color: '#FF6B95', 
+                                                                        fontSize: isMobile ? '0.85rem' : '1rem', 
+                                                                        whiteSpace: 'nowrap',
+                                                                        lineHeight: 1,
+                                                                    }}
                                                                 >
                                                                     {usdFormatted.format(product.price * (1 - product.discountPercentage / 100))}
                                                                 </Typography>
@@ -1503,8 +1588,9 @@ const ProductSearch = ({
                                                                     sx={{
                                                                         textDecoration: 'line-through',
                                                                         color: alpha('#FFFFFF', 0.5),
-                                                                        fontSize: '0.75rem',
+                                                                        fontSize: isMobile ? '0.65rem' : '0.75rem',
                                                                         whiteSpace: 'nowrap',
+                                                                        lineHeight: 1,
                                                                     }}
                                                                 >
                                                                     {usdFormatted.format(product.price)}
@@ -1514,24 +1600,36 @@ const ProductSearch = ({
                                                             <Typography
                                                                 variant="h6"
                                                                 fontWeight={700}
-                                                                sx={{ color: 'white', fontSize: '1rem', whiteSpace: 'nowrap' }}
+                                                                sx={{ 
+                                                                    color: 'white', 
+                                                                    fontSize: isMobile ? '0.85rem' : '1rem', 
+                                                                    whiteSpace: 'nowrap',
+                                                                    lineHeight: 1,
+                                                                }}
                                                             >
                                                                 {usdFormatted.format(product.price)}
                                                             </Typography>
                                                         )}
                                                     </Box>
 
-                                                    {/* List View Buttons */}
-                                                    <Stack direction="row" spacing={0.75}>
+                                                    {/* List View Buttons - Optimized for mobile */}
+                                                    <Stack 
+                                                        direction="row" 
+                                                        spacing={0.75}
+                                                        sx={{ 
+                                                            flexShrink: 0,
+                                                            width: isSmallMobile ? 'auto' : '100%',
+                                                            justifyContent: isSmallMobile ? 'flex-end' : 'flex-start',
+                                                        }}
+                                                    >
                                                         <Button
                                                             variant="contained"
                                                             size="small"
-                                                            startIcon={<ShoppingCart sx={{ fontSize: 12 }} />}
                                                             onClick={(e) => handleAddToCart(product, e)}
                                                             sx={{
-                                                                fontSize: '0.65rem',
-                                                                py: 0.4,
-                                                                px: 1,
+                                                                fontSize: isMobile ? '0.6rem' : '0.65rem',
+                                                                py: isMobile ? 0.3 : 0.4,
+                                                                px: isMobile ? 0.75 : 1,
                                                                 background: 'linear-gradient(135deg, #7877C6 0%, #5A59A1 100%)',
                                                                 backdropFilter: 'blur(10px)',
                                                                 border: '1px solid rgba(255, 255, 255, 0.15)',
@@ -1547,17 +1645,17 @@ const ProductSearch = ({
                                                                 }
                                                             }}
                                                         >
-                                                            Add
+                                                            {isMobile ? 'Add' : 'Add to Cart'}
                                                         </Button>
                                                         <Button
                                                             variant="contained"
                                                             size="small"
-                                                            startIcon={<Bolt sx={{ fontSize: 12 }} />}
+                                                            startIcon={isMobile ? null : <Bolt sx={{ fontSize: 12 }} />}
                                                             onClick={(e) => handleBuyNow(product, e)}
                                                             sx={{
-                                                                fontSize: '0.65rem',
-                                                                py: 0.4,
-                                                                px: 1,
+                                                                fontSize: isMobile ? '0.6rem' : '0.65rem',
+                                                                py: isMobile ? 0.3 : 0.4,
+                                                                px: isMobile ? 0.75 : 1,
                                                                 background: 'linear-gradient(135deg, #FF6B95 0%, #FF5252 100%)',
                                                                 backdropFilter: 'blur(10px)',
                                                                 border: '1px solid rgba(255, 255, 255, 0.15)',
@@ -1573,7 +1671,7 @@ const ProductSearch = ({
                                                                 }
                                                             }}
                                                         >
-                                                            Buy
+                                                            {isMobile ? 'Buy' : 'Buy Now'}
                                                         </Button>
                                                     </Stack>
                                                 </Box>

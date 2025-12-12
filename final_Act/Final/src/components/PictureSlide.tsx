@@ -26,14 +26,17 @@ const float = keyframes`
   50% { transform: translateY(-10px); }
 `;
 
-// MAIN CONTAINER - Fixed width and no shrink
+// MAIN CONTAINER - Adjusted for responsive height and width
 const MainContainer = styled(Box)(({ theme }) => ({
   width: '100%',
   minWidth: '100%',
   maxWidth: '100%',
   flex: '0 0 auto',
   position: 'relative',
-  height: 300,
+  height: 300, // Default height for larger screens
+  [theme.breakpoints.down('sm')]: {
+    height: 250, // Reduced height for small screens
+  },
   flexShrink: 0,
 }));
 
@@ -42,7 +45,7 @@ const SlideContainer = styled(Box)(({ theme }) => ({
   width: '100%',
   minWidth: '100%',
   maxWidth: '100%',
-  height: 300,
+  height: '100%', // Use 100% of MainContainer height
   borderRadius: 24,
   overflow: 'hidden',
   background: 'linear-gradient(135deg, #0F0C29 0%, #302B63 50%, #24243E 100%)',
@@ -68,8 +71,9 @@ const SlideContent = styled(Box)(({ theme }) => ({
     padding: theme.spacing(3),
   },
   [theme.breakpoints.down('sm')]: {
-    maxWidth: '90%',
-    minWidth: '90%',
+    // Crucial adjustment: allow full width on very small screens to prevent overflow
+    maxWidth: '100%',
+    minWidth: '100%',
     padding: theme.spacing(2),
   },
 }));
@@ -82,6 +86,7 @@ const BackgroundPattern = styled(Box)(({ theme }) => ({
   width: '50%',
   minWidth: '50%',
   background: 'linear-gradient(45deg, rgba(120, 119, 198, 0.1) 0%, transparent 100%)',
+  // Consider adjusting clipPath for small devices if it interferes with content
   clipPath: 'polygon(20% 0%, 100% 0%, 100% 100%, 0% 100%)',
   zIndex: 1,
 }));
@@ -141,11 +146,14 @@ const PictureSlide = () => {
   };
 
   useEffect(() => {
+    // Reset interval whenever currentSlide changes
     const interval = setInterval(() => {
-      nextSlide();
+      if (!isAnimating) { // Only advance if not animating from user interaction
+        setCurrentSlide((prev) => (prev + 1) % slides.length);
+      }
     }, 7000);
     return () => clearInterval(interval);
-  }, [currentSlide]);
+  }, [isAnimating]); // Dependency on isAnimating to re-init if needed
 
   const currentSlideData = slides[currentSlide];
 
@@ -157,7 +165,7 @@ const PictureSlide = () => {
           background: currentSlideData.bgPattern
         }} />
 
-        {/* Floating Elements */}
+        {/* Floating Elements (Keep its position relative to the SlideContainer) */}
         <Box
           sx={{
             position: 'absolute',
@@ -169,6 +177,8 @@ const PictureSlide = () => {
             width: 100,
             minWidth: 100,
             height: 100,
+            // Hide on extra small devices to save space/clutter
+            display: { xs: 'none', sm: 'block' } 
           }}
         >
           <Box
@@ -190,7 +200,7 @@ const PictureSlide = () => {
               backgroundColor: alpha(currentSlideData.color, 0.2),
               color: currentSlideData.color,
               border: `1px solid ${alpha(currentSlideData.color, 0.3)}`,
-              mb: 3,
+              mb: 2, // Reduced margin on mobile
               fontWeight: 700,
               fontSize: '0.75rem',
               height: 32,
@@ -202,13 +212,13 @@ const PictureSlide = () => {
             }}
           />
 
-          {/* Title */}
+          {/* Title - Smaller font on mobile */}
           <Typography
             variant="h2"
             sx={{
               fontWeight: 800,
               color: 'white',
-              fontSize: { xs: '2rem', md: '2.5rem' },
+              fontSize: { xs: '1.75rem', sm: '2rem', md: '2.5rem' }, // Adjusted xs
               mb: 1,
               animation: `${fadeIn} 1s ease-out`,
               textShadow: '0 4px 12px rgba(0,0,0,0.3)',
@@ -220,14 +230,14 @@ const PictureSlide = () => {
             {currentSlideData.title}
           </Typography>
 
-          {/* Subtitle */}
+          {/* Subtitle - Smaller font on mobile */}
           <Typography
             variant="h3"
             sx={{
               fontWeight: 700,
               color: alpha('#ffffff', 0.9),
-              mb: 2,
-              fontSize: { xs: '1.5rem', md: '2rem' },
+              mb: 1.5, // Reduced margin on mobile
+              fontSize: { xs: '1.25rem', sm: '1.5rem', md: '2rem' }, // Adjusted xs
               animation: `${fadeIn} 1.1s ease-out`,
               textShadow: '0 2px 8px rgba(0,0,0,0.2)',
               lineHeight: 1.2,
@@ -238,15 +248,15 @@ const PictureSlide = () => {
             {currentSlideData.subtitle}
           </Typography>
 
-          {/* Description */}
+          {/* Description - Smaller font and max width on mobile */}
           <Typography
             variant="body1"
             sx={{
               color: alpha('#ffffff', 0.8),
-              mb: 4,
-              fontSize: '1.1rem',
-              maxWidth: '80%',
-              minWidth: '80%',
+              mb: 3, // Reduced margin on mobile
+              fontSize: { xs: '0.9rem', sm: '1.0rem', md: '1.1rem' }, // Adjusted xs
+              maxWidth: { xs: '100%', sm: '90%', md: '80%' }, // Allows full width description on mobile
+              minWidth: { xs: '100%', sm: '90%', md: '80%' }, // Ensures width consistency
               animation: `${fadeIn} 1.2s ease-out`,
               fontWeight: 400,
               flexShrink: 0,
@@ -255,7 +265,7 @@ const PictureSlide = () => {
             {currentSlideData.description}
           </Typography>
 
-          {/* Action Button */}
+          {/* Action Button - Adjusted width/padding for mobile */}
           <Button
             variant="contained"
             startIcon={<ShoppingBag />}
@@ -264,13 +274,13 @@ const PictureSlide = () => {
               background: `linear-gradient(135deg, ${currentSlideData.color} 0%, ${alpha(currentSlideData.color, 0.8)} 100%)`,
               color: 'white',
               fontWeight: 700,
-              fontSize: '1rem',
-              px: 4,
-              py: 1.5,
+              fontSize: { xs: '0.9rem', md: '1rem' }, // Smaller font
+              px: { xs: 3, md: 4 }, // Reduced horizontal padding
+              py: { xs: 1, md: 1.5 }, // Reduced vertical padding
               borderRadius: 12,
-              maxWidth: 200,
-              minWidth: 200,
-              width: 200,
+              maxWidth: { xs: 150, md: 200 }, // Max width adjustment
+              minWidth: { xs: 150, md: 200 }, // Min width adjustment
+              width: { xs: 150, md: 200 }, // Width adjustment
               animation: `${fadeIn} 1.4s ease-out`,
               '&:hover': {
                 transform: 'translateY(-2px)',
@@ -286,23 +296,23 @@ const PictureSlide = () => {
           </Button>
         </SlideContent>
 
-        {/* Navigation Buttons */}
+        {/* Navigation Buttons (Reduced margin for small screens) */}
         <IconButton
           onClick={prevSlide}
           disabled={isAnimating}
           sx={{
             position: 'absolute',
-            left: 16,
+            left: { xs: 8, md: 16 }, // Reduced left margin
             top: '50%',
             transform: 'translateY(-50%)',
             backgroundColor: alpha('#ffffff', 0.15),
             backdropFilter: 'blur(10px)',
             color: 'white',
             border: '1px solid rgba(255, 255, 255, 0.1)',
-            width: 48,
-            height: 48,
-            minWidth: 48,
-            minHeight: 48,
+            width: 40, // Slightly smaller
+            height: 40, // Slightly smaller
+            minWidth: 40,
+            minHeight: 40,
             '&:hover': {
               backgroundColor: alpha('#ffffff', 0.25),
               transform: 'translateY(-50%) scale(1.1)',
@@ -320,17 +330,17 @@ const PictureSlide = () => {
           disabled={isAnimating}
           sx={{
             position: 'absolute',
-            right: 16,
+            right: { xs: 8, md: 16 }, // Reduced right margin
             top: '50%',
             transform: 'translateY(-50%)',
             backgroundColor: alpha('#ffffff', 0.15),
             backdropFilter: 'blur(10px)',
             color: 'white',
             border: '1px solid rgba(255, 255, 255, 0.1)',
-            width: 48,
-            height: 48,
-            minWidth: 48,
-            minHeight: 48,
+            width: 40, // Slightly smaller
+            height: 40, // Slightly smaller
+            minWidth: 40,
+            minHeight: 40,
             '&:hover': {
               backgroundColor: alpha('#ffffff', 0.25),
               transform: 'translateY(-50%) scale(1.1)',
@@ -343,11 +353,11 @@ const PictureSlide = () => {
           <ChevronRight />
         </IconButton>
 
-        {/* Slide Indicators */}
+        {/* Slide Indicators (Reduced margin for small screens) */}
         <Box
           sx={{
             position: 'absolute',
-            bottom: 24,
+            bottom: { xs: 16, md: 24 }, // Reduced bottom margin
             left: '50%',
             transform: 'translateX(-50%)',
             display: 'flex',
@@ -362,9 +372,9 @@ const PictureSlide = () => {
               key={index}
               onClick={() => !isAnimating && setCurrentSlide(index)}
               sx={{
-                width: index === currentSlide ? 24 : 8,
-                minWidth: index === currentSlide ? 24 : 8,
-                height: 8,
+                width: index === currentSlide ? 20 : 6, // Slightly smaller indicator
+                minWidth: index === currentSlide ? 20 : 6,
+                height: 6, // Slightly thinner indicator
                 borderRadius: 4,
                 backgroundColor: index === currentSlide
                   ? currentSlideData.color

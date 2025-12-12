@@ -1,3 +1,4 @@
+
 import { Container, Box, Grid, alpha } from "@mui/material";
 import ProductSearch from './components/ProductSearch';
 import AccountMenu from "./components/AccountMenu";
@@ -20,8 +21,6 @@ import { Routes, Route, useNavigate } from 'react-router-dom';
 import SellerDashboard from "./pages/SellerDashboard";
 import ProductManagement from "./pages/ProductManagement";
 import OrderManagement from "./pages/OrderManagement";
-import NotificationsPage from "./pages/NotificationsPage";
-import MessagesPage from "./pages/MessagesPage";
 
 // Create a separate component for the main app content
 const MainAppContent = () => {
@@ -599,10 +598,6 @@ function App() {
       <Route path="/seller-dashboard" element={<SellerDashboard />} />
       <Route path="/seller/products" element={<ProductManagement />} />
       <Route path="/seller/orders" element={<OrderManagement />} />
-
-      {/* New Routes */}
-      <Route path="/notifications" element={<NotificationsPage />} />
-      <Route path="/messages" element={<MessagesPage />} />
 
       {/* Main App Route */}
       <Route path="*" element={<MainAppContent />} />
