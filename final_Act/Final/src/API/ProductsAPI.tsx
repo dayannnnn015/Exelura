@@ -129,16 +129,30 @@ export const SearchProducts = async ({
     }
 }
 
-// Get seller products (ALL products belong to seller 2)
+// Get seller products (ALL products belong to seller 2) - UPDATED TO FETCH ALL PRODUCTS
 export const GetSellerProducts = async (sellerId?: number) => {
     console.log(`🛍️ GetSellerProducts called for seller:`, sellerId || 2);
     
     try {
         const sellerIdToUse = 2; // Always seller 2
         
-        // Get all products from API
-        const response = await axios.get(`${PRODUCTS_ENDPOINT}?limit=50`);
+        // Get ALL products from API - fetch without limit to get all products
+        const response = await axios.get(`${PRODUCTS_ENDPOINT}`);
         let products = response.data.products || [];
+        
+        // Check if we have all products or just a limited set
+        const totalFromAPI = response.data.total || products.length;
+        console.log(`📊 API returned ${products.length} products, total in API: ${totalFromAPI}`);
+        
+        // If the API has pagination and we don't have all products, fetch them all
+        if (totalFromAPI > products.length) {
+            console.log(`📦 Fetching all ${totalFromAPI} products...`);
+            
+            const limit = 100; // Use a large limit to get all at once if API supports
+            const allProductsResponse = await axios.get(`${PRODUCTS_ENDPOINT}?limit=${totalFromAPI}`);
+            products = allProductsResponse.data.products || products;
+            console.log(`✅ Now have ${products.length} products after fetching all`);
+        }
         
         // Assign ALL products to seller 2
         const sellerProducts = products.map((product: any) => ({
@@ -151,7 +165,11 @@ export const GetSellerProducts = async (sellerId?: number) => {
             updatedAt: new Date().toISOString(),
             thumbnail: product.thumbnail || product.images?.[0] || `https://via.placeholder.com/300x300?text=Product+${product.id}`,
             category: product.category || 'uncategorized',
-            price: product.price || 99.99
+            price: product.price || 99.99,
+            brand: product.brand || 'Luxury Elite',
+            discountPercentage: product.discountPercentage || 0,
+            rating: product.rating || 4.0 + (Math.random() * 1.0),
+            description: product.description || 'Premium quality product from our exclusive collection.'
         }));
         
         console.log(`✅ Found ${sellerProducts.length} products for seller 2`);

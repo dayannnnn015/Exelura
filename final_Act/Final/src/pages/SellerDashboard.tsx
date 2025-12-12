@@ -1,1283 +1,1063 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Box,
   Container,
   Grid,
   Paper,
   Typography,
-  Tabs,
-  Tab,
-  Card,
-  CardContent,
-  IconButton,
-  Chip,
   Stack,
-  LinearProgress,
-  Button,
   alpha,
-  Divider,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemAvatar,
-  Avatar,
-  Badge,
-  TextField,
-  InputAdornment,
-  Menu,
-  MenuItem,
-  Alert,
-  Snackbar,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  FormControl,
-  InputLabel,
-  Select,
-  OutlinedInput,
   CircularProgress,
-  Tooltip,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
-  TablePagination,
+  Chip,
+  IconButton,
+  Button,
+  Avatar,
+  AvatarGroup,
+  LinearProgress,
+  Divider,
+  Badge,
+  Tooltip,
 } from '@mui/material';
 import {
   Store as StoreIcon,
   Inventory as InventoryIcon,
   ShoppingBag as OrderIcon,
   TrendingUp as TrendingIcon,
-  MoreVert as MoreIcon,
-  Search as SearchIcon,
-  FilterList as FilterIcon,
-  CheckCircle as CheckIcon,
-  Pending as PendingIcon,
-  LocalShipping as ShippingIcon,
-  Cancel as CancelIcon,
-  Add as AddIcon,
-  Edit as EditIcon,
-  Delete as DeleteIcon,
-  Notifications as NotificationsIcon,
-  Dashboard as DashboardIcon,
   People as PeopleIcon,
   AttachMoney as MoneyIcon,
-  BarChart as ChartIcon,
-  ArrowBack as ArrowBackIcon,
-  SwitchAccount as SwitchAccountIcon,
-  Refresh as RefreshIcon,
   Visibility as VisibilityIcon,
-  AddPhotoAlternate as ImageIcon,
+  ArrowUpward as ArrowUpIcon,
+  ArrowDownward as ArrowDownIcon,
+  MoreVert as MoreVertIcon,
+  ShoppingCart as CartIcon,
   Category as CategoryIcon,
-  Home as HomeIcon,
-  ShoppingCart as ShoppingCartIcon,
-  AccountCircle as AccountCircleIcon,
-  LocationOn as LocationIcon,
-  Print as PrintIcon,
-  GridView as GridViewIcon,
-  FormatListBulleted as ListIcon,
+  PieChart as PieChartIcon,
+  Insights as InsightsIcon,
+  Star as StarIcon,
+  TrendingFlat as TrendingFlatIcon,
+  Notifications as NotificationsIcon,
+  Download as DownloadIcon,
+  FilterList as FilterIcon,
+  CalendarToday as CalendarIcon,
+  AccountCircle as AccountIcon,
+  LocalShipping as ShippingIcon,
+  CheckCircle as CheckIcon,
+  Warning as WarningIcon,
+  ShoppingBasket as BasketIcon,
+  Schedule as ScheduleIcon,
+  BarChart as BarChartIcon,
+  Storefront as StorefrontIcon,
+  LocalOffer as LocalOfferIcon,
+  Groups as GroupsIcon,
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+import { GetSellerProducts } from '../API/ProductsAPI';
+import SellerAccountMenu from '../components/SellerAccountMenu';
+import {
+  LineChart,
+  Line,
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip as RechartsTooltip,
+  Legend,
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  RadarChart,
+  Radar,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
+  Scatter,
+  ZAxis,
+} from 'recharts';
 
-interface Product {
-  id: number;
-  title: string;
-  category: string;
-  price: number;
-  stock: number;
-  sold: number;
-  status: 'active' | 'out_of_stock' | 'draft' | 'inactive';
-  thumbnail: string;
-  rating: number;
-  description?: string;
-}
+// Enhanced Palette
+const PALETTE = {
+  bgA: '#0A081F',
+  bgB: '#1A173B',
+  purple: '#7877C6',
+  teal: '#4ECDC4',
+  pink: '#FF6B95',
+  gold: '#F29F58',
+  green: '#4CAF50',
+  blue: '#2196F3',
+  orange: '#FF9800',
+  deepPurple: '#673AB7',
+  cyan: '#00BCD4',
+  lime: '#CDDC39',
+};
 
-interface Order {
-  id: number;
-  customerName: string;
-  customerEmail: string;
-  date: string;
-  items: number;
-  total: number;
-  status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
-  payment: 'paid' | 'pending' | 'refunded';
-}
+// Mock data optimized for 1920x1200
+const salesData = [
+  { month: 'Jan', sales: 4200, revenue: 2540, orders: 124, profit: 1820 },
+  { month: 'Feb', sales: 3200, revenue: 1458, orders: 98, profit: 1045 },
+  { month: 'Mar', sales: 2400, revenue: 10500, orders: 156, profit: 8900 },
+  { month: 'Apr', sales: 2980, revenue: 4208, orders: 112, profit: 3050 },
+  { month: 'May', sales: 2190, revenue: 5200, orders: 134, profit: 3950 },
+  { month: 'Jun', sales: 2690, revenue: 4100, orders: 108, profit: 2950 },
+  { month: 'Jul', sales: 3790, revenue: 4600, orders: 142, profit: 3350 },
+  { month: 'Aug', sales: 4500, revenue: 6400, orders: 165, profit: 4900 },
+  { month: 'Sep', sales: 4100, revenue: 5600, orders: 152, profit: 4200 },
+  { month: 'Oct', sales: 5400, revenue: 7800, orders: 198, profit: 6100 },
+  { month: 'Nov', sales: 5100, revenue: 7200, orders: 184, profit: 5600 },
+  { month: 'Dec', sales: 6200, revenue: 8900, orders: 210, profit: 7100 },
+];
 
-interface StatCard {
-  title: string;
-  value: string;
-  change: string;
-  icon: React.ReactElement;
-  color: string;
-}
+const categoryData = [
+  { name: 'Electronics', value: 42, revenue: 125000, growth: 12, items: 45 },
+  { name: 'Fashion', value: 28, revenue: 85000, growth: 8, items: 89 },
+  { name: 'Home & Garden', value: 18, revenue: 62000, growth: 15, items: 67 },
+  { name: 'Books', value: 22, revenue: 48000, growth: 5, items: 124 },
+  { name: 'Sports', value: 10, revenue: 32000, growth: 22, items: 56 },
+  { name: 'Beauty', value: 15, revenue: 45000, growth: 18, items: 78 },
+];
+
+const inventoryData = [
+  { name: 'In Stock', value: 65, color: PALETTE.teal, items: 423, valueGrowth: 8 },
+  { name: 'Low Stock', value: 18, color: PALETTE.gold, items: 117, valueGrowth: -2 },
+  { name: 'Out of Stock', value: 12, color: PALETTE.pink, items: 78, valueGrowth: -5 },
+  { name: 'Pre-order', value: 5, color: PALETTE.purple, items: 32, valueGrowth: 12 },
+];
+
+const customerInsightData = [
+  { subject: 'New Customers', current: 145, previous: 120, fullMark: 200 },
+  { subject: 'Repeat Orders', current: 112, previous: 98, fullMark: 200 },
+  { subject: 'Avg. Spend', current: 156, previous: 130, fullMark: 200 },
+  { subject: 'Satisfaction', current: 98, previous: 92, fullMark: 100 },
+  { subject: 'Referrals', current: 92, previous: 85, fullMark: 100 },
+  { subject: 'Engagement', current: 165, previous: 140, fullMark: 200 },
+];
+
+const topProductsData = [
+  { id: 1, name: 'Wireless Headphones Pro', category: 'Electronics', price: 199.99, sold: 1243, revenue: 248757.57, rating: 4.8, stock: 45, growth: 12 },
+  { id: 2, name: 'Organic Cotton T-Shirt', category: 'Fashion', price: 29.99, sold: 856, revenue: 25677.44, rating: 4.6, stock: 89, growth: 8 },
+  { id: 3, name: 'Smart Watch Series 5', category: 'Electronics', price: 349.99, sold: 567, revenue: 198444.33, rating: 4.9, stock: 23, growth: 25 },
+  { id: 4, name: 'Yoga Mat Premium', category: 'Sports', price: 49.99, sold: 432, revenue: 21599.68, rating: 4.7, stock: 156, growth: 15 },
+  { id: 5, name: 'Cookware Set 12pc', category: 'Home & Garden', price: 299.99, sold: 289, revenue: 86997.11, rating: 4.5, stock: 34, growth: 5 },
+  { id: 6, name: 'Skincare Bundle', category: 'Beauty', price: 89.99, sold: 398, revenue: 35816.02, rating: 4.8, stock: 67, growth: 32 },
+];
+
+const recentOrders = [
+  { id: '#ORD-7821', customer: 'John Smith', amount: 249.99, status: 'pending', date: '15 Jan 2024', items: 3, time: '14:30' },
+  { id: '#ORD-7820', customer: 'Jane Doe', amount: 89.50, status: 'approved', date: '14 Jan 2024', items: 1, time: '11:15' },
+  { id: '#ORD-7819', customer: 'Robert Johnson', amount: 1499.00, status: 'shipped', date: '13 Jan 2024', items: 5, time: '09:45' },
+  { id: '#ORD-7818', customer: 'Emily Davis', amount: 45.99, status: 'delivered', date: '12 Jan 2024', items: 2, time: '16:20' },
+  { id: '#ORD-7817', customer: 'Michael Brown', amount: 329.99, status: 'delivered', date: '11 Jan 2024', items: 4, time: '13:10' },
+];
+
+const performanceMetrics = [
+  { label: 'Conversion Rate', value: '3.2%', change: 2.1, icon: <TrendingIcon />, color: PALETTE.green },
+  { label: 'Avg. Order Value', value: '$156.80', change: 8.5, icon: <MoneyIcon />, color: PALETTE.teal },
+  { label: 'Customer Rating', value: '4.8/5', change: 0.3, icon: <StarIcon />, color: PALETTE.gold },
+  { label: 'Return Rate', value: '2.4%', change: -0.8, icon: <BasketIcon />, color: PALETTE.pink },
+];
+
+const quickStats = [
+  { label: 'Today\'s Revenue', value: '$2,450', change: 12.5, color: PALETTE.teal },
+  { label: 'Today\'s Orders', value: '42', change: 8.2, color: PALETTE.pink },
+  { label: 'Pending Orders', value: '18', change: -3, color: PALETTE.gold },
+  { label: 'New Customers', value: '24', change: 15.3, color: PALETTE.purple },
+];
 
 const SellerDashboard = () => {
-  const [activeTab, setActiveTab] = useState(0);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [categoryFilter, setCategoryFilter] = useState<string>('all');
-  const [notification, setNotification] = useState({ open: false, message: '', type: 'success' });
-  const [loading, setLoading] = useState(false);
-  const [addDialogOpen, setAddDialogOpen] = useState(false);
-  const [orderDetailsOpen, setOrderDetailsOpen] = useState(false);
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
-
   const navigate = useNavigate();
-
-  // Mock data - in real app, fetch from API/store
-  const statCards: StatCard[] = [
-    { title: 'Total Revenue', value: '$24,580', change: '+12.5%', icon: <MoneyIcon />, color: '#4ECDC4' },
-    { title: 'Total Orders', value: '1,248', change: '+8.2%', icon: <OrderIcon />, color: '#FF6B95' },
-    { title: 'Products', value: '342', change: '+3.4%', icon: <InventoryIcon />, color: '#7877C6' },
-    { title: 'Customers', value: '5,432', change: '+5.1%', icon: <PeopleIcon />, color: '#F29F58' },
-  ];
-
-  const products: Product[] = [
-    { id: 1, title: 'Premium Smartphone X', category: 'smartphones', price: 999, stock: 45, sold: 120, status: 'active', thumbnail: '', rating: 4.5 },
-    { id: 2, title: 'Luxury Watch Pro', category: 'womens-watches', price: 2499, stock: 12, sold: 45, status: 'active', thumbnail: '', rating: 4.8 },
-    { id: 3, title: 'Designer Handbag', category: 'womens-bags', price: 899, stock: 0, sold: 78, status: 'out_of_stock', thumbnail: '', rating: 4.3 },
-    { id: 4, title: 'Wireless Headphones', category: 'electronics', price: 299, stock: 23, sold: 210, status: 'active', thumbnail: '', rating: 4.6 },
-    { id: 5, title: 'Fitness Tracker', category: 'accessories', price: 199, stock: 56, sold: 89, status: 'active', thumbnail: '', rating: 4.2 },
-    { id: 6, title: 'Gaming Laptop', category: 'laptops', price: 1899, stock: 8, sold: 34, status: 'active', thumbnail: '', rating: 4.7 },
-    { id: 7, title: 'Perfume Collection', category: 'fragrances', price: 129, stock: 42, sold: 156, status: 'active', thumbnail: '', rating: 4.4 },
-    { id: 8, title: 'Bluetooth Speaker', category: 'electronics', price: 89, stock: 67, sold: 231, status: 'active', thumbnail: '', rating: 4.1 },
-  ];
-
-  const orders: Order[] = [
-    { id: 1001, customerName: 'John Doe', customerEmail: 'john@example.com', date: '2024-01-15', items: 3, total: 249.99, status: 'pending', payment: 'paid' },
-    { id: 1002, customerName: 'Jane Smith', customerEmail: 'jane@example.com', date: '2024-01-14', items: 1, total: 89.50, status: 'processing', payment: 'pending' },
-    { id: 1003, customerName: 'Robert Johnson', customerEmail: 'robert@example.com', date: '2024-01-14', items: 5, total: 1299.00, status: 'shipped', payment: 'paid' },
-    { id: 1004, customerName: 'Emily Brown', customerEmail: 'emily@example.com', date: '2024-01-13', items: 2, total: 45.99, status: 'delivered', payment: 'paid' },
-    { id: 1005, customerName: 'Michael Wilson', customerEmail: 'michael@example.com', date: '2024-01-12', items: 1, total: 599.00, status: 'cancelled', payment: 'refunded' },
-    { id: 1006, customerName: 'Sarah Davis', customerEmail: 'sarah@example.com', date: '2024-01-11', items: 4, total: 329.99, status: 'pending', payment: 'paid' },
-    { id: 1007, customerName: 'David Miller', customerEmail: 'david@example.com', date: '2024-01-10', items: 2, total: 199.99, status: 'shipped', payment: 'paid' },
-    { id: 1008, customerName: 'Lisa Anderson', customerEmail: 'lisa@example.com', date: '2024-01-09', items: 1, total: 149.50, status: 'delivered', payment: 'paid' },
-  ];
-
-  const categories = ['smartphones', 'laptops', 'fragrances', 'beauty', 'groceries', 'home-decoration', 'furniture', 'womens-dresses', 'womens-shoes', 'mens-shirts'];
-
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
-    setActiveTab(newValue);
-  };
-
-  const showNotification = (message: string, type: 'success' | 'error' | 'info' | 'warning') => {
-    setNotification({ open: true, message, type });
-  };
-
-  const handleCloseNotification = () => {
-    setNotification({ ...notification, open: false });
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'pending': return 'warning';
-      case 'processing': return 'info';
-      case 'shipped': return 'primary';
-      case 'delivered': return 'success';
-      case 'cancelled': return 'error';
-      default: return 'default';
-    }
-  };
-
-  const getProductStatusColor = (status: string) => {
-    switch (status) {
-      case 'active': return 'success';
-      case 'out_of_stock': return 'error';
-      case 'draft': return 'warning';
-      case 'inactive': return 'default';
-      default: return 'default';
-    }
-  };
-
-  const getPaymentColor = (status: string) => {
-    switch (status) {
-      case 'paid': return 'success';
-      case 'pending': return 'warning';
-      case 'refunded': return 'info';
-      default: return 'default';
-    }
-  };
-
-  const filteredOrders = orders.filter(order => {
-    if (statusFilter === 'all') return true;
-    return order.status === statusFilter;
+  const [loading, setLoading] = useState(true);
+  const [products, setProducts] = useState([]);
+  const [stats, setStats] = useState({ 
+    totalRevenue: 0, 
+    totalOrders: 0, 
+    totalProducts: 0, 
+    totalCustomers: 0, 
+    avgOrderValue: 0,
+    conversionRate: 0,
+    growthRate: 12.5,
   });
 
-  const filteredProducts = products.filter(product => {
-    const matchesSearch = product.title.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = categoryFilter === 'all' || product.category === categoryFilter;
-    return matchesSearch && matchesCategory;
-  });
+  const fetchProducts = async () => {
+    try {
+      setLoading(true);
+      const sellerProducts = await GetSellerProducts(2);
 
-  const handleGoHome = () => {
-    navigate('/');
-  };
+      const formattedProducts = sellerProducts.map((p) => ({ 
+        id: p.id, 
+        title: p.title, 
+        price: p.price, 
+        stock: p.stock, 
+        sold: p.sold 
+      }));
+      setProducts(formattedProducts);
 
-  const handleSwitchToUserMode = () => {
-    showNotification('Switched to user mode', 'info');
-    navigate('/');
-  };
+      const totalRevenue = formattedProducts.reduce((sum, item) => sum + item.price * (item.sold || 0), 0) + 89250;
+      const uniqueCustomers = new Set(recentOrders.map((o) => o.customer)).size;
 
-  const handleRefresh = () => {
-    setLoading(true);
-    setTimeout(() => {
+      setStats({ 
+        totalRevenue, 
+        totalOrders: recentOrders.length, 
+        totalProducts: formattedProducts.length + 6, 
+        totalCustomers: uniqueCustomers, 
+        avgOrderValue: totalRevenue / recentOrders.length,
+        conversionRate: 3.2,
+        growthRate: 12.5,
+      });
+    } catch (err) {
+      console.error(err);
+    } finally {
       setLoading(false);
-      showNotification('Data refreshed successfully', 'success');
-    }, 1000);
+    }
   };
 
-  const handleChangePage = (event: unknown, newPage: number) => {
-    setPage(newPage);
+  useEffect(() => { fetchProducts(); }, []);
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'pending': return PALETTE.gold;
+      case 'approved': return PALETTE.teal;
+      case 'shipped': return PALETTE.purple;
+      case 'delivered': return PALETTE.green;
+      case 'cancelled': return PALETTE.pink;
+      default: return '#fff';
+    }
   };
 
-  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setRowsPerPage(parseInt(event.target.value, 10));
-    setPage(0);
+  const getStatusIcon = (status) => {
+    switch (status) {
+      case 'pending': return <WarningIcon fontSize="small" />;
+      case 'approved': return <CheckIcon fontSize="small" />;
+      case 'shipped': return <ShippingIcon fontSize="small" />;
+      case 'delivered': return <CheckIcon fontSize="small" />;
+      default: return <WarningIcon fontSize="small" />;
+    }
   };
 
-  const paginatedOrders = filteredOrders.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+  const StatCard = ({ title, value, icon, color, subtitle, trend, prefix = '', suffix = '', compact = false }) => (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      whileHover={{ y: -4, scale: 1.02 }}
+    >
+      <Paper sx={{ 
+        p: compact ? 2 : 2.5, 
+        borderRadius: 2,
+        background: `linear-gradient(135deg, ${alpha(color, 0.15)}, ${alpha(color, 0.05)})`,
+        border: `1px solid ${alpha(color, 0.2)}`,
+        boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
+        backdropFilter: 'blur(8px)',
+        height: compact ? '100%' : '120px',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'space-between',
+        position: 'relative',
+        overflow: 'hidden',
+        '&:before': {
+          content: '""',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: '3px',
+          background: color,
+        }
+      }}>
+        <Stack direction="row" alignItems="flex-start" justifyContent="space-between" spacing={1}>
+          <Box sx={{ flex: 1 }}>
+            <Typography variant="body2" sx={{ 
+              color: alpha('#fff', 0.7), 
+              mb: 0.5, 
+              fontWeight: 500, 
+              fontSize: compact ? '0.8rem' : '0.85rem',
+              lineHeight: 1.2
+            }}>
+              {title}
+            </Typography>
+            <Stack direction="row" alignItems="baseline" spacing={1} sx={{ flexWrap: 'wrap' }}>
+              <Typography variant={compact ? "h5" : "h4"} sx={{ 
+                fontWeight: 800, 
+                color: '#fff', 
+                fontSize: compact ? '1.25rem' : '1.75rem',
+                lineHeight: 1
+              }}>
+                {prefix}{value}{suffix}
+              </Typography>
+              {trend !== undefined && (
+                <Chip 
+                  label={`${trend > 0 ? '+' : ''}${trend}%`}
+                  size="small"
+                  icon={trend > 0 ? <ArrowUpIcon sx={{ fontSize: 14 }} /> : <ArrowDownIcon sx={{ fontSize: 14 }} />}
+                  sx={{ 
+                    background: trend > 0 ? alpha(PALETTE.teal, 0.2) : alpha(PALETTE.pink, 0.2),
+                    color: trend > 0 ? PALETTE.teal : PALETTE.pink,
+                    fontWeight: 600,
+                    height: 20,
+                    fontSize: '0.7rem',
+                    '& .MuiChip-icon': { fontSize: 14 }
+                  }}
+                />
+              )}
+            </Stack>
+          </Box>
+          <Box sx={{
+            p: compact ? 1 : 1.5,
+            borderRadius: 1.5,
+            background: alpha(color, 0.1),
+            border: `1px solid ${alpha(color, 0.2)}`,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+          }}>
+            {React.cloneElement(icon, { sx: { 
+              fontSize: compact ? 20 : 24, 
+              color,
+              display: 'block'
+            } })}
+          </Box>
+        </Stack>
+        {subtitle && (
+          <Typography variant="caption" sx={{ 
+            color: alpha('#fff', 0.6), 
+            mt: compact ? 0.5 : 1, 
+            display: 'block',
+            fontSize: '0.75rem'
+          }}>
+            {subtitle}
+          </Typography>
+        )}
+      </Paper>
+    </motion.div>
+  );
 
   if (loading) {
     return (
-      <Box
-        sx={{
-          minHeight: '100vh',
-          background: 'linear-gradient(135deg, #0A081F 0%, #1A173B 100%)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        <CircularProgress sx={{ color: '#7877C6' }} />
+      <Box sx={{ 
+        minHeight: '100vh', 
+        background: `linear-gradient(135deg, ${PALETTE.bgA}, ${PALETTE.bgB})`, 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center' 
+      }}>
+        <CircularProgress sx={{ color: PALETTE.purple, width: '60px !important', height: '60px !important' }} />
       </Box>
     );
   }
 
   return (
-    <Box
-      sx={{
-        minHeight: '100vh',
-        background: 'linear-gradient(135deg, #0A081F 0%, #1A173B 100%)',
-        fontFamily: '"Inter", "Roboto", sans-serif',
-        color: 'white',
-        py: 4,
-      }}
-    >
-      <Container maxWidth="xl">
-        {/* Header */}
-        <Box sx={{ mb: 4 }}>
-          <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
-            <Stack direction="row" alignItems="center" spacing={2}>
-              <IconButton 
-                onClick={handleGoHome}
-                sx={{ 
-                  color: '#7877C6',
-                  backgroundColor: alpha('#7877C6', 0.1),
-                  '&:hover': { backgroundColor: alpha('#7877C6', 0.2) }
-                }}
-              >
-                <HomeIcon />
-              </IconButton>
-              <StoreIcon sx={{ fontSize: 40, color: '#7877C6' }} />
-              <Box>
-                <Typography variant="h4" fontWeight="bold">
-                  Seller Dashboard
-                </Typography>
-                <Typography variant="body2" sx={{ color: alpha('#ffffff', 0.7) }}>
-                  Welcome back, Seller! Manage your store efficiently.
-                </Typography>
-              </Box>
-            </Stack>
-            <Stack direction="row" spacing={2}>
-              <Button
-                variant="outlined"
-                startIcon={<RefreshIcon />}
-                onClick={handleRefresh}
-                disabled={loading}
-                sx={{
-                  borderColor: '#4ECDC4',
-                  color: '#4ECDC4',
-                  '&:hover': { borderColor: '#4ECDC4', backgroundColor: alpha('#4ECDC4', 0.1) },
-                }}
-              >
-                Refresh
-              </Button>
-              <Button
-                variant="outlined"
-                startIcon={<SwitchAccountIcon />}
-                onClick={handleSwitchToUserMode}
-                sx={{
-                  borderColor: '#F29F58',
-                  color: '#F29F58',
-                  '&:hover': { borderColor: '#F29F58', backgroundColor: alpha('#F29F58', 0.1) },
-                }}
-              >
-                Switch to User
-              </Button>
-            </Stack>
-          </Stack>
-        </Box>
+    <Box sx={{ 
+      minHeight: '100vh', 
+      background: `linear-gradient(145deg, ${PALETTE.bgA}, ${PALETTE.bgB})`, 
+      color: 'white',
+      pb: 4,
+      overflowX: 'hidden'
+    }}>
+      <SellerAccountMenu />
 
-        {/* Stats Cards */}
-        <Grid container spacing={3} sx={{ mb: 4 }}>
-          {statCards.map((stat, index) => (
-            <Grid item xs={12} sm={6} md={3} key={index}>
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
-              >
-                <Paper
-                  sx={{
-                    p: 3,
-                    background: `linear-gradient(135deg, ${alpha(stat.color, 0.2)} 0%, ${alpha(stat.color, 0.05)} 100%)`,
-                    border: `1px solid ${alpha(stat.color, 0.2)}`,
-                    backdropFilter: 'blur(20px)',
-                    borderRadius: 3,
-                    transition: 'transform 0.3s ease',
-                    '&:hover': { transform: 'translateY(-4px)' },
+      {/* MAIN DASHBOARD CONTENT - FULL WIDTH */}
+      <Box sx={{ 
+        width: '100%',
+        maxWidth: '1920px',
+        mx: 'auto',
+        px: 6,
+        pt: 4
+      }}>
+        {/* HEADER - COMPACT */}
+        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 4 }}>
+          <Box>
+            <Typography variant="h4" sx={{ fontWeight: 900, mb: 0.5, letterSpacing: '-0.5px' }}>
+              Dashboard Overview
+            </Typography>
+            <Typography sx={{ color: alpha('#fff', 0.7), fontSize: '0.95rem' }}>
+              Real-time insights for {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+            </Typography>
+          </Box>
+          <Stack direction="row" spacing={1.5}>
+            <Button
+              variant="outlined"
+              size="small"
+              startIcon={<CalendarIcon />}
+              sx={{
+                borderColor: alpha('#fff', 0.2),
+                color: '#fff',
+                fontSize: '0.85rem',
+                py: 0.75,
+                px: 2
+              }}
+            >
+              Last 30 Days
+            </Button>
+            <Button
+              variant="contained"
+              size="small"
+              startIcon={<DownloadIcon />}
+              sx={{
+                background: `linear-gradient(135deg, ${PALETTE.purple}, ${PALETTE.deepPurple})`,
+                fontSize: '0.85rem',
+                py: 0.75,
+                px: 2,
+                '&:hover': { 
+                  background: `linear-gradient(135deg, ${PALETTE.deepPurple}, ${PALETTE.purple})`,
+                  transform: 'translateY(-1px)'
+                }
+              }}
+            >
+              Export
+            </Button>
+          </Stack>
+        </Stack>
+
+        {/* TOP ROW: KEY METRICS - COMPACT LAYOUT */}
+        <Grid container spacing={2} sx={{ mb: 4 }}>
+          <Grid item xs={12} lg={3}>
+            <StatCard
+              title="Total Revenue"
+              value={stats.totalRevenue.toLocaleString()}
+              prefix="$"
+              icon={<MoneyIcon />}
+              color={PALETTE.teal}
+              subtitle="All time revenue"
+              trend={12.5}
+            />
+          </Grid>
+          <Grid item xs={12} lg={3}>
+            <StatCard
+              title="Total Orders"
+              value={stats.totalOrders}
+              icon={<OrderIcon />}
+              color={PALETTE.pink}
+              subtitle="Completed orders"
+              trend={8.2}
+            />
+          </Grid>
+          <Grid item xs={12} lg={3}>
+            <StatCard
+              title="Total Products"
+              value={stats.totalProducts}
+              icon={<InventoryIcon />}
+              color={PALETTE.purple}
+              subtitle="Active listings"
+              trend={5.7}
+            />
+          </Grid>
+          <Grid item xs={12} lg={3}>
+            <StatCard
+              title="Total Customers"
+              value={stats.totalCustomers}
+              icon={<PeopleIcon />}
+              color={PALETTE.gold}
+              subtitle="Active customers"
+              trend={15.3}
+            />
+          </Grid>
+        </Grid>
+
+        {/* QUICK STATS ROW */}
+        <Grid container spacing={2} sx={{ mb: 4 }}>
+          {quickStats.map((stat, index) => (
+            <Grid item xs={6} sm={3} key={index}>
+              <Paper sx={{ 
+                p: 1.5, 
+                borderRadius: 2,
+                background: alpha('#000', 0.2),
+                border: `1px solid ${alpha('#fff', 0.08)}`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                height: '100%'
+              }}>
+                <Box>
+                  <Typography variant="caption" sx={{ color: alpha('#fff', 0.6), display: 'block', mb: 0.5 }}>
+                    {stat.label}
+                  </Typography>
+                  <Typography variant="h6" sx={{ fontWeight: 700, color: stat.color }}>
+                    {stat.value}
+                  </Typography>
+                </Box>
+                <Chip 
+                  label={`${stat.change > 0 ? '+' : ''}${stat.change}%`}
+                  size="small"
+                  sx={{ 
+                    background: stat.change > 0 ? alpha(PALETTE.teal, 0.2) : alpha(PALETTE.pink, 0.2),
+                    color: stat.change > 0 ? PALETTE.teal : PALETTE.pink,
+                    fontWeight: 600,
+                    height: 20,
+                    fontSize: '0.7rem'
                   }}
-                >
-                  <Stack direction="row" alignItems="center" justifyContent="space-between">
-                    <Box>
-                      <Typography variant="body2" sx={{ color: alpha('#ffffff', 0.7), mb: 1 }}>
-                        {stat.title}
-                      </Typography>
-                      <Typography variant="h4" fontWeight="bold">
-                        {stat.value}
-                      </Typography>
-                      <Chip
-                        label={stat.change}
-                        size="small"
-                        sx={{
-                          mt: 1,
-                          background: alpha('#4ECDC4', 0.2),
-                          color: '#4ECDC4',
-                          fontWeight: 'bold',
-                        }}
-                      />
-                    </Box>
-                    <Box
-                      sx={{
-                        p: 2,
-                        borderRadius: 2,
-                        background: alpha(stat.color, 0.1),
-                        color: stat.color,
-                      }}
-                    >
-                      {stat.icon}
-                    </Box>
-                  </Stack>
-                </Paper>
-              </motion.div>
+                />
+              </Paper>
             </Grid>
           ))}
         </Grid>
 
-        {/* Main Content with Tabs */}
-        <Paper
-          sx={{
-            p: 3,
-            background: alpha('#0A081F', 0.7),
-            border: '1px solid rgba(120, 119, 198, 0.2)',
-            backdropFilter: 'blur(20px)',
-            borderRadius: 3,
-          }}
-        >
-          <Tabs
-            value={activeTab}
-            onChange={handleTabChange}
-            sx={{
-              mb: 3,
-              borderBottom: 1,
-              borderColor: 'divider',
-              '& .MuiTab-root': {
-                color: alpha('#ffffff', 0.7),
-                '&.Mui-selected': { color: '#7877C6' },
-              },
-            }}
-          >
-            <Tab icon={<DashboardIcon />} iconPosition="start" label="Overview" />
-            <Tab icon={<InventoryIcon />} iconPosition="start" label={`Products (${products.length})`} />
-            <Tab icon={<OrderIcon />} iconPosition="start" label={`Orders (${orders.length})`} />
-          </Tabs>
-
-          {/* Overview Tab */}
-          {activeTab === 0 && (
-            <Grid container spacing={3}>
-              {/* Sales Chart */}
-              <Grid item xs={12} md={8}>
+        {/* MAIN CONTENT AREA - DENSE LAYOUT */}
+        <Grid container spacing={3} sx={{ mb: 4 }}>
+          {/* LEFT COLUMN - CHARTS (2/3 width) */}
+          <Grid item xs={12} lg={8}>
+            <Grid container spacing={3} direction="column">
+              {/* REVENUE TREND CHART */}
+              <Grid item xs={12}>
                 <Paper sx={{ 
                   p: 3, 
-                  background: alpha('#1A173B', 0.5), 
                   borderRadius: 2,
+                  background: alpha('#000', 0.2),
+                  border: `1px solid ${alpha('#fff', 0.08)}`,
+                  boxShadow: '0 4px 24px rgba(0,0,0,0.4)',
                   height: '100%'
                 }}>
                   <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
-                    <Typography variant="h6">Sales Overview</Typography>
+                    <Box>
+                      <Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5 }}>
+                        Revenue & Sales Trend
+                      </Typography>
+                      <Typography variant="caption" sx={{ color: alpha('#fff', 0.6) }}>
+                        Last 12 months performance
+                      </Typography>
+                    </Box>
                     <Stack direction="row" spacing={1}>
-                      <Chip label="7 Days" size="small" sx={{ background: alpha('#7877C6', 0.2), color: '#7877C6' }} />
-                      <Chip label="30 Days" size="small" sx={{ background: alpha('#ffffff', 0.1), color: 'white' }} />
-                      <Chip label="90 Days" size="small" sx={{ background: alpha('#ffffff', 0.1), color: 'white' }} />
+                      <Chip label="Revenue" size="small" sx={{ background: alpha(PALETTE.teal, 0.2), color: PALETTE.teal }} />
+                      <Chip label="Sales" size="small" sx={{ background: alpha(PALETTE.purple, 0.2), color: PALETTE.purple }} />
+                      <Chip label="Profit" size="small" sx={{ background: alpha(PALETTE.blue, 0.2), color: PALETTE.blue }} />
                     </Stack>
                   </Stack>
-                  <Box sx={{ 
-                    height: 300, 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    justifyContent: 'center',
-                    background: alpha('#ffffff', 0.03),
-                    borderRadius: 2
-                  }}>
-                    <Typography sx={{ color: alpha('#ffffff', 0.3) }}>
-                      Sales Chart Visualization
-                    </Typography>
+                  
+                  <Box sx={{ height: 320 }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={salesData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                        <defs>
+                          <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor={PALETTE.teal} stopOpacity={0.8}/>
+                            <stop offset="95%" stopColor={PALETTE.teal} stopOpacity={0}/>
+                          </linearGradient>
+                          <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor={PALETTE.purple} stopOpacity={0.8}/>
+                            <stop offset="95%" stopColor={PALETTE.purple} stopOpacity={0}/>
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke={alpha('#fff', 0.1)} vertical={false} />
+                        <XAxis 
+                          dataKey="month" 
+                          stroke={alpha('#fff', 0.6)}
+                          tickLine={false}
+                          axisLine={false}
+                          fontSize={12}
+                        />
+                        <YAxis 
+                          stroke={alpha('#fff', 0.6)}
+                          tickLine={false}
+                          axisLine={false}
+                          fontSize={12}
+                          tickFormatter={(value) => `$${value/1000}k`}
+                        />
+                        <RechartsTooltip 
+                          contentStyle={{ 
+                            background: PALETTE.bgB,
+                            border: `1px solid ${alpha('#fff', 0.2)}`,
+                            borderRadius: 8,
+                            color: '#fff',
+                            fontSize: '12px'
+                          }}
+                        />
+                        <Area 
+                          type="monotone" 
+                          dataKey="revenue" 
+                          stroke={PALETTE.teal}
+                          strokeWidth={2}
+                          fill="url(#colorRevenue)" 
+                          name="Revenue"
+                        />
+                        <Area 
+                          type="monotone" 
+                          dataKey="profit" 
+                          stroke={PALETTE.blue}
+                          strokeWidth={2}
+                          fill={alpha(PALETTE.blue, 0.1)}
+                          name="Profit"
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
                   </Box>
                 </Paper>
               </Grid>
 
-              {/* Recent Activity */}
-              <Grid item xs={12} md={4}>
+              {/* CATEGORY & INVENTORY ROW */}
+              <Grid item xs={12}>
+                <Grid container spacing={3}>
+                  {/* CATEGORY PERFORMANCE */}
+                  <Grid item xs={12} md={7}>
+                    <Paper sx={{ 
+                      p: 3, 
+                      borderRadius: 2,
+                      background: alpha('#000', 0.2),
+                      border: `1px solid ${alpha('#fff', 0.08)}`,
+                      boxShadow: '0 4px 24px rgba(0,0,0,0.4)',
+                      height: '100%'
+                    }}>
+                      <Typography variant="h6" sx={{ fontWeight: 700, mb: 3 }}>
+                        Category Performance
+                      </Typography>
+                      
+                      <Box sx={{ height: 260 }}>
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={categoryData} margin={{ top: 10, right: 10, left: -10, bottom: 5 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke={alpha('#fff', 0.1)} horizontal={false} />
+                            <XAxis 
+                              dataKey="name" 
+                              stroke={alpha('#fff', 0.6)}
+                              tickLine={false}
+                              axisLine={false}
+                              fontSize={11}
+                            />
+                            <YAxis 
+                              stroke={alpha('#fff', 0.6)}
+                              tickLine={false}
+                              axisLine={false}
+                              fontSize={11}
+                              tickFormatter={(value) => `${value}%`}
+                            />
+                            <RechartsTooltip 
+                              contentStyle={{ 
+                                background: PALETTE.bgB,
+                                border: `1px solid ${alpha('#fff', 0.2)}`,
+                                borderRadius: 8,
+                                color: '#fff',
+                                fontSize: '12px'
+                              }}
+                            />
+                            <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+                              {categoryData.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={entry.color} />
+                              ))}
+                            </Bar>
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </Box>
+                    </Paper>
+                  </Grid>
+
+                  {/* INVENTORY HEALTH */}
+                  <Grid item xs={12} md={5}>
+                    <Paper sx={{ 
+                      p: 3, 
+                      borderRadius: 2,
+                      background: alpha('#000', 0.2),
+                      border: `1px solid ${alpha('#fff', 0.08)}`,
+                      boxShadow: '0 4px 24px rgba(0,0,0,0.4)',
+                      height: '100%'
+                    }}>
+                      <Typography variant="h6" sx={{ fontWeight: 700, mb: 3 }}>
+                        Inventory Health
+                      </Typography>
+                      
+                      <Box sx={{ height: 260 }}>
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie
+                              data={inventoryData}
+                              cx="50%"
+                              cy="50%"
+                              innerRadius={50}
+                              outerRadius={80}
+                              paddingAngle={1}
+                              dataKey="value"
+                            >
+                              {inventoryData.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={entry.color} />
+                              ))}
+                            </Pie>
+                            <RechartsTooltip 
+                              contentStyle={{ 
+                                background: PALETTE.bgB,
+                                border: `1px solid ${alpha('#fff', 0.2)}`,
+                                borderRadius: 8,
+                                color: '#fff',
+                                fontSize: '12px'
+                              }}
+                            />
+                          </PieChart>
+                        </ResponsiveContainer>
+                      </Box>
+                    </Paper>
+                  </Grid>
+                </Grid>
+              </Grid>
+            </Grid>
+          </Grid>
+
+          {/* RIGHT COLUMN - STATS & INSIGHTS (1/3 width) */}
+          <Grid item xs={12} lg={4}>
+            <Grid container spacing={3} direction="column">
+              {/* PERFORMANCE METRICS */}
+              <Grid item xs={12}>
                 <Paper sx={{ 
                   p: 3, 
-                  background: alpha('#1A173B', 0.5), 
                   borderRadius: 2,
+                  background: alpha('#000', 0.2),
+                  border: `1px solid ${alpha('#fff', 0.08)}`,
+                  boxShadow: '0 4px 24px rgba(0,0,0,0.4)',
                   height: '100%'
                 }}>
-                  <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
-                    <Typography variant="h6">Recent Activity</Typography>
-                    <IconButton size="small" sx={{ color: alpha('#ffffff', 0.7) }}>
-                      <MoreIcon />
-                    </IconButton>
-                  </Stack>
-                  
-                  <List>
-                    {orders.slice(0, 5).map((order) => (
-                      <ListItem
-                        key={order.id}
-                        sx={{
-                          mb: 1,
-                          px: 2,
-                          py: 1.5,
-                          background: alpha('#ffffff', 0.05),
-                          borderRadius: 1.5,
-                          '&:hover': { background: alpha('#ffffff', 0.1) },
-                        }}
-                      >
-                        <ListItemAvatar>
-                          <Badge
-                            color={getStatusColor(order.status) as any}
-                            variant="dot"
-                            anchorOrigin={{ vertical: 'top', horizontal: 'left' }}
-                          >
-                            <Avatar sx={{ bgcolor: alpha('#7877C6', 0.2), width: 32, height: 32 }}>
-                              <ShoppingCartIcon fontSize="small" />
-                            </Avatar>
-                          </Badge>
-                        </ListItemAvatar>
-                        <ListItemText
-                          primary={`Order #${order.id}`}
-                          secondary={`${order.customerName} • $${order.total.toFixed(2)}`}
-                          primaryTypographyProps={{ fontSize: '0.875rem', fontWeight: 'bold' }}
-                          secondaryTypographyProps={{ fontSize: '0.75rem', color: alpha('#ffffff', 0.5) }}
+                  <Typography variant="h6" sx={{ fontWeight: 700, mb: 3 }}>
+                    Performance Metrics
+                  </Typography>
+                  <Stack spacing={2.5}>
+                    {performanceMetrics.map((metric, index) => (
+                      <Box key={index}>
+                        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
+                          <Stack direction="row" alignItems="center" spacing={1.5}>
+                            <Box sx={{ 
+                              p: 0.75, 
+                              borderRadius: 1,
+                              background: alpha(metric.color, 0.1),
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}>
+                              {React.cloneElement(metric.icon, { sx: { fontSize: 16, color: metric.color } })}
+                            </Box>
+                            <Typography variant="body2" sx={{ color: alpha('#fff', 0.8), fontSize: '0.85rem' }}>
+                              {metric.label}
+                            </Typography>
+                          </Stack>
+                          <Stack direction="row" alignItems="center" spacing={1}>
+                            <Typography variant="body1" sx={{ fontWeight: 700, fontSize: '0.95rem' }}>
+                              {metric.value}
+                            </Typography>
+                            <Chip 
+                              label={`${metric.change > 0 ? '+' : ''}${metric.change}%`}
+                              size="small"
+                              sx={{ 
+                                background: metric.change > 0 ? alpha(PALETTE.teal, 0.2) : alpha(PALETTE.pink, 0.2),
+                                color: metric.change > 0 ? PALETTE.teal : PALETTE.pink,
+                                fontWeight: 600,
+                                height: 20,
+                                fontSize: '0.7rem'
+                              }}
+                            />
+                          </Stack>
+                        </Stack>
+                        <LinearProgress 
+                          variant="determinate" 
+                          value={Math.abs(metric.change) * 10} 
+                          sx={{ 
+                            height: 3,
+                            borderRadius: 1.5,
+                            background: alpha('#fff', 0.1),
+                            '& .MuiLinearProgress-bar': {
+                              background: metric.change > 0 ? PALETTE.teal : PALETTE.pink,
+                              borderRadius: 1.5,
+                            }
+                          }}
                         />
-                        <Chip
-                          label={order.status}
-                          size="small"
-                          color={getStatusColor(order.status) as any}
-                          sx={{ fontSize: '0.65rem' }}
-                        />
-                      </ListItem>
+                      </Box>
                     ))}
-                  </List>
-
-                  <Button
-                    fullWidth
-                    variant="text"
-                    sx={{ 
-                      mt: 2, 
-                      color: '#7877C6',
-                      '&:hover': { background: alpha('#7877C6', 0.1) }
-                    }}
-                    onClick={() => setActiveTab(2)}
-                  >
-                    View All Orders
-                  </Button>
+                  </Stack>
                 </Paper>
               </Grid>
 
-              {/* Top Products */}
+              {/* CUSTOMER INSIGHTS */}
               <Grid item xs={12}>
-                <Paper sx={{ p: 3, background: alpha('#1A173B', 0.5), borderRadius: 2 }}>
-                  <Typography variant="h6" gutterBottom>Top Selling Products</Typography>
-                  <Grid container spacing={2}>
-                    {products
-                      .sort((a, b) => b.sold - a.sold)
-                      .slice(0, 4)
-                      .map(product => (
-                        <Grid item xs={12} sm={6} md={3} key={product.id}>
-                          <Paper sx={{ 
-                            p: 2, 
-                            background: alpha('#ffffff', 0.05),
-                            borderRadius: 1.5,
-                            height: '100%'
-                          }}>
-                            <Stack direction="row" alignItems="center" spacing={2}>
-                              <Avatar
-                                variant="rounded"
-                                sx={{ 
-                                  width: 48, 
-                                  height: 48, 
-                                  bgcolor: alpha('#7877C6', 0.2),
-                                  color: '#7877C6'
-                                }}
-                              >
-                                <InventoryIcon />
-                              </Avatar>
-                              <Box sx={{ flex: 1 }}>
-                                <Typography variant="body2" fontWeight="bold" noWrap>
-                                  {product.title}
-                                </Typography>
-                                <Typography variant="caption" sx={{ color: alpha('#ffffff', 0.5) }}>
-                                  Sold: {product.sold} • Stock: {product.stock}
-                                </Typography>
-                                <LinearProgress
-                                  variant="determinate"
-                                  value={Math.min((product.sold / 300) * 100, 100)}
-                                  color="primary"
-                                  sx={{ mt: 1, height: 4, borderRadius: 2 }}
-                                />
-                              </Box>
-                              <Chip
-                                label={`$${product.price}`}
-                                size="small"
-                                sx={{ background: alpha('#4ECDC4', 0.2), color: '#4ECDC4' }}
-                              />
-                            </Stack>
-                          </Paper>
-                        </Grid>
-                      ))}
-                  </Grid>
+                <Paper sx={{ 
+                  p: 3, 
+                  borderRadius: 2,
+                  background: alpha('#000', 0.2),
+                  border: `1px solid ${alpha('#fff', 0.08)}`,
+                  boxShadow: '0 4px 24px rgba(0,0,0,0.4)',
+                  height: '100%'
+                }}>
+                  <Typography variant="h6" sx={{ fontWeight: 700, mb: 3 }}>
+                    Customer Insights
+                  </Typography>
+                  
+                  <Box sx={{ height: 240, mb: 2 }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <RadarChart cx="50%" cy="50%" outerRadius="75%" data={customerInsightData}>
+                        <PolarGrid stroke={alpha('#fff', 0.2)} />
+                        <PolarAngleAxis 
+                          dataKey="subject" 
+                          stroke={alpha('#fff', 0.6)}
+                          tick={{ fontSize: 10 }}
+                        />
+                        <PolarRadiusAxis 
+                          stroke={alpha('#fff', 0.6)}
+                          angle={30}
+                          domain={[0, 200]}
+                        />
+                        <Radar
+                          name="Current"
+                          dataKey="current"
+                          stroke={PALETTE.teal}
+                          fill={PALETTE.teal}
+                          fillOpacity={0.3}
+                          strokeWidth={1.5}
+                        />
+                      </RadarChart>
+                    </ResponsiveContainer>
+                  </Box>
                 </Paper>
               </Grid>
             </Grid>
-          )}
+          </Grid>
+        </Grid>
 
-          {/* Products Tab */}
-          {activeTab === 1 && (
-            <Box>
-              {/* Filters and Actions */}
+        {/* BOTTOM SECTION - TABLES */}
+        <Grid container spacing={3} sx={{ mb: 4 }}>
+          {/* TOP PRODUCTS TABLE */}
+          <Grid item xs={12} lg={7}>
+            <Paper sx={{ 
+              p: 3, 
+              borderRadius: 2,
+              background: alpha('#000', 0.2),
+              border: `1px solid ${alpha('#fff', 0.08)}`,
+              boxShadow: '0 4px 24px rgba(0,0,0,0.4)',
+              height: '100%'
+            }}>
               <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
-                <Stack direction="row" spacing={2} alignItems="center">
-                  <TextField
-                    placeholder="Search products..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    size="small"
-                    sx={{
-                      width: 300,
-                      '& .MuiOutlinedInput-root': {
-                        background: alpha('#ffffff', 0.05),
-                        color: 'white',
-                      },
-                    }}
-                    InputProps={{
-                      startAdornment: (
-                        <InputAdornment position="start">
-                          <SearchIcon sx={{ color: alpha('#ffffff', 0.5) }} />
-                        </InputAdornment>
-                      ),
-                    }}
-                  />
-                  <FormControl size="small" sx={{ minWidth: 150 }}>
-                    <InputLabel sx={{ color: alpha('#ffffff', 0.7) }}>Category</InputLabel>
-                    <Select
-                      value={categoryFilter}
-                      label="Category"
-                      onChange={(e) => setCategoryFilter(e.target.value)}
-                      sx={{
-                        background: alpha('#ffffff', 0.05),
-                        color: 'white',
-                        '& .MuiSelect-icon': { color: alpha('#ffffff', 0.5) },
-                      }}
-                    >
-                      <MenuItem value="all">All Categories</MenuItem>
-                      {categories.map(category => (
-                        <MenuItem key={category} value={category}>
-                          {category.charAt(0).toUpperCase() + category.slice(1)}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                </Stack>
-
-                <Stack direction="row" spacing={2}>
-                  <Stack direction="row" spacing={1}>
-                    <IconButton 
-                      size="small" 
-                      onClick={() => setViewMode('grid')}
-                      sx={{ 
-                        color: viewMode === 'grid' ? '#7877C6' : alpha('#ffffff', 0.5),
-                        background: viewMode === 'grid' ? alpha('#7877C6', 0.1) : 'transparent'
-                      }}
-                    >
-                      <GridViewIcon />
-                    </IconButton>
-                    <IconButton 
-                      size="small" 
-                      onClick={() => setViewMode('list')}
-                      sx={{ 
-                        color: viewMode === 'list' ? '#7877C6' : alpha('#ffffff', 0.5),
-                        background: viewMode === 'list' ? alpha('#7877C6', 0.1) : 'transparent'
-                      }}
-                    >
-                      <ListIcon />
-                    </IconButton>
-                  </Stack>
-                  <Button
-                    variant="contained"
-                    startIcon={<AddIcon />}
-                    onClick={() => setAddDialogOpen(true)}
-                    sx={{
-                      background: 'linear-gradient(135deg, #7877C6 0%, #5A59A1 100%)',
-                    }}
-                  >
-                    Add Product
-                  </Button>
-                </Stack>
+                <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                  Top Selling Products
+                </Typography>
+                <Button
+                  variant="text"
+                  size="small"
+                  endIcon={<TrendingFlatIcon sx={{ fontSize: 16 }} />}
+                  sx={{ color: PALETTE.teal, fontSize: '0.85rem' }}
+                >
+                  View All
+                </Button>
               </Stack>
-
-              {/* Products Grid/List */}
-              {filteredProducts.length === 0 ? (
-                <Paper sx={{ 
-                  p: 8, 
-                  textAlign: 'center', 
-                  background: alpha('#1A173B', 0.5), 
-                  borderRadius: 2 
-                }}>
-                  <InventoryIcon sx={{ fontSize: 60, color: alpha('#ffffff', 0.3), mb: 2 }} />
-                  <Typography variant="h6" gutterBottom>No products found</Typography>
-                  <Typography variant="body2" sx={{ color: alpha('#ffffff', 0.7), mb: 3 }}>
-                    {searchTerm ? 'Try a different search term' : 'Add your first product to get started'}
-                  </Typography>
-                  <Button
-                    variant="contained"
-                    startIcon={<AddIcon />}
-                    onClick={() => setAddDialogOpen(true)}
-                    sx={{
-                      background: 'linear-gradient(135deg, #7877C6 0%, #5A59A1 100%)',
-                    }}
-                  >
-                    Add Product
-                  </Button>
-                </Paper>
-              ) : viewMode === 'grid' ? (
-                <Grid container spacing={3}>
-                  {filteredProducts.map((product) => (
-                    <Grid item xs={12} sm={6} md={4} lg={3} key={product.id}>
-                      <Paper
-                        className="product-card"
-                        sx={{
-                          p: 2,
-                          height: '100%',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          background: alpha('#1A173B', 0.5),
-                          borderRadius: 2,
-                          transition: 'transform 0.3s ease',
-                          '&:hover': { transform: 'translateY(-4px)' },
-                        }}
-                      >
-                        {/* Product Image */}
-                        <Box
-                          className="product-image-container"
-                          sx={{
-                            height: 140,
-                            background: `linear-gradient(45deg, ${alpha('#7877C6', 0.3)} 0%, ${alpha('#4ECDC4', 0.3)} 100%)`,
-                            borderRadius: 1.5,
-                            mb: 2,
-                            position: 'relative',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center'
-                          }}
-                        >
-                          <InventoryIcon sx={{ fontSize: 48, color: alpha('#ffffff', 0.3) }} />
-                          <Chip
-                            label={product.status === 'out_of_stock' ? 'Out of Stock' : 'In Stock'}
-                            size="small"
-                            color={getProductStatusColor(product.status) as any}
-                            sx={{ position: 'absolute', top: 8, right: 8 }}
-                          />
-                        </Box>
-
-                        {/* Product Info */}
-                        <Box sx={{ flex: 1 }}>
-                          <Typography variant="subtitle1" fontWeight="bold" gutterBottom noWrap>
-                            {product.title}
-                          </Typography>
-                          <Typography variant="body2" sx={{ color: alpha('#ffffff', 0.7), mb: 2 }} noWrap>
-                            {product.category} • ${product.price.toFixed(2)}
-                          </Typography>
-                          
-                          <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
-                            <Box>
-                              <Typography variant="caption" sx={{ color: alpha('#ffffff', 0.5) }}>
-                                Stock: {product.stock}
-                              </Typography>
-                              <LinearProgress
-                                variant="determinate"
-                                value={Math.min((product.stock / 100) * 100, 100)}
-                                color={product.stock < 10 ? 'warning' : 'success'}
-                                sx={{ width: 80, height: 4, borderRadius: 2, mt: 0.5 }}
-                              />
-                            </Box>
-                            <Typography variant="caption" sx={{ color: '#4ECDC4' }}>
-                              ${(product.price * product.sold).toLocaleString()} revenue
-                            </Typography>
-                          </Stack>
-                        </Box>
-
-                        {/* Actions */}
-                        <Stack direction="row" spacing={1} className="product-actions-stack">
-                          <Tooltip title="Edit Product">
-                            <Button
-                              size="small"
-                              startIcon={<EditIcon />}
-                              fullWidth
-                              sx={{
-                                background: alpha('#4ECDC4', 0.1),
-                                color: '#4ECDC4',
-                                '&:hover': { background: alpha('#4ECDC4', 0.2) }
-                              }}
-                            >
-                              Edit
-                            </Button>
-                          </Tooltip>
-                          <Tooltip title="Delete Product">
-                            <Button
-                              size="small"
-                              startIcon={<DeleteIcon />}
-                              fullWidth
-                              sx={{
-                                background: alpha('#FF6B95', 0.1),
-                                color: '#FF6B95',
-                                '&:hover': { background: alpha('#FF6B95', 0.2) }
-                              }}
-                            >
-                              Delete
-                            </Button>
-                          </Tooltip>
-                        </Stack>
-                      </Paper>
-                    </Grid>
-                  ))}
-                </Grid>
-              ) : (
-                /* Products List View */
-                <TableContainer component={Paper} sx={{ 
-                  background: alpha('#1A173B', 0.5),
-                  border: '1px solid rgba(120, 119, 198, 0.2)',
-                  borderRadius: 2,
-                }}>
-                  <Table>
-                    <TableHead>
-                      <TableRow sx={{ background: alpha('#7877C6', 0.1) }}>
-                        <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Product</TableCell>
-                        <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Category</TableCell>
-                        <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Price</TableCell>
-                        <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Stock</TableCell>
-                        <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Sold</TableCell>
-                        <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Status</TableCell>
-                        <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Actions</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {filteredProducts.map((product) => (
-                        <TableRow 
-                          key={product.id}
-                          hover
-                          sx={{ '&:hover': { background: alpha('#ffffff', 0.05) } }}
-                        >
-                          <TableCell>
-                            <Stack direction="row" alignItems="center" spacing={2}>
-                              <Avatar
-                                variant="rounded"
-                                sx={{ 
-                                  width: 40, 
-                                  height: 40, 
-                                  bgcolor: alpha('#7877C6', 0.2),
-                                  color: '#7877C6'
-                                }}
-                              >
-                                <InventoryIcon />
-                              </Avatar>
-                              <Box>
-                                <Typography variant="body2" fontWeight="bold">
-                                  {product.title}
-                                </Typography>
-                                <Typography variant="caption" sx={{ color: alpha('#ffffff', 0.5) }}>
-                                  ID: {product.id}
-                                </Typography>
-                              </Box>
-                            </Stack>
-                          </TableCell>
-                          <TableCell>
-                            <Chip 
-                              label={product.category} 
-                              size="small" 
-                              sx={{ background: alpha('#7877C6', 0.2), color: '#7877C6' }} 
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Typography variant="body2" fontWeight="bold">
-                              ${product.price.toFixed(2)}
-                            </Typography>
-                          </TableCell>
-                          <TableCell>
-                            <Stack direction="row" alignItems="center" spacing={1}>
-                              <Typography variant="body2">{product.stock}</Typography>
-                              {product.stock < 10 && product.stock > 0 && (
-                                <Chip label="Low" size="small" color="warning" />
-                              )}
-                            </Stack>
-                          </TableCell>
-                          <TableCell>
-                            <Typography variant="body2">{product.sold}</Typography>
-                          </TableCell>
-                          <TableCell>
-                            <Chip
-                              label={product.status.toUpperCase()}
-                              size="small"
-                              color={getProductStatusColor(product.status) as any}
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Stack direction="row" spacing={1}>
-                              <IconButton size="small" sx={{ color: '#7877C6' }}>
-                                <EditIcon fontSize="small" />
-                              </IconButton>
-                              <IconButton size="small" sx={{ color: '#FF6B95' }}>
-                                <DeleteIcon fontSize="small" />
-                              </IconButton>
-                            </Stack>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              )}
-            </Box>
-          )}
-
-          {/* Orders Tab */}
-          {activeTab === 2 && (
-            <Box>
-              {/* Filters */}
-              <Stack direction="row" spacing={2} sx={{ mb: 3 }} flexWrap="wrap" gap={1}>
-                <Chip
-                  label="All Orders"
-                  onClick={() => setStatusFilter('all')}
-                  color={statusFilter === 'all' ? 'primary' : 'default'}
-                  sx={{ 
-                    color: statusFilter === 'all' ? 'white' : 'inherit',
-                    backgroundColor: statusFilter === 'all' ? '#7877C6' : alpha('#ffffff', 0.1)
-                  }}
-                />
-                <Chip
-                  label="Pending"
-                  onClick={() => setStatusFilter('pending')}
-                  color={statusFilter === 'pending' ? 'warning' : 'default'}
-                  sx={{ backgroundColor: statusFilter === 'pending' ? alpha('#F29F58', 0.2) : alpha('#ffffff', 0.1) }}
-                />
-                <Chip
-                  label="Processing"
-                  onClick={() => setStatusFilter('processing')}
-                  color={statusFilter === 'processing' ? 'info' : 'default'}
-                  sx={{ backgroundColor: statusFilter === 'processing' ? alpha('#4ECDC4', 0.2) : alpha('#ffffff', 0.1) }}
-                />
-                <Chip
-                  label="Shipped"
-                  onClick={() => setStatusFilter('shipped')}
-                  color={statusFilter === 'shipped' ? 'primary' : 'default'}
-                  sx={{ backgroundColor: statusFilter === 'shipped' ? alpha('#7877C6', 0.2) : alpha('#ffffff', 0.1) }}
-                />
-                <Chip
-                  label="Delivered"
-                  onClick={() => setStatusFilter('delivered')}
-                  color={statusFilter === 'delivered' ? 'success' : 'default'}
-                  sx={{ backgroundColor: statusFilter === 'delivered' ? alpha('#4ECDC4', 0.2) : alpha('#ffffff', 0.1) }}
-                />
-                <Chip
-                  label="Cancelled"
-                  onClick={() => setStatusFilter('cancelled')}
-                  color={statusFilter === 'cancelled' ? 'error' : 'default'}
-                  sx={{ backgroundColor: statusFilter === 'cancelled' ? alpha('#FF6B95', 0.2) : alpha('#ffffff', 0.1) }}
-                />
-              </Stack>
-
-              {/* Orders Table */}
-              <TableContainer component={Paper} sx={{ 
-                background: alpha('#ffffff', 0.05),
-                border: '1px solid rgba(120, 119, 198, 0.2)',
-                borderRadius: 2,
+              
+              <TableContainer sx={{ 
+                maxHeight: 320,
+                borderRadius: 1,
+                background: alpha('#fff', 0.03),
+                '& .MuiTableCell-root': {
+                  borderColor: alpha('#fff', 0.08),
+                  color: '#fff',
+                  py: 1.25,
+                  fontSize: '0.85rem'
+                },
+                '& .MuiTableHead-root .MuiTableCell-root': {
+                  fontWeight: 700,
+                  color: alpha('#fff', 0.7),
+                  background: alpha('#fff', 0.05),
+                  fontSize: '0.85rem'
+                }
               }}>
-                <Table>
+                <Table size="small" stickyHeader>
                   <TableHead>
-                    <TableRow sx={{ background: alpha('#7877C6', 0.1) }}>
-                      <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Order ID</TableCell>
-                      <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Customer</TableCell>
-                      <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Date</TableCell>
-                      <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Items</TableCell>
-                      <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Total</TableCell>
-                      <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Status</TableCell>
-                      <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Payment</TableCell>
-                      <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Actions</TableCell>
+                    <TableRow>
+                      <TableCell sx={{ width: '30%' }}>Product</TableCell>
+                      <TableCell align="center">Price</TableCell>
+                      <TableCell align="center">Sold</TableCell>
+                      <TableCell align="center">Revenue</TableCell>
+                      <TableCell align="center">Stock</TableCell>
+                      <TableCell align="center">Rating</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {paginatedOrders.map((order) => (
+                    {topProductsData.map((product) => (
                       <TableRow 
-                        key={order.id}
+                        key={product.id}
                         hover
                         sx={{ 
-                          '&:hover': { background: alpha('#ffffff', 0.05) },
-                          cursor: 'pointer'
+                          '&:hover': { background: alpha('#fff', 0.05) },
+                          cursor: 'pointer',
                         }}
-                        onClick={() => setOrderDetailsOpen(true)}
                       >
-                        <TableCell sx={{ color: 'white' }}>
-                          <Typography fontWeight="bold">#{order.id}</Typography>
+                        <TableCell>
+                          <Stack direction="row" alignItems="center" spacing={1.5}>
+                            <Avatar sx={{ 
+                              width: 32, 
+                              height: 32, 
+                              background: alpha(PALETTE.purple, 0.2),
+                              color: PALETTE.purple,
+                              fontSize: 12,
+                              fontWeight: 600
+                            }}>
+                              {product.name.charAt(0)}
+                            </Avatar>
+                            <Box>
+                              <Typography sx={{ fontWeight: 600, fontSize: '0.85rem', lineHeight: 1.2 }}>
+                                {product.name.length > 25 ? `${product.name.substring(0, 25)}...` : product.name}
+                              </Typography>
+                              <Typography variant="caption" sx={{ color: alpha('#fff', 0.5) }}>
+                                {product.category}
+                              </Typography>
+                            </Box>
+                          </Stack>
                         </TableCell>
-                        <TableCell sx={{ color: 'white' }}>
-                          <Box>
-                            <Typography variant="body2" fontWeight="bold">
-                              {order.customerName}
-                            </Typography>
-                            <Typography variant="caption" sx={{ color: alpha('#ffffff', 0.5) }}>
-                              {order.customerEmail}
-                            </Typography>
-                          </Box>
+                        <TableCell align="center" sx={{ fontWeight: 700, color: PALETTE.teal }}>
+                          ${product.price}
                         </TableCell>
-                        <TableCell sx={{ color: alpha('#ffffff', 0.8) }}>
-                          {order.date}
-                        </TableCell>
-                        <TableCell sx={{ color: 'white' }}>
-                          {order.items} items
-                        </TableCell>
-                        <TableCell sx={{ color: 'white' }}>
-                          <Typography fontWeight="bold">
-                            ${order.total.toFixed(2)}
+                        <TableCell align="center">
+                          <Typography sx={{ fontWeight: 700, fontSize: '0.9rem' }}>
+                            {product.sold.toLocaleString()}
                           </Typography>
                         </TableCell>
-                        <TableCell>
-                          <Chip
-                            label={order.status.toUpperCase()}
-                            size="small"
-                            color={getStatusColor(order.status) as any}
-                            sx={{ fontWeight: 'bold', fontSize: '0.7rem' }}
-                          />
+                        <TableCell align="center" sx={{ fontWeight: 700, color: PALETTE.gold }}>
+                          ${product.revenue.toLocaleString()}
                         </TableCell>
-                        <TableCell>
-                          <Chip
-                            label={order.payment.toUpperCase()}
-                            size="small"
-                            color={getPaymentColor(order.payment) as any}
-                            sx={{ fontSize: '0.7rem' }}
-                          />
+                        <TableCell align="center">
+                          <Box sx={{ position: 'relative', display: 'inline-flex' }}>
+                            <CircularProgress 
+                              variant="determinate" 
+                              value={(product.stock / 200) * 100}
+                              size={28}
+                              thickness={4}
+                              sx={{ 
+                                color: product.stock > 50 ? PALETTE.teal : 
+                                       product.stock > 20 ? PALETTE.gold : PALETTE.pink 
+                              }}
+                            />
+                            <Box sx={{
+                              position: 'absolute',
+                              top: 0,
+                              left: 0,
+                              bottom: 0,
+                              right: 0,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                            }}>
+                              <Typography variant="caption" sx={{ fontWeight: 700, fontSize: '0.6rem' }}>
+                                {product.stock}
+                              </Typography>
+                            </Box>
+                          </Box>
                         </TableCell>
-                        <TableCell>
-                          <Stack direction="row" spacing={1}>
-                            <IconButton 
-                              size="small" 
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                showNotification(`Order #${order.id} approved`, 'success');
-                              }}
-                              sx={{ color: '#4ECDC4' }}
-                            >
-                              <CheckIcon fontSize="small" />
-                            </IconButton>
-                            <IconButton 
-                              size="small" 
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                showNotification(`Order #${order.id} shipped`, 'info');
-                              }}
-                              sx={{ color: '#7877C6' }}
-                            >
-                              <ShippingIcon fontSize="small" />
-                            </IconButton>
-                            <IconButton 
-                              size="small" 
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                showNotification(`Order #${order.id} cancelled`, 'warning');
-                              }}
-                              sx={{ color: '#FF6B95' }}
-                            >
-                              <CancelIcon fontSize="small" />
-                            </IconButton>
+                        <TableCell align="center">
+                          <Stack direction="row" alignItems="center" justifyContent="center" spacing={0.5}>
+                            <StarIcon sx={{ color: PALETTE.gold, fontSize: 14 }} />
+                            <Typography sx={{ fontWeight: 600, fontSize: '0.85rem' }}>
+                              {product.rating}
+                            </Typography>
                           </Stack>
                         </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
                 </Table>
-                <TablePagination
-                  rowsPerPageOptions={[5, 10, 25]}
-                  component="div"
-                  count={filteredOrders.length}
-                  rowsPerPage={rowsPerPage}
-                  page={page}
-                  onPageChange={handleChangePage}
-                  onRowsPerPageChange={handleChangeRowsPerPage}
-                  sx={{ 
-                    color: 'white',
-                    '& .MuiTablePagination-selectIcon': {
-                      color: 'white',
-                    },
-                    '& .MuiTablePagination-actions button': {
-                      color: 'white',
-                    }
-                  }}
-                />
               </TableContainer>
-            </Box>
-          )}
-        </Paper>
+            </Paper>
+          </Grid>
 
-        {/* Add Product Dialog */}
-        <Dialog 
-          open={addDialogOpen} 
-          onClose={() => setAddDialogOpen(false)}
-          maxWidth="sm"
-          fullWidth
-        >
-          <DialogTitle sx={{ background: '#0A081F', color: 'white' }}>
-            <Stack direction="row" alignItems="center" spacing={1}>
-              <AddIcon />
-              <Typography variant="h6">Add New Product</Typography>
-            </Stack>
-          </DialogTitle>
-          <DialogContent sx={{ background: '#1A173B', color: 'white', pt: 3 }}>
-            <Stack spacing={3}>
-              <TextField
-                label="Product Title"
-                fullWidth
-                InputLabelProps={{ sx: { color: alpha('#ffffff', 0.7) } }}
-                InputProps={{ sx: { color: 'white' } }}
-              />
-              <TextField
-                label="Description"
-                fullWidth
-                multiline
-                rows={3}
-                InputLabelProps={{ sx: { color: alpha('#ffffff', 0.7) } }}
-                InputProps={{ sx: { color: 'white' } }}
-              />
-              <Stack direction="row" spacing={2}>
-                <TextField
-                  label="Price ($)"
-                  fullWidth
-                  type="number"
-                  InputLabelProps={{ sx: { color: alpha('#ffffff', 0.7) } }}
-                  InputProps={{ sx: { color: 'white' } }}
-                />
-                <TextField
-                  label="Stock"
-                  fullWidth
-                  type="number"
-                  InputLabelProps={{ sx: { color: alpha('#ffffff', 0.7) } }}
-                  InputProps={{ sx: { color: 'white' } }}
-                />
+          {/* RECENT ORDERS TABLE */}
+          <Grid item xs={12} lg={5}>
+            <Paper sx={{ 
+              p: 3, 
+              borderRadius: 2,
+              background: alpha('#000', 0.2),
+              border: `1px solid ${alpha('#fff', 0.08)}`,
+              boxShadow: '0 4px 24px rgba(0,0,0,0.4)',
+              height: '100%'
+            }}>
+              <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
+                <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                  Recent Orders
+                </Typography>
+                <Badge badgeContent={recentOrders.length} color="error" sx={{ '& .MuiBadge-badge': { fontSize: 10, height: 16, minWidth: 16 } }}>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    startIcon={<NotificationsIcon sx={{ fontSize: 16 }} />}
+                    sx={{
+                      borderColor: alpha('#fff', 0.2),
+                      color: '#fff',
+                      fontSize: '0.85rem',
+                      py: 0.5,
+                      px: 1.5
+                    }}
+                  >
+                    View All
+                  </Button>
+                </Badge>
               </Stack>
-              <FormControl fullWidth>
-                <InputLabel sx={{ color: alpha('#ffffff', 0.7) }}>Category</InputLabel>
-                <Select
-                  label="Category"
-                  input={<OutlinedInput label="Category" sx={{ color: 'white' }} />}
-                >
-                  {categories.map((category) => (
-                    <MenuItem key={category} value={category}>
-                      {category.charAt(0).toUpperCase() + category.slice(1)}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Stack>
-          </DialogContent>
-          <DialogActions sx={{ background: '#0A081F', color: 'white' }}>
-            <Button onClick={() => setAddDialogOpen(false)} sx={{ color: '#FF6B95' }}>
-              Cancel
-            </Button>
-            <Button 
-              variant="contained"
-              onClick={() => {
-                showNotification('Product added successfully', 'success');
-                setAddDialogOpen(false);
-              }}
-              sx={{
-                background: 'linear-gradient(135deg, #7877C6 0%, #5A59A1 100%)',
-              }}
-            >
-              Add Product
-            </Button>
-          </DialogActions>
-        </Dialog>
+              
+              <Stack spacing={2}>
+                {recentOrders.map((order) => (
+                  <Paper 
+                    key={order.id}
+                    sx={{ 
+                      p: 1.5, 
+                      background: alpha('#fff', 0.03),
+                      border: `1px solid ${alpha('#fff', 0.06)}`,
+                      borderRadius: 1.5,
+                      transition: 'all 0.2s',
+                      '&:hover': {
+                        background: alpha('#fff', 0.05),
+                        transform: 'translateX(2px)'
+                      }
+                    }}
+                  >
+                    <Stack direction="row" justifyContent="space-between" alignItems="center">
+                      <Box>
+                        <Typography variant="body2" sx={{ fontWeight: 700, color: PALETTE.teal, mb: 0.5 }}>
+                          {order.id}
+                        </Typography>
+                        <Typography variant="caption" sx={{ color: alpha('#fff', 0.7), display: 'block' }}>
+                          {order.customer} • {order.items} items
+                        </Typography>
+                      </Box>
+                      <Box sx={{ textAlign: 'right' }}>
+                        <Typography variant="body2" sx={{ fontWeight: 700, fontSize: '1rem', mb: 0.5 }}>
+                          ${order.amount}
+                        </Typography>
+                        <Stack direction="row" alignItems="center" spacing={1}>
+                          <Typography variant="caption" sx={{ color: alpha('#fff', 0.5) }}>
+                            {order.date} {order.time}
+                          </Typography>
+                          <Chip 
+                            label={order.status}
+                            size="small"
+                            sx={{ 
+                              background: alpha(getStatusColor(order.status), 0.2),
+                              color: getStatusColor(order.status),
+                              fontWeight: 600,
+                              height: 18,
+                              fontSize: '0.65rem',
+                              '& .MuiChip-label': { px: 1 }
+                            }}
+                          />
+                        </Stack>
+                      </Box>
+                    </Stack>
+                  </Paper>
+                ))}
+              </Stack>
+            </Paper>
+          </Grid>
+        </Grid>
 
-        {/* Order Details Dialog */}
-        <Dialog 
-          open={orderDetailsOpen} 
-          onClose={() => setOrderDetailsOpen(false)}
-          maxWidth="md"
-          fullWidth
-        >
-          <DialogTitle sx={{ 
-            background: 'linear-gradient(135deg, #1A173B 0%, #2A2660 100%)',
-            color: 'white',
-          }}>
-            <Stack direction="row" justifyContent="space-between" alignItems="center">
-              <Typography variant="h6">Order #1001 Details</Typography>
-              <Chip
-                label="PENDING"
-                color="warning"
-                sx={{ fontWeight: 'bold' }}
-              />
+        {/* FOOTER - COMPACT */}
+        <Box sx={{ 
+          pt: 3,
+          borderTop: `1px solid ${alpha('#fff', 0.08)}`,
+        }}>
+          <Stack direction="row" justifyContent="space-between" alignItems="center">
+            <Typography variant="caption" sx={{ color: alpha('#fff', 0.4) }}>
+              © 2024 E-Commerce Dashboard • v2.1.4 • Last refresh: {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </Typography>
+            <Stack direction="row" spacing={2}>
+              <Typography variant="caption" sx={{ color: alpha('#fff', 0.4) }}>
+                <Box component="span" sx={{ color: PALETTE.teal, fontWeight: 600 }}>89,250</Box> total revenue
+              </Typography>
+              <Typography variant="caption" sx={{ color: alpha('#fff', 0.4) }}>
+                <Box component="span" sx={{ color: PALETTE.green, fontWeight: 600 }}>●</Box> System online
+              </Typography>
             </Stack>
-          </DialogTitle>
-          <DialogContent sx={{ background: '#1A173B', color: 'white', pt: 3 }}>
-            <Grid container spacing={3}>
-              {/* Customer Information */}
-              <Grid item xs={12} md={6}>
-                <Typography variant="h6" gutterBottom sx={{ color: '#4ECDC4' }}>Customer Information</Typography>
-                <Paper sx={{ p: 2, background: alpha('#ffffff', 0.05) }}>
-                  <Stack spacing={1.5}>
-                    <Box>
-                      <Typography variant="caption" sx={{ color: alpha('#ffffff', 0.5) }}>Name</Typography>
-                      <Typography>John Doe</Typography>
-                    </Box>
-                    <Box>
-                      <Typography variant="caption" sx={{ color: alpha('#ffffff', 0.5) }}>Email</Typography>
-                      <Typography>john@example.com</Typography>
-                    </Box>
-                    <Box>
-                      <Typography variant="caption" sx={{ color: alpha('#ffffff', 0.5) }}>Phone</Typography>
-                      <Typography>+1 (555) 123-4567</Typography>
-                    </Box>
-                    <Box>
-                      <Typography variant="caption" sx={{ color: alpha('#ffffff', 0.5) }}>Shipping Address</Typography>
-                      <Typography>123 Main St, New York, NY 10001</Typography>
-                    </Box>
-                  </Stack>
-                </Paper>
-              </Grid>
-
-              {/* Order Summary */}
-              <Grid item xs={12} md={6}>
-                <Typography variant="h6" gutterBottom sx={{ color: '#4ECDC4' }}>Order Summary</Typography>
-                <Paper sx={{ p: 2, background: alpha('#ffffff', 0.05) }}>
-                  <Stack spacing={1.5}>
-                    <Stack direction="row" justifyContent="space-between">
-                      <Typography>Subtotal</Typography>
-                      <Typography>$379.96</Typography>
-                    </Stack>
-                    <Stack direction="row" justifyContent="space-between">
-                      <Typography>Shipping Fee</Typography>
-                      <Typography>$9.99</Typography>
-                    </Stack>
-                    <Stack direction="row" justifyContent="space-between">
-                      <Typography>Tax (9%)</Typography>
-                      <Typography>$34.20</Typography>
-                    </Stack>
-                    <Divider sx={{ borderColor: alpha('#ffffff', 0.1), my: 1 }} />
-                    <Stack direction="row" justifyContent="space-between">
-                      <Typography variant="h6">Total</Typography>
-                      <Typography variant="h6">$424.15</Typography>
-                    </Stack>
-                  </Stack>
-                </Paper>
-              </Grid>
-            </Grid>
-          </DialogContent>
-          <DialogActions sx={{ 
-            background: '#1A173B', 
-            borderTop: '1px solid rgba(120, 119, 198, 0.2)',
-            p: 3 
-          }}>
-            <Stack direction="row" spacing={2} sx={{ width: '100%' }}>
-              <Button
-                onClick={() => setOrderDetailsOpen(false)}
-                sx={{ 
-                  color: '#FF6B95',
-                  flex: 1
-                }}
-              >
-                Close
-              </Button>
-              <Button
-                variant="contained"
-                startIcon={<CheckIcon />}
-                onClick={() => {
-                  showNotification('Order #1001 approved', 'success');
-                  setOrderDetailsOpen(false);
-                }}
-                sx={{
-                  background: 'linear-gradient(135deg, #4ECDC4 0%, #36A398 100%)',
-                  color: 'white',
-                  flex: 1
-                }}
-              >
-                Approve Order
-              </Button>
-              <Button
-                variant="contained"
-                startIcon={<ShippingIcon />}
-                onClick={() => {
-                  showNotification('Order #1001 marked as shipped', 'info');
-                  setOrderDetailsOpen(false);
-                }}
-                sx={{
-                  background: 'linear-gradient(135deg, #7877C6 0%, #5A59A1 100%)',
-                  color: 'white',
-                  flex: 1
-                }}
-              >
-                Mark as Shipped
-              </Button>
-            </Stack>
-          </DialogActions>
-        </Dialog>
-
-        {/* Notification Snackbar */}
-        <Snackbar
-          open={notification.open}
-          autoHideDuration={6000}
-          onClose={handleCloseNotification}
-          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-        >
-          <Alert
-            onClose={handleCloseNotification}
-            severity={notification.type as any}
-            sx={{ 
-              width: '100%',
-              background: notification.type === 'success' ? '#4ECDC4' : 
-                        notification.type === 'error' ? '#FF6B95' : 
-                        notification.type === 'warning' ? '#F29F58' : '#7877C6',
-              color: 'white',
-            }}
-          >
-            {notification.message}
-          </Alert>
-        </Snackbar>
-      </Container>
+          </Stack>
+        </Box>
+      </Box>
     </Box>
   );
 };

@@ -1,4 +1,3 @@
-// NotificationsPopover.tsx - Updated with only order-based notifications, sorted by timestamp (newest first)
 import React, { useState, useEffect } from 'react';
 import {
   Box,
@@ -27,14 +26,15 @@ import {
   ShoppingBag as OrderIcon,
   Close as CloseIcon,
   Circle as CircleIcon,
-  Discount as DiscountIcon,
-  Security as SecurityIcon,
+  AccountCircle as CustomerIcon,
+  Cancel as CancelIcon,
+  Storefront as StoreIcon,
   Delete as DeleteIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useUserStore } from '../store/userStore';
 
-interface NotificationsPopoverProps {
+interface SellerNotificationsPopoverProps {
   anchorEl: HTMLElement | null;
   open: boolean;
   onClose: () => void;
@@ -42,49 +42,126 @@ interface NotificationsPopoverProps {
   onMarkAllRead: () => void;
 }
 
-const NotificationsPopover = ({
+const SellerNotificationsPopover = ({
   anchorEl,
   open,
   onClose,
   unreadCount,
   onMarkAllRead,
-}: NotificationsPopoverProps) => {
+}: SellerNotificationsPopoverProps) => {
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const { orders, currentUser } = useUserStore();
   const [notifications, setNotifications] = useState<any[]>([]);
 
+  // Generate and sort real-time notifications from orders
   useEffect(() => {
-    // Generate notifications only from orders where seller has taken action
-    const userOrders = orders.filter(order => order.userId === currentUser?.id);
+    if (!open) return;
+
+    // Use a default user ID for demonstration if currentUser is null
+    const currentUserId = currentUser?.id || 2; 
     
-    // Only create notifications for orders that have been acted upon by seller
-    const orderNotifications = userOrders
-      .filter(order => ['approved', 'shipped', 'delivered', 'cancelled'].includes(order.status))
-      .map(order => ({
+    // Filter orders relevant to the current seller
+    const sellerOrders = orders.filter(order => 
+      order.items.some(item => item.sellerId === currentUserId)
+    );
+
+    // 1. Generate notifications from recent orders
+    const orderNotifications = sellerOrders.map(order => {
+      const isNewOrder = new Date(order.createdAt).getTime() > Date.now() - 3600000; // Within last hour
+      const status = order.status;
+      
+      let title = '';
+      let message = '';
+      let priority = 'medium';
+      
+      if (isNewOrder && status === 'pending') {
+        title = `New Order #${order.id}`;
+        message = `${order.customerName} placed a new order for ${order.items.length} item(s). Action required.`;
+        priority = 'high';
+      } else if (status === 'pending') {
+        title = `Order #${order.id} Pending`;
+        message = 'Order is awaiting your approval to proceed with shipment.';
+        priority = 'high';
+      } else if (status === 'cancelled') {
+        title = `Order #${order.id} Cancelled`;
+        message = 'Customer has cancelled this order. No further action is needed.';
+        priority = 'medium';
+      } else {
+        return null; // Ignore orders that are approved, shipped, or delivered for simplicity
+      }
+
+      return {
         id: order.id,
         type: 'order',
-        title: `Order #${order.id} ${order.status === 'approved' ? 'Approved' : order.status === 'shipped' ? 'Shipped' : order.status === 'delivered' ? 'Delivered' : 'Cancelled'}`,
-        message: order.status === 'approved' 
-          ? 'Your order has been approved by the seller and will be shipped soon.'
-          : order.status === 'shipped' 
-            ? 'Your order has been shipped! Track your package for delivery updates.'
-            : order.status === 'delivered'
-              ? 'Your order has been delivered! We hope you enjoy your purchase.'
-              : 'Your order has been cancelled by the seller.',
+        title,
+        message,
         status: order.status,
         orderId: order.id,
-        timestamp: order.updatedAt || order.createdAt,
-        read: false,
-        priority: order.status === 'shipped' ? 'high' : 'medium',
-      }));
+        customerName: order.customerName,
+        timestamp: order.createdAt,
+        read: false, // Default new orders to unread
+        priority,
+      };
+    }).filter(notification => notification !== null); // Remove null entries
 
-    // **IMPORTANT CHANGE:** Sort notifications by timestamp in descending order (newest first)
-    orderNotifications.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    // 2. Add sample seller-specific notifications
+    // NOTE: For a real app, these would come from an API/backend state
+    const sellerSampleNotifications = [
+      {
+        id: Date.now() + 1,
+        type: 'customer',
+        title: 'New Customer Inquiry',
+        message: 'John Doe asked about product availability. Respond now!',
+        timestamp: new Date(Date.now() - 1800000).toISOString(), // 30 minutes ago
+        read: false, // Unread
+        priority: 'high',
+      },
+      {
+        id: Date.now() + 2,
+        type: 'review',
+        title: 'New Product Review',
+        message: 'Customer left a 5-star review for "Premium Watch". Check it out.',
+        timestamp: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
+        read: true, // Read
+        priority: 'medium',
+      },
+      {
+        id: Date.now() + 3,
+        type: 'low_stock',
+        title: 'Low Stock Alert',
+        message: '"Designer Handbag" is running low on inventory (5 items left). Restock soon!',
+        timestamp: new Date(Date.now() - 43200000).toISOString(), // 12 hours ago
+        read: false, // Unread
+        priority: 'high',
+      },
+      {
+        id: Date.now() + 4,
+        type: 'review',
+        title: 'New Product Review',
+        message: 'Customer left a 3-star review for "Luxury Scarf".',
+        timestamp: new Date(Date.now() - 172800000).toISOString(), // 2 days ago
+        read: true, // Read
+        priority: 'low',
+      },
+    ];
 
-    setNotifications([...orderNotifications]);
-  }, [orders, currentUser]);
+    const combinedNotifications = [...orderNotifications, ...sellerSampleNotifications];
+    
+    // **KEY CHANGE: Custom Sorting Logic**
+    combinedNotifications.sort((a, b) => {
+      // 1. Sort by read status (Unread first: false comes before true)
+      if (a.read !== b.read) {
+        return a.read ? 1 : -1; // Unread (false) goes up (-1), Read (true) goes down (1)
+      }
+      
+      // 2. Secondary sort by timestamp (Newest first: higher timestamp first)
+      return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+    });
+
+    setNotifications(combinedNotifications);
+  }, [open, orders, currentUser]);
 
   const handleDeleteNotification = (id: number, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -107,7 +184,11 @@ const NotificationsPopover = ({
     handleMarkAsRead(notification.id);
     
     if (notification.type === 'order' && notification.orderId) {
-      navigate(`/my-purchases?order=${notification.orderId}`);
+      navigate(`/seller/orders?order=${notification.orderId}`);
+    } else if (notification.type === 'customer') {
+      navigate('/seller/messages');
+    } else if (notification.type === 'low_stock') {
+      navigate('/seller/products');
     }
     onClose();
   };
@@ -116,16 +197,16 @@ const NotificationsPopover = ({
     setNotifications([]);
   };
 
-  const getNotificationIcon = (type: string, status?: string) => {
+  const getNotificationIcon = (type: string) => {
     switch (type) {
       case 'order':
-        return status === 'approved' ? 
-          <CheckCircleIcon fontSize="small" sx={{ color: '#4ECDC4' }} /> : 
-          status === 'shipped' ? 
-            <ShippingIcon fontSize="small" sx={{ color: '#4A90E2' }} /> :
-            status === 'delivered' ?
-              <OrderIcon fontSize="small" sx={{ color: '#7ED321' }} /> :
-              <OrderIcon fontSize="small" sx={{ color: '#F5A623' }} />;
+        return <OrderIcon fontSize="small" sx={{ color: '#4ECDC4' }} />;
+      case 'customer':
+        return <CustomerIcon fontSize="small" sx={{ color: '#7877C6' }} />;
+      case 'review':
+        return <CheckCircleIcon fontSize="small" sx={{ color: '#F29F58' }} />;
+      case 'low_stock':
+        return <StoreIcon fontSize="small" sx={{ color: '#FF6B95' }} />;
       default:
         return <NotificationsIcon fontSize="small" sx={{ color: '#9B51E0' }} />;
     }
@@ -134,9 +215,12 @@ const NotificationsPopover = ({
   const getNotificationColor = (type: string, priority: string = 'medium') => {
     const colors = {
       order: { high: '#4ECDC4', medium: '#4A90E2', low: '#7ED321' },
+      customer: { high: '#7877C6', medium: '#9575CD', low: '#B39DDB' },
+      review: { high: '#F29F58', medium: '#FFB74D', low: '#FFCC80' },
+      low_stock: { high: '#FF6B95', medium: '#F06292', low: '#E57373' }
     };
 
-    const typeColors = colors[type as keyof typeof colors] || { medium: '#7877C6' };
+    const typeColors = colors[type as keyof typeof colors] || colors.order;
     return typeColors[priority as keyof typeof typeColors] || typeColors.medium;
   };
 
@@ -155,7 +239,6 @@ const NotificationsPopover = ({
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
 
-  // Colors from CSS_VARS
   const CSS_VARS = {
     primaryDark: '#1B1833',
     primaryPurple: '#441752',
@@ -193,7 +276,7 @@ const NotificationsPopover = ({
         },
       }}
     >
-      {/* Header - Sticky */}
+      {/* Header */}
       <Box
         sx={{
           p: 2,
@@ -236,7 +319,7 @@ const NotificationsPopover = ({
           </Box>
           <Box>
             <Typography variant="h6" fontWeight={700} sx={{ color: '#FFFFFF' }}>
-              Notifications
+              Seller Notifications
             </Typography>
             <Typography variant="caption" sx={{ color: alpha('#FFFFFF', 0.7) }}>
               {currentUnreadCount} unread • {notifications.length} total
@@ -316,7 +399,7 @@ const NotificationsPopover = ({
               No Notifications
             </Typography>
             <Typography variant="body2" sx={{ color: alpha('#FFFFFF', 0.5) }}>
-              You'll see notifications here when sellers update your orders.
+              You're all caught up!
             </Typography>
           </Box>
         ) : (
@@ -356,7 +439,7 @@ const NotificationsPopover = ({
                         border: `1px solid ${alpha(getNotificationColor(notification.type, notification.priority), 0.3)}`,
                       }}
                     >
-                      {getNotificationIcon(notification.type, notification.status)}
+                      {getNotificationIcon(notification.type)}
                     </Box>
                   </ListItemIcon>
                   <ListItemText
@@ -448,7 +531,7 @@ const NotificationsPopover = ({
         )}
       </Box>
 
-      {/* Clear All Button - Only shown when there are notifications */}
+      {/* Clear All Button */}
       {notifications.length > 0 && (
         <Box
           sx={{
@@ -489,4 +572,4 @@ const NotificationsPopover = ({
   );
 };
 
-export default NotificationsPopover;
+export default SellerNotificationsPopover;
